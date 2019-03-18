@@ -1,0 +1,608 @@
+#!/usr/bin/env python3
+
+import argparse
+import subprocess
+import json
+import urllib.request
+import collections
+
+OperationResult = collections.namedtuple(
+  'OperationResult', ['function', 'region', 'failed', 'error'],
+  defaults=(None, None, False, None))
+
+
+class NewRelicGraphQLClient:
+    _GRAPHQL_API_URL = 'https://api.newrelic.com/graphql'
+
+    def __init__(self, nr_account_id, api_key, url=None):
+        self.api_key = api_key
+        self.nr_account_id = int(nr_account_id)
+        self.debug = False
+        self.url = url if url else self._GRAPHQL_API_URL
+
+    def _extract_errors(self, errors, operation=None):
+        """
+        extract error messages from the errors lists. we need to parse 2 types
+        of errors:
+           - query parsing errors: these don't reach the downstream service
+           - downstream errors: these come from the 'real' service downstream
+        """
+        error_messages = []
+        for error in errors:
+            downstream_error = error.get('downstreamResponse', '')
+            if downstream_error:
+                for e in downstream_error:
+                    error_messages.append(e.get('message', ''))
+            else:
+                error_messages.append(error.get('message', ''))
+
+        return error_messages
+
+    def _raise_if_failed(self, response, operation=None):
+        errors = response['errors'] if 'errors' in response else None
+        if errors:
+            error_messages = self._extract_errors(errors, operation)
+            error_message = '\n'.join(error_messages)
+            raise Exception(error_message)
+
+    def _execute_query(self, query, params=None):
+        post_data = json.dumps({
+          'query': query,
+          'variables': params
+        }).encode('utf-8')
+        headers = {
+          'Content-Type': 'application/json',
+          'api-key': self.api_key,
+          'Content-Length': len(post_data)}
+
+        req = urllib.request.Request(url=self.url, data=post_data, 
+                                     headers=headers, method='POST')
+        res = urllib.request.urlopen(req)
+        response = res.read()
+        return json.loads(response.decode('utf-8'))
+
+    def _get_linked_accounts(self):
+        """
+        return a list of linked accounts for the current New Relic account
+        """
+        query = '''
+          query($accountId: Int!) {
+            actor {
+              account(id: $accountId) {
+                cloud {
+                  linkedAccounts {
+                    id
+                    name
+                    createdAt
+                    updatedAt
+                    authLabel
+                    externalId
+                  }
+                }
+              }
+            }
+          }
+        '''
+        params = {'accountId': self.nr_account_id}
+        response = self._execute_query(query=query, params=params)
+        self._raise_if_failed(response)
+        account = response['data']['actor']['account']
+        return account['cloud']['linkedAccounts']
+
+    def get_linked_account_by_name(self, account_name):
+        """
+        return a specific linked account of the current New Relic account
+        """
+        accounts = self._get_linked_accounts()
+        # find account with name == account_name, or None
+        return next((account for account in accounts
+                    if account['name'] == account_name), None)
+
+    def create_linked_account(self, role_arn, account_name):
+        """
+        create a linked account (cloud integrations account)
+        in your New Relic account
+        """
+        query = '''
+          mutation ($accountId: Int!, $accounts: CloudLinkCloudAccountsInput!){
+            cloudLinkAccount(accountId: $accountId, accounts: $accounts) {
+              linkedAccounts {
+                id
+                name
+              }
+              errors {
+                  message
+              }
+            }
+          }
+        '''
+        accounts = {'aws': {'arn': role_arn, 'name': account_name}}
+        params = {'accountId': self.nr_account_id, 'accounts': accounts}
+        response = self._execute_query(query=query, params=params)
+        self._raise_if_failed(response, 'cloudLinkAccount')
+        # should be only one even though we ask for many
+        return response['data']['cloudLinkAccount']['linkedAccounts'][0]
+
+    def get_integration_by_service_slug(self, linked_account_id,
+                                        service_slug):
+        """
+        return the integration that is associated with the specified service
+        name.
+        """
+        query = '''
+          query($accountId: Int!, $linkedAccountId: Int!) {
+            actor {
+              account(id: $accountId) {
+                cloud {
+                  linkedAccount(id: $linkedAccountId) {
+                    integrations {
+                      id
+                      name
+                      createdAt
+                      updatedAt
+                      service {
+                        slug
+                        isEnabled
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        '''
+        params = {'accountId': self.nr_account_id,
+                  'linkedAccountId': linked_account_id}
+        response = self._execute_query(query=query, params=params)
+        self._raise_if_failed(response)
+        account = response['data']['actor']['account']
+        integrations = account['cloud']['linkedAccount']['integrations']
+        # return the integration with service.slug == service_slug, or none
+        return next((integration for integration in integrations
+                    if integration['service']['slug'] == service_slug), None)
+
+    def is_integration_enabled(self, linked_account_id,
+                               service_slug):
+        integration = self.get_integration_by_service_slug(
+            linked_account_id, service_slug)
+        return (integration and integration['service']['isEnabled'])
+
+    def enable_integration(self, linked_account_id, provider_slug,
+                           service_slug):
+        """
+        enable monitoring of a Cloud provider service (integration)
+        """
+        query = '''
+          mutation($accountId:Int!, $integrations: CloudIntegrationsInput!) {
+            cloudConfigureIntegration(accountId: $accountId,
+                                      integrations: $integrations) {
+              integrations {
+                id
+                name
+                service {
+                  id
+                  name
+                }
+              }
+              errors {
+                linkedAccountId
+                message
+              }
+            }
+          }
+        '''
+        integrations = {provider_slug: {
+                         service_slug: [{'linkedAccountId': linked_account_id}]
+                        }}
+        params = {'accountId': self.nr_account_id,
+                  'integrations': integrations}
+        response = self._execute_query(query=query, params=params)
+        self._raise_if_failed(response, 'cloudConfigureIntegration')
+        # should be only one
+        return response['data']['cloudConfigureIntegration']['integrations'][0]
+
+
+def get_role(role_name):
+    cmd = f'aws iam get-role --role-name {role_name}'
+    response = subprocess.run(
+        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    exit_code = response.returncode
+    # error:most likely role does not exist
+    if exit_code > 0:
+        if 'NoSuchEntity' in str(response.stderr):
+            return None
+        else:
+            raise Exception(response.stderr)
+    else:
+        return json.loads(response.stdout)
+
+
+def get_function(function_name, region):
+    cmd = f'aws --region {region} lambda get-function --function-name {function_name}'
+    response = subprocess.run(
+        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    exit_code = response.returncode
+    # error:most likely function does not exist
+    if exit_code > 0:
+        if 'ResourceNotFoundException' in str(response.stderr):
+            return None
+        else:
+            raise Exception(response.stderr)
+    else:
+        return json.loads(response.stdout)
+
+
+def get_streaming_filters(region, function_name):
+    cmd = (
+          f'aws --region {region} logs describe-subscription-filters '
+          f'--log-group-name "/aws/lambda/{function_name}" ')
+    response = subprocess.run(
+        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    exit_code = response.returncode
+    if exit_code > 0:
+        raise Exception(response.stderr)
+    else:
+        response = json.loads(response.stdout)
+        return response["subscriptionFilters"]
+
+
+def create_role(role_name, role_policy, nr_account_number):
+    role_policy_name = "" if role_policy is None else role_policy
+    cmd = (
+      f'aws cloudformation create-stack '
+      f'--stack-name NewRelicLambdaIntegrationRole '
+      f'--template-body file://./templates/nr-lambda-integration-role.yaml '
+      f'--parameters '
+      f'ParameterKey=NewRelicAccountNumber,ParameterValue={nr_account_number} '
+      f'ParameterKey=PolicyName,ParameterValue={role_policy_name} '
+      f'--capabilities CAPABILITY_NAMED_IAM')
+    response = subprocess.run(
+        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    exit_code = response.returncode
+    if exit_code > 0:
+        raise Exception(response.stderr)
+    else:
+        # wait for stack to create
+        cmd = (
+          f'aws cloudformation wait stack-create-complete '
+          f'--stack-name NewRelicLambdaIntegrationRole')
+        response = subprocess.run(
+            cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        exit_code = response.returncode
+        if exit_code > 0:
+            raise Exception(response.stderr)
+
+
+def create_function(region, function_name, nr_license_key):
+    cmd = (
+      f'aws --region {region} cloudformation create-stack '
+      f'--stack-name NewRelicLogIngestion '
+      f'--template-body file://./templates/newrelic-log-ingestion.yaml '
+      f'--parameters '
+      f'ParameterKey=NewRelicLicenseKey,ParameterValue={nr_license_key} '
+      f'--capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND')
+
+    response = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE)
+    exit_code = response.returncode
+    if exit_code > 0:
+        raise Exception(response.stderr)
+    else:
+        cmd = (
+          f'aws --region {region} cloudformation wait '
+          f'stack-create-complete --stack-name NewRelicLogIngestion')
+
+        response = subprocess.run(
+            cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        exit_code = response.returncode
+        if exit_code > 0:
+            raise Exception(response.stderr)
+        else:
+            return response.stdout
+
+
+def create_log_subscription(region, function_name):
+    function = get_function("newrelic-log-ingestion", region)
+    if function is None:
+        error_msg = (
+              f'Could not find "newrelic-log-ingestion function". '
+              f'Please create it first before enabling log streaming.')
+        return OperationResult(function=function_name, region=region,
+                               failed=True, error=error_msg)
+    function_arn = function['Configuration']['FunctionArn']
+    # check if any subscription filter already exists for the function to
+    # avoid throwing LimitExceeded.
+    streaming_filters = get_streaming_filters(region, function_name)
+    if not streaming_filters:
+        cmd = (
+          f'aws --region {region} logs put-subscription-filter '
+          f'--log-group-name "/aws/lambda/{function_name}" '
+          f'--filter-name NewRelicLogStreaming '
+          f'--filter-pattern "" '
+          f'--destination-arn "{function_arn}"')
+        response = subprocess.run(
+          cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        exit_code = response.returncode
+        if exit_code > 0:
+            raise Exception(response.stderr)
+    else:
+        error_msg = 'Log streaming already enabled.'
+        return OperationResult(function=function_name, region=region,
+                               failed=True, error=error_msg)
+
+    return OperationResult(function=function_name, region=region)
+
+
+def list_all_regions():
+    cmd = f'aws ec2 describe-regions'
+    response = subprocess.run(
+        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    exit_code = response.returncode
+    # error:most likely role does not exist
+    if exit_code > 0:
+        raise Exception(response.stderr)
+    else:
+        response = json.loads(response.stdout)
+        return [region['RegionName'] for region in response['Regions']]
+
+
+def create_integration_role(role_policy, nr_account_id):
+    role = get_role('NewRelicLambdaIntegrationRole')
+    if role is None:
+        print(f'Creating role [NewRelicLambdaIntegrationRole] '
+              f'with policy [{role_policy}] in you AWS account...')
+        create_role('NewRelicLambdaIntegrationRole', role_policy, nr_account_id)
+        role = get_role('NewRelicLambdaIntegrationRole')
+    return role
+
+
+def create_integration_account(nr_account_id, linked_account_name,
+                               role, api_client):
+
+    role_arn = role['Role']['Arn']
+    account = api_client.get_linked_account_by_name(linked_account_name)
+    if account is None:
+        account = api_client.create_linked_account(
+          role_arn, linked_account_name)
+
+        print(f'Cloud integrations account [{linked_account_name}] '
+              f'was created in New Relic account [{nr_account_id}] '
+              f'with role [{role_arn}].')
+    else:
+        print(f'Cloud integrations account '
+              f'[{account["name"]}] already exists '
+              f'in New Relic account [{nr_account_id}].')
+    return account
+
+
+def enable_lamba_integration(nr_account_id, linked_account_name, api_client):
+    account = api_client.get_linked_account_by_name(linked_account_name)
+    if account is None:
+        raise Exception(f'Could not find Cloud integrations account '
+                        f'[{linked_account_name}] in New Relic account '
+                        f'[{nr_account_id}].')
+
+    is_lambda_enabled = api_client.is_integration_enabled(
+      account['id'], 'lambda')
+
+    if is_lambda_enabled:
+        print(f'The AWS Lambda integration is already enabled in '
+              f'Cloud integrations account [{linked_account_name}] '
+              f'of New Relic account [{nr_account_id}].')
+    else:
+        integration = api_client.enable_integration(
+          account['id'], 'aws', 'lambda')
+
+        print(f'Integration [id={integration["id"]}, '
+              f'name={integration["name"]}] has been enabled in '
+              f'Cloud integrations account [{linked_account_name}] '
+              f' of New Relic account [{nr_account_id}].')
+
+
+def validate_linked_account(linked_account_name, api_client):
+    """
+    ensure that the aws account associated with the 'provider account',
+    if it exists, is the same as the aws account of the default aws-cli
+    profile configured in the local machine.
+    """
+    account = api_client.get_linked_account_by_name(linked_account_name)
+    if account is not None:
+        cmd = f'aws sts get-caller-identity'
+        response = subprocess.run(
+            cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        exit_code = response.returncode
+        if exit_code > 0:
+            raise Exception(response.stderr)
+        else:
+            user_info = json.loads(response.stdout)
+            if user_info['Account'] != account['externalId']:
+                raise Exception(
+                  f"The selected linked AWS account [{account['externalId']}] does not match "
+                  f"the AWS account of your default AWS-CLI profile [{user_info['Account']}].")
+
+
+def print_summary(failures, successes):
+    print('\n')
+    print("Failed actions:")
+    for result in failures:
+        print(f'  Function: {result.function}, Region: {result.region}, Error: {result.error}')
+
+    print('\n')
+    print("Completed actions:")
+    for result in successes:
+        print(f'  Function: {result.function}, Region: {result.region}')
+
+
+def setup_log_ingestion(nr_license_key, regions):
+    regions = regions if regions else list_all_regions()
+    results = []
+
+    print(f'Setting up "newrelic-log-ingestion" function in regions: {regions}')
+    for region in regions:
+        try:
+            function = get_function('newrelic-log-ingestion', region)
+            if function is None:
+                create_function(region, 'newrelic-log-ingestion', nr_license_key)
+                results.append(
+                  OperationResult(function='newrelic-log-ingestion',
+                                  region=region))
+            else:
+                error_msg = f'"newrelic-log-ingestion" function already exists.'
+                results.append(
+                  OperationResult(function='newrelic-log-ingestion',
+                                  region=region, failed=True,
+                                  error=error_msg))
+        except Exception as e:
+            error_msg = f'Failed to create "newrelic-log-ingestion" function: {e}.'
+            results.append(OperationResult(function='newrelic-log-ingestion',
+                                           region=region, failed=True,
+                                           error=error_msg))
+
+    return results
+
+
+def enable_lambda_monitoring(args):
+    """
+    Execute the full workflow to enable AWS lambda monitoring.
+    It will execute the following steps
+      - create a  Cloud monitoring account if it doesn't exist yet
+        - creates the required role in AWS
+      - enable the integration in New Relic
+      - install the Log ingestion function in AWS
+    """
+    nr_account_id = args['nr_account_id']
+    linked_account_name = args['linked_account_name']
+    role_policy = args['aws_role_policy']
+    nr_license_key = args['nr_license_key']
+    api_key = args['nr_api_key']
+    regions = args['regions']
+
+    results = []
+    api_client = NewRelicGraphQLClient(nr_account_id, api_key)
+    try:
+
+        validate_linked_account(linked_account_name, api_client)
+
+        role = create_integration_role(role_policy, nr_account_id)
+
+        create_integration_account(
+          nr_account_id, linked_account_name, role, api_client)
+
+        enable_lamba_integration(
+          nr_account_id, linked_account_name, api_client)
+
+        results = setup_log_ingestion(nr_license_key, regions)
+    except Exception as e:
+        error_msg = f'Failed to set up lambda integration: {e}'
+        results.append(OperationResult(failed=True, error=error_msg))
+    return results
+
+
+def setup_lambda_streaming(args):
+    """
+    Setup lambda log streaming.
+    This enables lambda instrumentation logs to be sent to New Relic
+    """
+    function_names = args['functions']
+    regions = args['regions']
+
+    results = []
+    regions = regions if regions else list_all_regions()
+    for region in regions:
+        for function_name in function_names:
+            print(f'Enabling log streaming for function : {function_name} '
+                  f'in region {region}')
+            try:
+                # try to find the function in the region.
+                # enable streaming only if we find it
+                function = get_function(function_name, region)
+                if function:
+                    result = create_log_subscription(region, function_name)
+                    results.append(result)
+                else:
+                    error_msg = f'Function {function_name} does not exist in region {region}'
+                    results.append(OperationResult(function=function_name,
+                                                   region=region, failed=True,
+                                                   error=error_msg))
+            except Exception as e:
+                results.append(OperationResult(function=function,
+                                               region=region, failed=True,
+                                               error=e))
+
+    return results
+
+
+def main():
+    main_parser = argparse.ArgumentParser(
+        usage='newrelic-cloud command [args]',
+        description='New Relic installer for AWS Lambda monitoring.')
+    subparsers = main_parser.add_subparsers(dest='command', required=True)
+    # lambda integration command
+    lambda_parser = subparsers.add_parser(
+      name='set-up-lambda-integration',
+      usage='newrelic-cloud set-up-lambda-integration [args]',
+      help=(
+        f'Link an AWS account to New Relic Cloud integrations and'
+        f'configure it for receiving Lambda monitoring data from agents'))
+
+    lambda_parser.add_argument(
+      '--nr-account-id', type=int, required=True,
+      help='Your New Relic account id.')
+    lambda_parser.add_argument(
+      '--aws-role-policy',
+      help=(
+        f'(Optional) Name of the policy to assign to the AWS role. '
+        f'If no value is supplied, uses the AWS default ReadOnlyAccess '
+        f'managed policy. If a value is supplied, creates a restricted policy '
+        f'(only Lambda permissions).'))
+    lambda_parser.add_argument(
+      '--linked-account-name', required=True,
+      help=(
+        f'Name of your AWS account that will appear in NR Cloud integrations. '
+        f'It is used to easily identify you account in NR.'
+        f'The cloud account will be created if it does not exist yet.'))
+    lambda_parser.add_argument(
+      '--nr-api-key', required=True,
+      help=(
+        f'Your New Relic user API key. '
+        f'Check the documentation on how to obtain an API key.'))
+    lambda_parser.add_argument(
+      '--nr-license-key', required=True,
+      help=(
+        f'Your New Relic license key. '
+        f'Check the documentation on how to obtain an license key.'))
+    lambda_parser.add_argument(
+      '--regions', nargs='+',
+      help=(
+        f'(Optional) List of (space-separated) regions where the log '
+        f'ingestion function will be installed.'))
+
+    # log ingestion command
+    log_ingestion_parser = subparsers.add_parser(
+      name='stream-lambda-logs',
+      usage='newrelic-cloud stream-lambda-logs [args]',
+      help='Configure log streaming for instrumented Lambda functions.')
+    log_ingestion_parser.add_argument(
+      '--functions', required=True, nargs='+',
+      help='List of (space-separated) function names to set up log streaming.')
+    log_ingestion_parser.add_argument(
+      '--regions', nargs='+',
+      help=(
+        f'(Optional) List of (space-separated) regions where the script will '
+        f'try to setup the log streaming for the given functions. '
+        f'If no value is supplied, it will use all available regions.'))
+
+    args = main_parser.parse_args()
+    results = []
+    if args.command == 'set-up-lambda-integration':
+        results = enable_lambda_monitoring(vars(args))
+    elif args.command == 'stream-lambda-logs':
+        results = setup_lambda_streaming(vars(args))
+
+    failures = (result for result in results if result.failed)
+    sucesses = (result for result in results if not result.failed)
+    print_summary(failures, sucesses)
+
+
+if __name__ == '__main__':
+    main()
