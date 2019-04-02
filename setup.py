@@ -4,6 +4,7 @@ from setuptools import setup, find_packages
 setup(
     name='iopipe_install',
     version='0.1',
+    python_requires='>=3.3',
     packages=find_packages(),
     install_requires=[
         'click',
