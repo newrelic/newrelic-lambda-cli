@@ -3,6 +3,7 @@ import boto3
 import collections
 import itertools
 import json
+import shutil
 
 from . import layers
 from .combine_dict import combine_dict
@@ -58,6 +59,45 @@ def get_lambda_client(region):
         boto_kwargs['region_name'] = region
     AwsLambda = boto3.client('lambda', **boto_kwargs)
     return AwsLambda
+
+def list_functions(region, quiet, filter_choice):
+    """ This lists *and* formats for display.
+        it used to be in cli.py because of the display portions,
+        but do-not-repeat-yourself semantics makes it easier
+        to maintain it here in update.py :shrug: -Erica """
+    AwsLambda = get_lambda_client(region)
+    coltmpl = "{:<64}\t{:<12}\t{:>12}\n"
+    conscols, consrows = shutil.get_terminal_size((80,50))
+    # set all if the filter_choice is "all" or there is no filter_choice active.
+    all = filter_choice == "all" or not filter_choice
+
+    if not quiet:
+        yield coltmpl.format("Function Name", "Runtime", "Installed")
+        # ascii table limbo line ---
+        yield ("{:-^%s}\n" % (str(conscols),)).format("")
+
+    next_marker = None
+    while True:
+        list_func_args = {'MaxItems': consrows}
+        if next_marker:
+            list_func_args = {'Marker': next_marker, 'MaxItems': consrows}
+        func_resp = AwsLambda.list_functions(**list_func_args)
+        next_marker = func_resp.get("NextMarker", None)
+        funcs = func_resp.get("Functions", [])
+
+        for f in funcs:
+            runtime = f.get("Runtime")
+            new_handler = RUNTIME_CONFIG.get(runtime, {}).get('Handler', None)
+            if f.get("Handler") == new_handler:
+                f["-x-iopipe-enabled"] = True
+                if not all and filter_choice != "installed":
+                    continue
+            elif not all and filter_choice == "installed":
+                continue
+            yield coltmpl.format(f.get("FunctionName"), f.get("Runtime"), f.get("-x-iopipe-enabled", False))
+
+        if not next_marker:
+            break
 
 class MultipleLayersException(Exception):
     pass

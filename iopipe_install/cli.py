@@ -22,44 +22,6 @@ def check_token(ctx, param, value):
     except:
         raise click.BadParameter('token invalid.')
 
-def list_functions(region, quiet, filter_choice):
-    coltmpl = "{:<64}\t{:<12}\t{:>12}\n"
-    conscols, consrows = shutil.get_terminal_size((80,50))
-    # set all if the filter_choice is "all" or there is no filter_choice active.
-    all = filter_choice == "all" or not filter_choice
-
-    if not quiet:
-        yield coltmpl.format("Function Name", "Runtime", "Installed")
-        # ascii table limbo line ---
-        yield ("{:-^%s}\n" % (str(conscols),)).format("")
-
-    boto_kwargs = {}
-    if region:
-        boto_kwargs['region_name'] = region
-    AwsLambda = boto3.client('lambda', **boto_kwargs)
-    next_marker = None
-    while True:
-        list_func_args = {'MaxItems': consrows}
-        if next_marker:
-            list_func_args = {'Marker': next_marker, 'MaxItems': consrows}
-        func_resp = AwsLambda.list_functions(**list_func_args)
-        next_marker = func_resp.get("NextMarker", None)
-        funcs = func_resp.get("Functions", [])
-
-        for f in funcs:
-            runtime = f.get("Runtime")
-            new_handler = update.RUNTIME_CONFIG.get(runtime, {}).get('Handler', None)
-            if f.get("Handler") == new_handler:
-                f["-x-iopipe-enabled"] = True
-                if not all and filter_choice != "installed":
-                    continue
-            elif not all and filter_choice == "installed":
-                continue
-            yield coltmpl.format(f.get("FunctionName"), f.get("Runtime"), f.get("-x-iopipe-enabled", False))
-
-        if not next_marker:
-            break
-
 @click.command(name="template")
 @click.option("--input", "-i", default='template.json', help="Cloudformation JSON file.")
 @click.option("--function", "-f", required=True, metavar="<arn>", help="Lambda function name or ARN")
@@ -125,7 +87,7 @@ def lambda_list_functions(region, quiet, filter):
     # us enough control here to change the variable name? -Erica
     buffer = []
     _, consrows = shutil.get_terminal_size((80,50))
-    functions_iter = list_functions(region, quiet, filter)
+    functions_iter = update.list_functions(region, quiet, filter)
     for idx, line in enumerate(functions_iter):
         buffer.append(line)
 
