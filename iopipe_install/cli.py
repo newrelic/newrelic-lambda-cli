@@ -174,3 +174,5 @@ def main():
         print("You must specify a region. Have you run `aws configure`?")
     except botocore.exceptions.NoCredentialsError:
         print("No AWS credentials configured. Have you run `aws configure`?")
+    except botocore.exceptions.NoRegionError:
+        print("No AWS region specified. Run `aws configure` or set env var AWS_DEFAULT_REGION.")
