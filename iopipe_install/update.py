@@ -173,7 +173,6 @@ def remove_function_api(region, function_arn, layer_arn):
         print("IOpipe installation (via layers) not auto-detected for the specified function.")
         print("No IOPIPE_HANDLER environment variable found.")
         return
-    token = info.get('Configuration', {}).get('Environment', {}).get('Variables', {}).get('IOPIPE_TOKEN')
     try:
         del info['Configuration']['Environment']['Variables']['IOPIPE_HANDLER']
     except KeyError:
