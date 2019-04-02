@@ -12,6 +12,8 @@ import shutil
 
 IOPIPE_FF_CLOUDFORMATION = os.environ.get('IOPIPE_FF_CLOUDFORMATION')
 
+def all_lambda_regions():
+    return boto3.session.Session().get_available_regions('lambda')
 
 def check_token(ctx, param, value):
     try:
@@ -20,7 +22,7 @@ def check_token(ctx, param, value):
     except:
         raise click.BadParameter('token invalid.')
 
-def list_functions(quiet, filter_choice):
+def list_functions(region, quiet, filter_choice):
     coltmpl = "{:<64}\t{:<12}\t{:>12}\n"
     conscols, consrows = shutil.get_terminal_size((80,50))
     # set all if the filter_choice is "all" or there is no filter_choice active.
@@ -31,7 +33,10 @@ def list_functions(quiet, filter_choice):
         # ascii table limbo line ---
         yield ("{:-^%s}\n" % (str(conscols),)).format("")
 
-    AwsLambda = boto3.client('lambda')
+    boto_kwargs = {}
+    if region:
+        boto_kwargs['region_name'] = region
+    AwsLambda = boto3.client('lambda', **boto_kwargs)
     next_marker = None
     while True:
         list_func_args = {'MaxItems': consrows}
@@ -71,14 +76,15 @@ def cf_update_stack(stack_id, function, token):
     update.update_cloudformation_stack(stack_id, function, token)
 
 @click.command(name="install")
+@click.option("--region", "-r", help="AWS region", type=click.Choice(all_lambda_regions()))
 @click.option("--function", "-f", required=True, help="Lambda Function name")
 @click.option("--layer-arn", "-l", help="Layer ARN for IOpipe library (default: auto-detect)")
 @click.option("--verbose", "-v", help="Print new function configuration upon completion.", is_flag=True)
 @click.option("--java-type", "-j", help="Specify Java handler type, required for Java functions.", type=click.Choice(['request', 'stream']))
 @click.option("--token", "-t", envvar="IOPIPE_TOKEN", required=True, help="IOpipe Token", callback=check_token)
-def api_install(function, layer_arn, verbose, token, java_type):
+def api_install(region, function, layer_arn, verbose, token, java_type):
     try:
-        resp = update.apply_function_api(function, layer_arn, token, java_type)
+        resp = update.apply_function_api(region, function, layer_arn, token, java_type)
         if not resp:
             click.echo("\nInstallation failed.")
             return
@@ -93,12 +99,13 @@ def api_install(function, layer_arn, verbose, token, java_type):
         print("Error in communication to AWS. Check aws-cli configuration.")
 
 @click.command(name="uninstall")
+@click.option("--region", "-r", help="AWS region", type=click.Choice(all_lambda_regions()))
 @click.option("--function", "-f", required=True, help="Lambda Function name")
 @click.option("--layer-arn", "-l", help="Layer ARN for IOpipe library (default: auto-detect)")
 @click.option("--verbose", "-v", help="Print new function configuration upon completion.", is_flag=True)
-def api_uninstall(function, layer_arn, verbose):
+def api_uninstall(region, function, layer_arn, verbose):
     try:
-        resp = update.remove_function_api(function, layer_arn)
+        resp = update.remove_function_api(region, function, layer_arn)
         if not resp:
             click.echo("\nRemoval failed.")
             return
@@ -109,15 +116,16 @@ def api_uninstall(function, layer_arn, verbose):
         print ("Error in communication to AWS. Check aws-cli configuration.")
 
 @click.command(name="list")
+@click.option("--region", "-r", help="AWS region", type=click.Choice(all_lambda_regions()))
 @click.option("--quiet", "-q", help="Skip headers", is_flag=True)
 @click.option("--filter", "-f", help="Apply a filter to the list.", type=click.Choice(['all', 'installed', 'not-installed']))
-def lambda_list_functions(quiet, filter):
+def lambda_list_functions(region, quiet, filter):
     # this use of `filter` worries me as it's a keyword,
     # but it actually works? Clickly doesn't give
     # us enough control here to change the variable name? -Erica
     buffer = []
     _, consrows = shutil.get_terminal_size((80,50))
-    functions_iter = list_functions(quiet, filter)
+    functions_iter = list_functions(region, quiet, filter)
     for idx, line in enumerate(functions_iter):
         buffer.append(line)
 
@@ -171,8 +179,6 @@ def main():
     try:
         cli()
     except botocore.exceptions.NoRegionError:
-        print("You must specify a region. Have you run `aws configure`?")
+        print("You must specify a region. Pass `--region` or run `aws configure`.")
     except botocore.exceptions.NoCredentialsError:
-        print("No AWS credentials configured. Have you run `aws configure`?")
-    except botocore.exceptions.NoRegionError:
-        print("No AWS region specified. Run `aws configure` or set env var AWS_DEFAULT_REGION.")
+        print("No AWS credentials configured. Did you run `aws configure`?")

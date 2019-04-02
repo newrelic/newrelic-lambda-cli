@@ -7,9 +7,6 @@ import json
 from . import layers
 from .combine_dict import combine_dict
 
-AwsLambda = boto3.client('lambda')
-CloudFormation = boto3.client('cloudformation')
-
 IOPIPE_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:5558675309"
 RUNTIME_CONFIG = {
     'nodejs': {
@@ -45,15 +42,22 @@ RUNTIME_CONFIG = {
 def get_arn_prefix():
     return IOPIPE_ARN_PREFIX_TEMPLATE % (get_region(), )
 
-def get_region():
-    session = boto3.session.Session()
+def get_region(region):
+    boto_kwargs = {}
+    if region:
+        boto_kwargs['region_name'] = region
+    session = boto3.session.Session(**boto_kwargs)
     return session.region_name
 
-def get_layers(runtime):
-    return layers.index(get_region(), runtime)
+def get_layers(region, runtime):
+    return layers.index(get_region(region), runtime)
 
-def list_functions():
-    AwsLambda.list_functions()
+def get_lambda_client(region):
+    boto_kwargs = {}
+    if region:
+        boto_kwargs['region_name'] = region
+    AwsLambda = boto3.client('lambda', **boto_kwargs)
+    return AwsLambda
 
 class MultipleLayersException(Exception):
     pass
@@ -61,7 +65,8 @@ class MultipleLayersException(Exception):
 class UpdateLambdaException(Exception):
     pass
 
-def apply_function_api(function_arn, layer_arn, token, java_type):
+def apply_function_api(region, function_arn, layer_arn, token, java_type):
+    AwsLambda = get_lambda_client(region)
     info = AwsLambda.get_function(FunctionName=function_arn)
     runtime = info.get('Configuration', {}).get('Runtime', '')
     orig_handler = info.get('Configuration', {}).get('Handler')
@@ -83,7 +88,7 @@ def apply_function_api(function_arn, layer_arn, token, java_type):
         iopipe_layers = [layer_arn]
     else:
         # compatible layers:
-        disco_layers = get_layers(runtime)
+        disco_layers = get_layers(region, runtime)
         if len(iopipe_layers) > 1:
             print("Discovered layers for runtime (%s)" % (runtime,))
             for layer in disco_layers:
@@ -108,7 +113,8 @@ def apply_function_api(function_arn, layer_arn, token, java_type):
         update_kwargs['Environment']['Variables']['IOPIPE_HANDLER'] = orig_handler
     return AwsLambda.update_function_configuration(**update_kwargs)
 
-def remove_function_api(function_arn, layer_arn):
+def remove_function_api(region, function_arn, layer_arn):
+    AwsLambda = get_lambda_client(region)
     info = AwsLambda.get_function(FunctionName=function_arn)
     runtime = info.get('Configuration', {}).get('Runtime', '')
     orig_handler = info.get('Configuration', {}).get('Handler', '')
@@ -155,6 +161,7 @@ def remove_function_api(function_arn, layer_arn):
     )
 
 def get_stack_ids():
+    CloudFormation = boto3.client('cloudformation')
     def stack_filter(stack_id):
         resources = CloudFormation.list_stack_resources(
             StackName=stack_id
@@ -177,6 +184,7 @@ def get_stack_ids():
     return filter(stack_filter, itertools.chain(*stack_id_pages))
 
 def get_template(stackid):
+    CloudFormation = boto3.client('cloudformation')
     # DOC get_template: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/cloudformation.html#CloudFormation.Client.get_template
     template_body = CloudFormation.get_template(StackName=stackid)
     #    example_get_template_body = '''
@@ -238,6 +246,8 @@ def update_cloudformation_file(filename, function_arn, output, token):
             yml.write(json.dumps(cf_template, indent=2))
 
 def update_cloudformation_stack(stack_id, function_arn):
+    CloudFormation = boto3.client('cloudformation')
+
     #stackid = get_stack_ids(function_arn)
     orig_template=get_template(stack_id)
     template_body=modify_cloudformation(orig_template, function_arn)
