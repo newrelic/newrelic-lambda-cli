@@ -62,26 +62,26 @@ def list_functions(region, quiet, filter_choice):
 
 @click.command(name="template")
 @click.option("--input", "-i", default='template.json', help="Cloudformation JSON file.")
-@click.option("--function", "-f", required=True, help="Lambda Function name")
+@click.option("--function", "-f", required=True, metavar="<arn>", help="Lambda function name or ARN")
 @click.option("--output", "-o", default='-', help="Output file for modified template.")
-@click.option("--token", "-t", envvar="IOPIPE_TOKEN", required=True, help="IOpipe Token", callback=check_token)
+@click.option("--token", "-t", envvar="IOPIPE_TOKEN", required=True, metavar="<token>", help="IOpipe Token", callback=check_token)
 def cf_update_template(template, function, output, token):
     update.update_cloudformation_file(template, function, output, token)
 
 @click.command(name="update")
 @click.option("--stack-id", "-s", required=True, help="Cloudformation Stack ID.")
-@click.option("--function", "-f", required=True, help="Lambda Function name")
-@click.option("--token", "-t", envvar="IOPIPE_TOKEN", required=True, help="IOpipe Token", callback=check_token)
+@click.option("--function", "-f", required=True, metavar="<arn>", help="Lambda function name or ARN")
+@click.option("--token", "-t", envvar="IOPIPE_TOKEN", required=True, metavar="<token>", help="IOpipe Token", callback=check_token)
 def cf_update_stack(stack_id, function, token):
     update.update_cloudformation_stack(stack_id, function, token)
 
 @click.command(name="install")
 @click.option("--region", "-r", help="AWS region", type=click.Choice(all_lambda_regions()))
-@click.option("--function", "-f", required=True, help="Lambda Function name")
-@click.option("--layer-arn", "-l", help="Layer ARN for IOpipe library (default: auto-detect)")
+@click.option("--function", "-f", required=True, metavar="<arn>", help="Lambda function name or ARN")
+@click.option("--layer-arn", "-l", metavar="<arn>", help="Layer ARN for IOpipe library (default: auto-detect)")
 @click.option("--verbose", "-v", help="Print new function configuration upon completion.", is_flag=True)
 @click.option("--java-type", "-j", help="Specify Java handler type, required for Java functions.", type=click.Choice(['request', 'stream']))
-@click.option("--token", "-t", envvar="IOPIPE_TOKEN", required=True, help="IOpipe Token", callback=check_token)
+@click.option("--token", "-t", envvar="IOPIPE_TOKEN", required=True, metavar="<token>", help="IOpipe Token", callback=check_token)
 def api_install(region, function, layer_arn, verbose, token, java_type):
     try:
         resp = update.apply_function_api(region, function, layer_arn, token, java_type)
@@ -100,8 +100,8 @@ def api_install(region, function, layer_arn, verbose, token, java_type):
 
 @click.command(name="uninstall")
 @click.option("--region", "-r", help="AWS region", type=click.Choice(all_lambda_regions()))
-@click.option("--function", "-f", required=True, help="Lambda Function name")
-@click.option("--layer-arn", "-l", help="Layer ARN for IOpipe library (default: auto-detect)")
+@click.option("--function", "-f", required=True, metavar="<arn>", help="Lambda function name or ARN")
+@click.option("--layer-arn", "-l", metavar="<arn>", help="Layer ARN for IOpipe library (default: auto-detect)")
 @click.option("--verbose", "-v", help="Print new function configuration upon completion.", is_flag=True)
 def api_uninstall(region, function, layer_arn, verbose):
     try:
