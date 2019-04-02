@@ -39,8 +39,8 @@ RUNTIME_CONFIG = {
 }
 
 
-def get_arn_prefix():
-    return IOPIPE_ARN_PREFIX_TEMPLATE % (get_region(), )
+def get_arn_prefix(region):
+    return IOPIPE_ARN_PREFIX_TEMPLATE % (get_region(region), )
 
 def get_region(region):
     boto_kwargs = {}
@@ -160,19 +160,16 @@ def remove_function_api(region, function_arn, layer_arn):
     new_handler = RUNTIME_CONFIG.get(runtime, {}).get('Handler', None)
 
     if runtime == 'provider' or runtime not in RUNTIME_CONFIG.keys():
-        print("Unsupported Lambda runtime: %s" % (runtime,))
-        return
+        raise UpdateLambdaException("Unsupported Lambda runtime: %s" % (runtime,))
     if orig_handler != new_handler:
-        print("IOpipe installation (via layers) not auto-detected for the specified function.")
-        print("Unrecognized handler in deployed function.")
-        return
+        raise UpdateLambdaException("IOpipe installation (via layers) not auto-detected for the specified function.\n" \
+            "Unrecognized handler in deployed function.")
 
     env_handler = info.get('Configuration', {}).get('Environment', {}).get('Variables', {}).get('IOPIPE_HANDLER')
     env_alt_handler = info.get('Configuration', {}).get('Environment', {}).get('Variables', {}).get('IOPIPE_GENERIC_HANDLER')
     if not env_handler or env_alt_handler:
-        print("IOpipe installation (via layers) not auto-detected for the specified function.")
-        print("No IOPIPE_HANDLER environment variable found.")
-        return
+        raise UpdateLambdaException("IOpipe installation (via layers) not auto-detected for the specified function.\n" + \
+            "No IOPIPE_HANDLER environment variable found.")
     try:
         del info['Configuration']['Environment']['Variables']['IOPIPE_HANDLER']
     except KeyError:
@@ -188,7 +185,7 @@ def remove_function_api(region, function_arn, layer_arn):
 
     layers = info.get('Configuration', {}).get('Layers', [])
     for layer_idx, layer_arn in enumerate(layers):
-        if layer_arn['Arn'].startswith(get_arn_prefix()):
+        if layer_arn['Arn'].startswith(get_arn_prefix(region)):
             del layers[layer_idx]
 
     return AwsLambda.update_function_configuration(

@@ -45,20 +45,13 @@ def cf_update_stack(stack_id, function, token):
 @click.option("--java-type", "-j", help="Specify Java handler type, required for Java functions.", type=click.Choice(['request', 'stream']))
 @click.option("--token", "-t", envvar="IOPIPE_TOKEN", required=True, metavar="<token>", help="IOpipe Token", callback=check_token)
 def api_install(region, function, layer_arn, verbose, token, java_type):
-    try:
-        resp = update.apply_function_api(region, function, layer_arn, token, java_type)
-        if not resp:
-            click.echo("\nInstallation failed.")
-            return
-        if verbose:
-            click.echo(json.dumps(resp, indent=2))
-        click.echo("\nInstall complete.")
-    except update.MultipleLayersException:
-        print("Multiple layers found. Pass --layer-arn to specify layer ARN")
-    except update.UpdateLambdaException as e:
-        print(e);
-    except boto3.exceptions.Boto3Error:
-        print("Error in communication to AWS. Check aws-cli configuration.")
+    resp = update.apply_function_api(region, function, layer_arn, token, java_type)
+    if not resp:
+        click.echo("\nInstallation failed.")
+        return
+    if verbose:
+        click.echo(json.dumps(resp, indent=2))
+    click.echo("\nInstall complete.")
 
 @click.command(name="uninstall")
 @click.option("--region", "-r", help="AWS region", type=click.Choice(all_lambda_regions()))
@@ -66,16 +59,13 @@ def api_install(region, function, layer_arn, verbose, token, java_type):
 @click.option("--layer-arn", "-l", metavar="<arn>", help="Layer ARN for IOpipe library (default: auto-detect)")
 @click.option("--verbose", "-v", help="Print new function configuration upon completion.", is_flag=True)
 def api_uninstall(region, function, layer_arn, verbose):
-    try:
-        resp = update.remove_function_api(region, function, layer_arn)
-        if not resp:
-            click.echo("\nRemoval failed.")
-            return
-        if verbose:
-            click.echo(json.dumps(resp, indent=2))
-        click.echo("\nRemoval of IOpipe layers and configuration complete.")
-    except boto3.exceptions.Boto3Error:
-        print ("Error in communication to AWS. Check aws-cli configuration.")
+    resp = update.remove_function_api(region, function, layer_arn)
+    if not resp:
+        click.echo("\nRemoval failed.")
+        return
+    if verbose:
+        click.echo(json.dumps(resp, indent=2))
+    click.echo("\nRemoval of IOpipe layers and configuration complete.")
 
 @click.command(name="list")
 @click.option("--region", "-r", help="AWS region", type=click.Choice(all_lambda_regions()))
@@ -144,3 +134,10 @@ def main():
         print("You must specify a region. Pass `--region` or run `aws configure`.")
     except botocore.exceptions.NoCredentialsError:
         print("No AWS credentials configured. Did you run `aws configure`?")
+    except update.MultipleLayersException:
+        print("Multiple layers found. Pass --layer-arn to specify layer ARN")
+    except update.UpdateLambdaException as e:
+        print(e);
+    except boto3.exceptions.Boto3Error:
+        print("Error in communication to AWS. Check aws-cli configuration.")
+
