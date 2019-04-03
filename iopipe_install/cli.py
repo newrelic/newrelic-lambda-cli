@@ -75,10 +75,22 @@ def lambda_list_functions(region, quiet, filter):
     # this use of `filter` worries me as it's a keyword,
     # but it actually works? Clickly doesn't give
     # us enough control here to change the variable name? -Erica
+    coltmpl = "{:<64}\t{:<12}\t{:>12}\n"
+    conscols, consrows = shutil.get_terminal_size((80,50))
+
+    def _header():
+        if not quiet:
+            yield coltmpl.format("Function Name", "Runtime", "Installed")
+            # ascii table limbo line ---
+            yield ("{:-^%s}\n" % (str(conscols),)).format("")
+
+    def _format(funcs):
+        for f in funcs:
+            yield coltmpl.format(f.get("FunctionName"), f.get("Runtime"), f.get("-x-iopipe-enabled", False))
+
     buffer = []
-    _, consrows = shutil.get_terminal_size((80,50))
     functions_iter = update.list_functions(region, quiet, filter)
-    for idx, line in enumerate(functions_iter):
+    for idx, line in enumerate(itertools.chain(_header(), _format(functions_iter))):
         buffer.append(line)
 
         # This is designed to ONLY page when there's
@@ -86,11 +98,11 @@ def lambda_list_functions(region, quiet, filter):
         # If we've buffered as many lines as the height of the console,
         # then start a pager and empty the buffer.
         if idx > 0 and idx % consrows == 0:
-            click.echo_via_pager(itertools.chain(iter(buffer), functions_iter))
+            click.echo_via_pager(itertools.chain(iter(buffer), _format(functions_iter)))
             buffer = []
             break
     # Print all lines for non-paged results.
-    for line in buffer:
+    for line in iter(buffer):
         click.echo(line, nl=False)
 
 @click.group()
