@@ -17,17 +17,12 @@ def click_groups(group):
     cli_awslambda.register(group)
     cli_stack.register(group)
 
+@utils.catch_boto_errors
 def main():
-    click_groups(cli_group)
     try:
+        click_groups(cli_group)
         cli_group()
-    except botocore.exceptions.NoRegionError:
-        print("You must specify a region. Pass `--region` or run `aws configure`.")
-    except botocore.exceptions.NoCredentialsError:
-        print("No AWS credentials configured. Did you run `aws configure`?")
     except awslambda.MultipleLayersException:
-        print("Multiple layers found. Pass --layer-arn to specify layer ARN")
+        utils.error("Multiple layers found. Pass --layer-arn to specify layer ARN")
     except awslambda.UpdateLambdaException as e:
-        print(e)
-    except boto3.exceptions.Boto3Error:
-        print("Error in communication to AWS. Check aws-cli configuration.")
+        utils.error(e)

@@ -1,8 +1,10 @@
 from . import layers
 
 import boto3
+import botocore
 import click
 import jwt
+import sys
 
 IOPIPE_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:5558675309"
 RUNTIME_CONFIG = {
@@ -35,10 +37,22 @@ RUNTIME_CONFIG = {
     }
 }
 
+def catch_boto_errors(func):
+    def _boto_error_wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except botocore.exceptions.NoRegionError:
+            error("You must specify a region. Pass `--region` or run `aws configure`.""You must specify a region. Pass `--region` or run `aws configure`.")
+        except botocore.exceptions.NoCredentialsError:
+            error("No AWS credentials configured. Did you run `aws configure`?")
+        except botocore.exceptions.BotoCoreError as e:
+            error("Unexpected AWS error: %s" % e)
+    return _boto_error_wrapper
 
 def get_arn_prefix(region):
     return IOPIPE_ARN_PREFIX_TEMPLATE % (get_region(region), )
 
+@catch_boto_errors
 def get_region(region):
     boto_kwargs = {}
     if region:
@@ -49,6 +63,7 @@ def get_region(region):
 def get_layers(region, runtime):
     return layers.index(get_region(region), runtime)
 
+@catch_boto_errors
 def get_lambda_client(region):
     boto_kwargs = {}
     if region:
@@ -56,6 +71,7 @@ def get_lambda_client(region):
     AwsLambda = boto3.client('lambda', **boto_kwargs)
     return AwsLambda
 
+@catch_boto_errors
 def all_lambda_regions():
     return boto3.session.Session().get_available_regions('lambda')
 
@@ -67,3 +83,7 @@ def check_token(ctx, param, value):
         return value
     except:
         raise click.BadParameter('token invalid.')
+
+def error(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+    sys.exit(1)
