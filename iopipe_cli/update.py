@@ -76,8 +76,7 @@ def list_functions(region, quiet, filter_choice):
 
         for f in funcs:
             runtime = f.get("Runtime")
-            runtime_handler = RUNTIME_CONFIG.get(runtime, {}).get('Handler', None)
-            if f.get("Handler") == runtime_handler:
+            if is_valid_handler(runtime, f.get("Handler")):
                 f["-x-iopipe-enabled"] = True
                 if not all and filter_choice != "installed":
                     continue
@@ -142,6 +141,17 @@ def apply_function_api(region, function_arn, layer_arn, token, java_type):
         update_kwargs['Environment']['Variables']['IOPIPE_HANDLER'] = orig_handler
     return AwsLambda.update_function_configuration(**update_kwargs)
 
+def is_valid_handler(runtime, handler):
+    runtime_handler = RUNTIME_CONFIG.get(runtime, {}).get('Handler', None)
+    if isinstance(runtime_handler, dict):
+        for _, valid_handler in runtime_handler.items():
+            if handler == valid_handler:
+                return True
+        return False
+    elif handler == runtime_handler:
+        return True
+    return False
+
 def remove_function_api(region, function_arn, layer_arn):
     AwsLambda = get_lambda_client(region)
     info = AwsLambda.get_function(FunctionName=function_arn)
@@ -153,21 +163,11 @@ def remove_function_api(region, function_arn, layer_arn):
         raise UpdateLambdaException("Unsupported Lambda runtime: %s" % (runtime,))
 
     # Detect non-IOpipe handler and error if necessary.
-    def _err_invalid_handler():
+    if not is_valid_handler(runtime, orig_handler):
         raise UpdateLambdaException(
             "IOpipe installation (via layers) not auto-detected for the specified function.\n" \
             "Error: Unrecognized handler in deployed function."
         )
-    if isinstance(runtime_handler, dict):
-        def _has_valid_handler():
-            for _, valid_handler in runtime_handler.items():
-                if orig_handler == valid_handler:
-                    return True
-            return False
-        if not _has_valid_handler():
-            _err_invalid_handler()
-    elif orig_handler != runtime_handler:
-        _err_invalid_handler()
 
     env_handler = info.get('Configuration', {}).get('Environment', {}).get('Variables', {}).get('IOPIPE_HANDLER')
     env_alt_handler = info.get('Configuration', {}).get('Environment', {}).get('Variables', {}).get('IOPIPE_GENERIC_HANDLER')
