@@ -1,7 +1,8 @@
 from . import layers
 
 import boto3
-
+import click
+import jwt
 
 IOPIPE_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:5558675309"
 RUNTIME_CONFIG = {
@@ -54,3 +55,15 @@ def get_lambda_client(region):
         boto_kwargs['region_name'] = region
     AwsLambda = boto3.client('lambda', **boto_kwargs)
     return AwsLambda
+
+def all_lambda_regions():
+    return boto3.session.Session().get_available_regions('lambda')
+
+def check_token(ctx, param, value):
+    if not hasattr(jwt, 'PyJWT'):
+        raise Exception("Incompatible `jwt` library detected. Must have `pyjwt` installed.")
+    try:
+        jwt.decode(value, verify=False)
+        return value
+    except:
+        raise click.BadParameter('token invalid.')
