@@ -16,6 +16,8 @@ def all_lambda_regions():
     return boto3.session.Session().get_available_regions('lambda')
 
 def check_token(ctx, param, value):
+    if not hasattr(jwt, 'PyJWT'):
+        raise Exception("Incompatible `jwt` library detected. Must have `pyjwt` installed.")
     try:
         jwt.decode(value, verify=False)
         return value 
