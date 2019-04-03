@@ -11,8 +11,9 @@ setup(
         'boto3',
         'requests'
     ],
-    entry_points='''
-        [console_scripts]
-        iopipe=iopipe_cli.cli:main
-    ''',
+    entry_points={
+        'console_scripts': [
+            'iopipe = iopipe_cli.cli:main',
+        ],
+    }
 )
