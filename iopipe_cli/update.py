@@ -76,8 +76,8 @@ def list_functions(region, quiet, filter_choice):
 
         for f in funcs:
             runtime = f.get("Runtime")
-            new_handler = RUNTIME_CONFIG.get(runtime, {}).get('Handler', None)
-            if f.get("Handler") == new_handler:
+            runtime_handler = RUNTIME_CONFIG.get(runtime, {}).get('Handler', None)
+            if f.get("Handler") == runtime_handler:
                 f["-x-iopipe-enabled"] = True
                 if not all and filter_choice != "installed":
                     continue
@@ -99,16 +99,16 @@ def apply_function_api(region, function_arn, layer_arn, token, java_type):
     info = AwsLambda.get_function(FunctionName=function_arn)
     runtime = info.get('Configuration', {}).get('Runtime', '')
     orig_handler = info.get('Configuration', {}).get('Handler')
-    new_handler = RUNTIME_CONFIG.get(runtime, {}).get('Handler')
+    runtime_handler = RUNTIME_CONFIG.get(runtime, {}).get('Handler')
 
     if runtime.startswith('java'):
         if not java_type:
             raise UpdateLambdaException("Must specify a handler type for java functions.")
-        new_handler = RUNTIME_CONFIG.get(runtime, {}).get('Handler', {}).get(java_type)
+        runtime_handler = RUNTIME_CONFIG.get(runtime, {}).get('Handler', {}).get(java_type)
 
     if runtime == 'provider' or runtime not in RUNTIME_CONFIG.keys():
         raise UpdateLambdaException("Unsupported Lambda runtime: %s" % (runtime,))
-    if orig_handler == new_handler:
+    if orig_handler == runtime_handler:
         raise UpdateLambdaException("Already configured.")
 
     iopipe_layers = []
@@ -128,7 +128,7 @@ def apply_function_api(region, function_arn, layer_arn, token, java_type):
 
     update_kwargs = {
         'FunctionName': function_arn,
-        'Handler': new_handler,
+        'Handler': runtime_handler,
         'Environment': {
             'Variables': {
                 'IOPIPE_TOKEN': token
@@ -240,18 +240,18 @@ def modify_cloudformation(template_body, function_arn, token):
     func_template = template_body.get('Resources', {}).get(function_arn, {})
     orig_handler = func_template.get('Properties', {}).get('Handler', None)
     runtime = func_template.get('Properties', {}).get('Runtime', None)
-    new_handler = RUNTIME_CONFIG.get(runtime, {}).get('Handler', None)
+    runtime_handler = RUNTIME_CONFIG.get(runtime, {}).get('Handler', None)
 
     if runtime == 'provider' or runtime not in RUNTIME_CONFIG.keys():
         raise UpdateLambdaException("Unsupported Lambda runtime: %s" % (runtime,))
-    if orig_handler == new_handler:
+    if orig_handler == runtime_handler:
         raise UpdateLambdaException("Already configured.")
 
     updates = {
         'Resources': {
             function_arn: {
                 'Properties': {
-                    'Handler': new_handler
+                    'Handler': runtime_handler
                 },
                 'Environment': {
                     'Variables': {
