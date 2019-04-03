@@ -9,7 +9,7 @@ for the AWS CLI.
 On your system CLI:
 
 ```
-pip3 install git+https://github.com/iopipe/iopipe-install.git
+pip3 install git+https://github.com/iopipe/iopipe-cli.git
 ```
 
 This tool assumes the AWS cli tool is configured correctly. Install and configure the AWS CLI as such:
@@ -26,13 +26,13 @@ aws configure
 
 Refer to the [AWS CLI User Guide](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) for advanced configuration options and support for the aws cli tool.
 
-# Installing IOpipe with `iopipe-install`
+# Installing IOpipe for functions with `iopipe`
 
 The easiest way to update a function is to update it with
 the AWS Lambda API:
 
 ```
-iopipe-install lambda install --function <name or arn> --token <IOPIPE_TOKEN>
+iopipe lambda install --function <name or arn> --token <IOPIPE_TOKEN>
 ```
 
 The token may also be passed by the CLI's environment variable, `IOPIPE_TOKEN`.
@@ -42,16 +42,11 @@ If your Lambda has been deployed by Cloudformation, this method will cause stack
 
 # Troubleshooting
 
-## Error: `botocore.exceptions.NoRegionError: You must specify a region.`
+## MacOS X: cannot find `iopipe` after installation
 
-The AWS cli tool is not configured for a region. You may run `aws configure` or set the environment variable `AWS_DEFAULT_REGION` on the cli.
+Make sure your python script bin directory is included in your path.
 
-To set the env var on the cli:
+The [documentation for the AWS cli](https://docs.aws.amazon.com/cli/latest/userguide/install-macos.html#awscli-install-osx-path) covers
+this topic and describes a solution.
 
-`export AWS_DEFAULT_REGION=us-east-1`
 
-## Error: `botocore.exceptions.NoCredentialsError: Unable to locate credentials`
-
-The AWS cli tool is not configured for an AWS account. You may run `aws configure` to configure your AWS environment.
-
-If you have multiple credential configurations in `$HOME/.aws/credentials`, but none is set as a default, you may specify a profile using `export AWS_PROFILE=<name>`.

@@ -9,7 +9,8 @@ setup(
     install_requires=[
         'click',
         'boto3',
-        'requests'
+        'requests',
+        'pyjwt'
     ],
     entry_points={
         'console_scripts': [
