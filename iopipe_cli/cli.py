@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-from . import update
+from . import awslambda
+from . import stack 
 
 import boto3
 import botocore
@@ -29,15 +30,19 @@ def check_token(ctx, param, value):
 @click.option("--function", "-f", required=True, metavar="<arn>", help="Lambda function name or ARN")
 @click.option("--output", "-o", default='-', help="Output file for modified template.")
 @click.option("--token", "-t", envvar="IOPIPE_TOKEN", required=True, metavar="<token>", help="IOpipe Token", callback=check_token)
-def cf_update_template(template, function, output, token):
-    update.update_cloudformation_file(template, function, output, token)
+def stack_template(template, function, output, token):
+    stack.update_cloudformation_file(template, function, output, token)
 
-@click.command(name="update")
+@click.command(name="list")
+def stack_list(stack_id, function, token):
+    click.echo_via_pager(stack.get_stack_ids())
+
+@click.command(name="install")
 @click.option("--stack-id", "-s", required=True, help="Cloudformation Stack ID.")
 @click.option("--function", "-f", required=True, metavar="<arn>", help="Lambda function name or ARN")
 @click.option("--token", "-t", envvar="IOPIPE_TOKEN", required=True, metavar="<token>", help="IOpipe Token", callback=check_token)
-def cf_update_stack(stack_id, function, token):
-    update.update_cloudformation_stack(stack_id, function, token)
+def stack_install(stack_id, function, token):
+    stack.update_cloudformation_stack(stack_id, function, token)
 
 @click.command(name="install")
 @click.option("--region", "-r", help="AWS region", type=click.Choice(all_lambda_regions()))
@@ -46,8 +51,8 @@ def cf_update_stack(stack_id, function, token):
 @click.option("--verbose", "-v", help="Print new function configuration upon completion.", is_flag=True)
 @click.option("--java-type", "-j", help="Specify Java handler type, required for Java functions.", type=click.Choice(['request', 'stream']))
 @click.option("--token", "-t", envvar="IOPIPE_TOKEN", required=True, metavar="<token>", help="IOpipe Token", callback=check_token)
-def api_install(region, function, layer_arn, verbose, token, java_type):
-    resp = update.apply_function_api(region, function, layer_arn, token, java_type)
+def lambda_install(region, function, layer_arn, verbose, token, java_type):
+    resp = awslambda.apply_function_api(region, function, layer_arn, token, java_type)
     if not resp:
         click.echo("\nInstallation failed.")
         return
@@ -60,8 +65,8 @@ def api_install(region, function, layer_arn, verbose, token, java_type):
 @click.option("--function", "-f", required=True, metavar="<arn>", help="Lambda function name or ARN")
 @click.option("--layer-arn", "-l", metavar="<arn>", help="Layer ARN for IOpipe library (default: auto-detect)")
 @click.option("--verbose", "-v", help="Print new function configuration upon completion.", is_flag=True)
-def api_uninstall(region, function, layer_arn, verbose):
-    resp = update.remove_function_api(region, function, layer_arn)
+def lambda_uninstall(region, function, layer_arn, verbose):
+    resp = awslambda.remove_function_api(region, function, layer_arn)
     if not resp:
         click.echo("\nRemoval failed.")
         return
@@ -91,7 +96,7 @@ def lambda_list_functions(region, quiet, filter):
             yield coltmpl.format(f.get("FunctionName"), f.get("Runtime"), f.get("-x-iopipe-enabled", False))
 
     buffer = []
-    functions_iter = update.list_functions(region, quiet, filter)
+    functions_iter = awslambda.list_functions(region, quiet, filter)
     for idx, line in enumerate(itertools.chain(_header(), _format(functions_iter))):
         buffer.append(line)
 
@@ -107,12 +112,12 @@ def lambda_list_functions(region, quiet, filter):
     for line in iter(buffer):
         click.echo(line, nl=False)
 
-@click.group()
-def cli():
+@click.group(name="cli")
+def cli_group():
     None
 
-@click.group()
-def stack():
+@click.group(name="stack")
+def stack_group():
     None
 
 @click.group(name="lambda")
@@ -131,27 +136,27 @@ def lambda_group():
 
 def click_groups():
     if IOPIPE_FF_CLOUDFORMATION:
-        cli.add_command(stack)
-        stack.add_command(cf_update_template)
-        stack.add_command(cf_update_stack)
+        cli_group.add_command(stack)
+        stack_group.add_command(stack_template)
+        stack_group.add_command(stack_install)
 
-    cli.add_command(lambda_group)
+    cli_group.add_command(lambda_group)
     lambda_group.add_command(lambda_list_functions)
-    lambda_group.add_command(api_install)
-    lambda_group.add_command(api_uninstall)
+    lambda_group.add_command(lambda_install)
+    lambda_group.add_command(lambda_uninstall)
 
 def main():
     click_groups()
     try:
-        cli()
+        cli_group()
     except botocore.exceptions.NoRegionError:
         print("You must specify a region. Pass `--region` or run `aws configure`.")
     except botocore.exceptions.NoCredentialsError:
         print("No AWS credentials configured. Did you run `aws configure`?")
-    except update.MultipleLayersException:
+    except awslambda.MultipleLayersException:
         print("Multiple layers found. Pass --layer-arn to specify layer ARN")
-    except update.UpdateLambdaException as e:
-        print(e);
+    except awslambda.UpdateLambdaException as e:
+        print(e)
     except boto3.exceptions.Boto3Error:
         print("Error in communication to AWS. Check aws-cli configuration.")
 
