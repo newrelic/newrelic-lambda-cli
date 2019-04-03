@@ -18,18 +18,6 @@ import shutil
 def cli_group():
     None
 
-
-
-#@click.group()
-#def sam():
-#    None
-#cli.add_command(sam)
-#
-#@click.group()
-#def gosls():
-#    None
-#cli.add_command(gosls)
-
 def click_groups(group):
     cli_awslambda.register(group)
     cli_stack.register(group)
