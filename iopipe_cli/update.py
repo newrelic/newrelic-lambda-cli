@@ -147,32 +147,44 @@ def remove_function_api(region, function_arn, layer_arn):
     info = AwsLambda.get_function(FunctionName=function_arn)
     runtime = info.get('Configuration', {}).get('Runtime', '')
     orig_handler = info.get('Configuration', {}).get('Handler', '')
-    new_handler = RUNTIME_CONFIG.get(runtime, {}).get('Handler', None)
+    runtime_handler = RUNTIME_CONFIG.get(runtime, {}).get('Handler', None)
 
     if runtime == 'provider' or runtime not in RUNTIME_CONFIG.keys():
         raise UpdateLambdaException("Unsupported Lambda runtime: %s" % (runtime,))
-    if orig_handler != new_handler:
-        raise UpdateLambdaException("IOpipe installation (via layers) not auto-detected for the specified function.\n" \
-            "Unrecognized handler in deployed function.")
+
+    # Detect non-IOpipe handler and error if necessary.
+    def _err_invalid_handler():
+        raise UpdateLambdaException(
+            "IOpipe installation (via layers) not auto-detected for the specified function.\n" \
+            "Error: Unrecognized handler in deployed function."
+        )
+    if isinstance(runtime_handler, dict):
+        def _has_valid_handler():
+            for _, valid_handler in runtime_handler.items():
+                if orig_handler == valid_handler:
+                    return True
+            return False
+        if not _has_valid_handler():
+            _err_invalid_handler()
+    elif orig_handler != runtime_handler:
+        _err_invalid_handler()
 
     env_handler = info.get('Configuration', {}).get('Environment', {}).get('Variables', {}).get('IOPIPE_HANDLER')
     env_alt_handler = info.get('Configuration', {}).get('Environment', {}).get('Variables', {}).get('IOPIPE_GENERIC_HANDLER')
-    if not env_handler or env_alt_handler:
-        raise UpdateLambdaException("IOpipe installation (via layers) not auto-detected for the specified function.\n" + \
-            "No IOPIPE_HANDLER environment variable found.")
-    try:
-        del info['Configuration']['Environment']['Variables']['IOPIPE_HANDLER']
-    except KeyError:
-        pass
-    try:
-        del info['Configuration']['Environment']['Variables']['IOPIPE_GENERIC_HANDLER']
-    except KeyError:
-        pass
-    try:
-        del info['Configuration']['Environment']['Variables']['IOPIPE_TOKEN']
-    except KeyError:
-        pass
+    if not (env_handler or env_alt_handler):
+        raise UpdateLambdaException(
+            "IOpipe installation (via layers) not auto-detected for the specified function.\n" + \
+            "Error: Environment variable IOPIPE_HANDLER or IOPIPE_GENERIC_HANDLER not found."
+        )
 
+    # Delete IOpipe env vars
+    for key in ['IOPIPE_HANDLER', 'IOPIPE_GENERIC_HANDLER', 'IOPIPE_TOKEN']:
+        try:
+            del info['Configuration']['Environment']['Variables'][key]
+        except KeyError:
+            pass
+
+    # Remove IOpipe layers
     layers = info.get('Configuration', {}).get('Layers', [])
     for layer_idx, layer_arn in enumerate(layers):
         if layer_arn['Arn'].startswith(get_arn_prefix(region)):
