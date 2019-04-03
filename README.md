@@ -49,4 +49,9 @@ Make sure your python script bin directory is included in your path.
 The [documentation for the AWS cli](https://docs.aws.amazon.com/cli/latest/userguide/install-macos.html#awscli-install-osx-path) covers
 this topic and describes a solution.
 
+## Error: Invalid value for "--token" / "-t": token invalid.
 
+Your token may be malformed or corrupted. Try copying-and-pasting again, or using quotations on the cli.
+
+Some users also report that they have the incorrect `jwt` library installed on their system. This project
+uses the popular `pyjwt` module installable from PyPi.
