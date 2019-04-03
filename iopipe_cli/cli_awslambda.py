@@ -6,8 +6,6 @@ import botocore
 import click
 import itertools
 import json
-import jwt
-import os
 import shutil
 
 @click.group(name="lambda")

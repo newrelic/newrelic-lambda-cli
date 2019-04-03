@@ -7,11 +7,6 @@ from . import utils
 import boto3
 import botocore
 import click
-import itertools
-import json
-import jwt
-import os
-import shutil
 
 
 @click.group(name="cli")
