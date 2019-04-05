@@ -84,6 +84,17 @@ def check_token(ctx, param, value):
     except:
         raise click.BadParameter('token invalid.')
 
+def is_valid_handler(runtime, handler):
+    runtime_handler = RUNTIME_CONFIG.get(runtime, {}).get('Handler', None)
+    if isinstance(runtime_handler, dict):
+        for _, valid_handler in runtime_handler.items():
+            if handler == valid_handler:
+                return True
+        return False
+    elif handler == runtime_handler:
+        return True
+    return False
+
 def error(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
     sys.exit(1)

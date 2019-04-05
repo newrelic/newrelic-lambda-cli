@@ -19,7 +19,7 @@ def list_functions(region, quiet, filter_choice):
 
         for f in funcs:
             runtime = f.get("Runtime")
-            if is_valid_handler(runtime, f.get("Handler")):
+            if utils.is_valid_handler(runtime, f.get("Handler")):
                 f["-x-iopipe-enabled"] = True
                 if not all and filter_choice != "installed":
                     continue
@@ -36,29 +36,45 @@ class MultipleLayersException(Exception):
 class UpdateLambdaException(Exception):
     pass
 
-def apply_function_api(region, function_arn, layer_arn, token, java_type):
+def install(region, function_arn, layer_arn, token, java_type, allow_upgrade):
     AwsLambda = utils.get_lambda_client(region)
     info = AwsLambda.get_function(FunctionName=function_arn)
     runtime = info.get('Configuration', {}).get('Runtime', '')
     orig_handler = info.get('Configuration', {}).get('Handler')
     runtime_handler = utils.RUNTIME_CONFIG.get(runtime, {}).get('Handler')
 
+    if not allow_upgrade and orig_handler == runtime_handler:
+        raise UpdateLambdaException("Already installed. Pass --upgrade (or -u) to allow upgrade or reinstall to latest layer version.")
+    if runtime == 'provider' or runtime not in utils.RUNTIME_CONFIG.keys():
+        raise UpdateLambdaException("Unsupported Lambda runtime: %s" % (runtime,))
+
     if runtime.startswith('java'):
+        # Special case of multiple legal handlers for Java
         if not java_type:
             raise UpdateLambdaException("Must specify a handler type for java functions.")
         runtime_handler = utils.RUNTIME_CONFIG.get(runtime, {}).get('Handler', {}).get(java_type)
 
-    if runtime == 'provider' or runtime not in utils.RUNTIME_CONFIG.keys():
-        raise UpdateLambdaException("Unsupported Lambda runtime: %s" % (runtime,))
-    if orig_handler == runtime_handler:
-        raise UpdateLambdaException("Already configured.")
+    def _filter_iopipe_layers(layer_arn):
+        if layer_arn.startswith(utils.get_arn_prefix(region)):
+            return False
+        return True
+    def _map_response_to_arns(layer):
+        return layer.get("Arn")
+    existing_layers = list(
+        filter(
+            _filter_iopipe_layers,
+            map(
+                _map_response_to_arns,
+                info.get('Configuration', {}).get('Layers', [])
+            )
+        )
+    )
 
     iopipe_layers = []
-    existing_layers = []
     if layer_arn:
         iopipe_layers = [layer_arn]
     else:
-        # compatible layers:
+        # discover compatible layers...
         disco_layers = utils.get_layers(region, runtime)
         if len(iopipe_layers) > 1:
             print("Discovered layers for runtime (%s)" % (runtime,))
@@ -66,36 +82,30 @@ def apply_function_api(region, function_arn, layer_arn, token, java_type):
                 print("%s\t%s" % (layer.get("LatestMatchingVersion", {}).get("LayerVersionArn", ""), layer.get("Description", "")))
             raise MultipleLayersException()
         iopipe_layers = [ disco_layers[0].get("LatestMatchingVersion", {}).get("LayerVersionArn", "") ]
-        existing_layers = info.get('Configuration', {}).get('Layers', [])
 
+    #print(json.dumps(info, indent=2))
     update_kwargs = {
         'FunctionName': function_arn,
         'Handler': runtime_handler,
         'Environment': {
-            'Variables': {
-                'IOPIPE_TOKEN': token
-            }
+            'Variables': info.get('Configuration', {}).get('Environment', {}).get('Variables', {})
         },
         'Layers': iopipe_layers + existing_layers
     }
-    if runtime.startswith('java'):
-        update_kwargs['Environment']['Variables']['IOPIPE_GENERIC_HANDLER'] = orig_handler
-    else:
-        update_kwargs['Environment']['Variables']['IOPIPE_HANDLER'] = orig_handler
+
+    # Update the token
+    update_kwargs['Environment']['Variables']['IOPIPE_TOKEN'] = token
+
+    # Update the IOPIPE_HANDLER envvars only when it's a new install.
+    if orig_handler != runtime_handler:
+        if runtime.startswith('java'):
+            update_kwargs['Environment']['Variables']['IOPIPE_GENERIC_HANDLER'] = orig_handler
+        else:
+            update_kwargs['Environment']['Variables']['IOPIPE_HANDLER'] = orig_handler
+
     return AwsLambda.update_function_configuration(**update_kwargs)
 
-def is_valid_handler(runtime, handler):
-    runtime_handler = utils.RUNTIME_CONFIG.get(runtime, {}).get('Handler', None)
-    if isinstance(runtime_handler, dict):
-        for _, valid_handler in runtime_handler.items():
-            if handler == valid_handler:
-                return True
-        return False
-    elif handler == runtime_handler:
-        return True
-    return False
-
-def remove_function_api(region, function_arn, layer_arn):
+def uninstall(region, function_arn, layer_arn):
     AwsLambda = utils.get_lambda_client(region)
     info = AwsLambda.get_function(FunctionName=function_arn)
     runtime = info.get('Configuration', {}).get('Runtime', '')
@@ -105,7 +115,7 @@ def remove_function_api(region, function_arn, layer_arn):
         raise UpdateLambdaException("Unsupported Lambda runtime: %s" % (runtime,))
 
     # Detect non-IOpipe handler and error if necessary.
-    if not is_valid_handler(runtime, orig_handler):
+    if not utils.is_valid_handler(runtime, orig_handler):
         raise UpdateLambdaException(
             "IOpipe installation (via layers) not auto-detected for the specified function.\n" \
             "Error: Unrecognized handler in deployed function."

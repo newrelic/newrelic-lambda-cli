@@ -25,8 +25,9 @@ def register(group):
 @click.option("--verbose", "-v", help="Print new function configuration upon completion.", is_flag=True)
 @click.option("--java-type", "-j", help="Specify Java handler type, required for Java functions.", type=click.Choice(['request', 'stream']))
 @click.option("--token", "-t", envvar="IOPIPE_TOKEN", required=True, metavar="<token>", help="IOpipe Token", callback=utils.check_token)
-def lambda_install(region, function, layer_arn, verbose, token, java_type):
-    resp = awslambda.apply_function_api(region, function, layer_arn, token, java_type)
+@click.option("--upgrade", "-u", help="Permit upgrade of function layers to new version.", is_flag=True)
+def lambda_install(region, function, layer_arn, verbose, token, java_type, upgrade):
+    resp = awslambda.install(region, function, layer_arn, token, java_type, upgrade)
     if not resp:
         click.echo("\nInstallation failed.")
         return
@@ -40,7 +41,7 @@ def lambda_install(region, function, layer_arn, verbose, token, java_type):
 @click.option("--layer-arn", "-l", metavar="<arn>", help="Layer ARN for IOpipe library (default: auto-detect)")
 @click.option("--verbose", "-v", help="Print new function configuration upon completion.", is_flag=True)
 def lambda_uninstall(region, function, layer_arn, verbose):
-    resp = awslambda.remove_function_api(region, function, layer_arn)
+    resp = awslambda.uninstall(region, function, layer_arn)
     if not resp:
         click.echo("\nRemoval failed.")
         return
