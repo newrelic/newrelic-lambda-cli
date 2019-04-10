@@ -8,6 +8,7 @@ def combine_dict(map1: dict, map2: dict):
             else:
                 d[k] = u[k]
         return d
+
     _result = {}
     update(_result, map1)
     update(_result, map2)

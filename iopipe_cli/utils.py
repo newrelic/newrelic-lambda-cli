@@ -8,84 +8,84 @@ import sys
 
 IOPIPE_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:5558675309"
 RUNTIME_CONFIG = {
-    'nodejs': {
-        'Handler': 'node_modules/@iopipe/iopipe/handler'
-    },
-    'nodejs4.3': {
-        'Handler': 'node_modules/@iopipe/iopipe/handler'
-    },
-    'nodejs6.10': {
-        'Handler': 'node_modules/@iopipe/iopipe/handler'
-    },
-    'nodejs8.10': {
-        'Handler': 'node_modules/@iopipe/iopipe/handler'
-    },
-    'java8': {
-        'Handler': {
-            'request': 'com.iopipe.generic.GenericAWSRequestHandler',
-            'stream': 'com.iopipe.generic.GenericAWSRequestStreamHandler'
+    "nodejs": {"Handler": "node_modules/@iopipe/iopipe/handler"},
+    "nodejs4.3": {"Handler": "node_modules/@iopipe/iopipe/handler"},
+    "nodejs6.10": {"Handler": "node_modules/@iopipe/iopipe/handler"},
+    "nodejs8.10": {"Handler": "node_modules/@iopipe/iopipe/handler"},
+    "java8": {
+        "Handler": {
+            "request": "com.iopipe.generic.GenericAWSRequestHandler",
+            "stream": "com.iopipe.generic.GenericAWSRequestStreamHandler",
         }
     },
-    'python2.7': {
-        'Handler': 'iopipe.handler.wrapper'
-    },
-    'python3.0.6': {
-        'Handler': 'iopipe.handler.wrapper'
-    },
-    'python3.7': {
-        'Handler': 'iopipe.handler.wrapper',
-    }
+    "python2.7": {"Handler": "iopipe.handler.wrapper"},
+    "python3.0.6": {"Handler": "iopipe.handler.wrapper"},
+    "python3.7": {"Handler": "iopipe.handler.wrapper"},
 }
+
 
 def catch_boto_errors(func):
     def _boto_error_wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except botocore.exceptions.NoRegionError:
-            error("You must specify a region. Pass `--region` or run `aws configure`.""You must specify a region. Pass `--region` or run `aws configure`.")
+            error(
+                "You must specify a region. Pass `--region` or run `aws configure`."
+                "You must specify a region. Pass `--region` or run `aws configure`."
+            )
         except botocore.exceptions.NoCredentialsError:
             error("No AWS credentials configured. Did you run `aws configure`?")
         except botocore.exceptions.BotoCoreError as e:
             error("Unexpected AWS error: %s" % e)
+
     return _boto_error_wrapper
 
+
 def get_arn_prefix(region):
-    return IOPIPE_ARN_PREFIX_TEMPLATE % (get_region(region), )
+    return IOPIPE_ARN_PREFIX_TEMPLATE % (get_region(region),)
+
 
 @catch_boto_errors
 def get_region(region):
     boto_kwargs = {}
     if region:
-        boto_kwargs['region_name'] = region
+        boto_kwargs["region_name"] = region
     session = boto3.session.Session(**boto_kwargs)
     return session.region_name
 
+
 def get_layers(region, runtime):
     return layers.index(get_region(region), runtime)
+
 
 @catch_boto_errors
 def get_lambda_client(region):
     boto_kwargs = {}
     if region:
-        boto_kwargs['region_name'] = region
-    AwsLambda = boto3.client('lambda', **boto_kwargs)
+        boto_kwargs["region_name"] = region
+    AwsLambda = boto3.client("lambda", **boto_kwargs)
     return AwsLambda
+
 
 @catch_boto_errors
 def all_lambda_regions():
-    return boto3.session.Session().get_available_regions('lambda')
+    return boto3.session.Session().get_available_regions("lambda")
+
 
 def check_token(ctx, param, value):
-    if not hasattr(jwt, 'PyJWT'):
-        raise Exception("Incompatible `jwt` library detected. Must have `pyjwt` installed.")
+    if not hasattr(jwt, "PyJWT"):
+        raise Exception(
+            "Incompatible `jwt` library detected. Must have `pyjwt` installed."
+        )
     try:
         jwt.decode(value, verify=False)
         return value
     except:
-        raise click.BadParameter('token invalid.')
+        raise click.BadParameter("token invalid.")
+
 
 def is_valid_handler(runtime, handler):
-    runtime_handler = RUNTIME_CONFIG.get(runtime, {}).get('Handler', None)
+    runtime_handler = RUNTIME_CONFIG.get(runtime, {}).get("Handler", None)
     if isinstance(runtime_handler, dict):
         for _, valid_handler in runtime_handler.items():
             if handler == valid_handler:
@@ -94,6 +94,7 @@ def is_valid_handler(runtime, handler):
     elif handler == runtime_handler:
         return True
     return False
+
 
 def error(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)

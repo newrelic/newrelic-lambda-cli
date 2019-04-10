@@ -13,9 +13,11 @@ import click
 def cli_group():
     None
 
+
 def click_groups(group):
     cli_awslambda.register(group)
     cli_stack.register(group)
+
 
 @utils.catch_boto_errors
 def main():
