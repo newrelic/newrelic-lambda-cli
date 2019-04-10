@@ -36,9 +36,7 @@ class MultipleLayersException(Exception):
 class UpdateLambdaException(Exception):
     pass
 
-def install(region, function_arn, layer_arn, token, java_type, allow_upgrade):
-    AwsLambda = utils.get_lambda_client(region)
-    info = AwsLambda.get_function(FunctionName=function_arn)
+def _add_iopipe(info, region, function_arn, layer_arn, token, java_type, allow_upgrade):
     runtime = info.get('Configuration', {}).get('Runtime', '')
     orig_handler = info.get('Configuration', {}).get('Handler')
     runtime_handler = utils.RUNTIME_CONFIG.get(runtime, {}).get('Handler')
@@ -103,11 +101,15 @@ def install(region, function_arn, layer_arn, token, java_type, allow_upgrade):
         else:
             update_kwargs['Environment']['Variables']['IOPIPE_HANDLER'] = orig_handler
 
-    return AwsLambda.update_function_configuration(**update_kwargs)
+    return update_kwargs
 
-def uninstall(region, function_arn, layer_arn):
+def install(region, function_arn, layer_arn, token, java_type, allow_upgrade):
     AwsLambda = utils.get_lambda_client(region)
     info = AwsLambda.get_function(FunctionName=function_arn)
+    update_kwargs = _add_iopipe(info, region, function_arn, layer_arn, token, java_type, allow_upgrade)
+    return AwsLambda.update_function_configuration(**update_kwargs)
+
+def _remove_iopipe(info, region, function_arn, layer_arn):
     runtime = info.get('Configuration', {}).get('Runtime', '')
     orig_handler = info.get('Configuration', {}).get('Handler', '')
 
@@ -142,9 +144,15 @@ def uninstall(region, function_arn, layer_arn):
         if layer_arn['Arn'].startswith(utils.get_arn_prefix(region)):
             del layers[layer_idx]
 
-    return AwsLambda.update_function_configuration(
-        FunctionName=function_arn,
-        Handler=env_handler,
-        Environment=info['Configuration']['Environment'],
-        Layers=layers
-    )
+    return {
+        'FunctionName': function_arn,
+        'Handler': env_handler,
+        'Environment': info['Configuration']['Environment'],
+        'Layers': layers
+    }
+
+def uninstall(region, function_arn, layer_arn):
+    AwsLambda = utils.get_lambda_client(region)
+    info = AwsLambda.get_function(FunctionName=function_arn)
+    update_kwargs = _remove_iopipe(info, region, function_arn, layer_arn)
+    return AwsLambda.update_function_configuration(**update_kwargs)
