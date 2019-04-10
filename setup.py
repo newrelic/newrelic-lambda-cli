@@ -12,6 +12,15 @@ setup(
         'requests',
         'pyjwt'
     ],
+    tests_require=[
+        "coverage==5.0a2",
+        "mock",
+        "more-itertools<6.0.0",
+        "pytest==4.1.0",
+        "pytest-benchmark==3.2.0",
+        "pytest-cov==2.6.1",
+        "requests",
+    ],
     entry_points={
         'console_scripts': [
             'iopipe = iopipe_cli.cli:main',
