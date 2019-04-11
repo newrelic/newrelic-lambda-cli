@@ -107,6 +107,19 @@ def test_add_iopipe_upgrade_requires_flag():
         )
 
 
+def test_add_iopipe_upgrade_success():
+    fake_function_config = _mock_function_config("nodejs8.10")
+    wrapped = _local_apply_updates(
+        fake_function_config,
+        awslambda._add_iopipe(
+            fake_function_config, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
+        ),
+    )
+    assert awslambda._add_iopipe(
+        wrapped, "us-east-1", "fakeArn", None, TEST_TOKEN, None, True
+    )
+
+
 def test_on_off_on_again_node810():
     fake_function_config = _mock_function_config("nodejs8.10")
     runtime = fake_function_config["Configuration"]["Runtime"]
