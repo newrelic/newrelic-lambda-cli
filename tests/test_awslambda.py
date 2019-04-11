@@ -23,7 +23,7 @@ def _mock_function_config(runtime):
 
 def test_add_iopipe_error_no_token():
     with pytest.raises(awslambda.UpdateLambdaException):
-        result = awslambda._add_iopipe(
+        awslambda._add_iopipe(
             _mock_function_config("nodejs8.10"),
             "us-east-1",
             "fakeArn",
