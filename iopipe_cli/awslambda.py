@@ -39,15 +39,19 @@ class UpdateLambdaException(Exception):
     pass
 
 
-def _add_iopipe(info, region, function_arn, layer_arn, token, java_type, allow_upgrade):
+def _add_iopipe(config, region, function_arn, layer_arn, token, java_type, allow_upgrade):
+    info = config.copy()
     runtime = info.get("Configuration", {}).get("Runtime", "")
     orig_handler = info.get("Configuration", {}).get("Handler")
     runtime_handler = utils.RUNTIME_CONFIG.get(runtime, {}).get("Handler")
 
+    if not token:
+        raise(UpdateLambdaException("Token missing from parameters."))
+
     if not allow_upgrade and orig_handler == runtime_handler:
-        raise UpdateLambdaException(
+        raise(UpdateLambdaException(
             "Already installed. Pass --upgrade (or -u) to allow upgrade or reinstall to latest layer version."
-        )
+        ))
     if runtime == "provider" or runtime not in utils.RUNTIME_CONFIG.keys():
         raise UpdateLambdaException("Unsupported Lambda runtime: %s" % (runtime,))
 
@@ -135,7 +139,8 @@ def install(region, function_arn, layer_arn, token, java_type, allow_upgrade):
     return AwsLambda.update_function_configuration(**update_kwargs)
 
 
-def _remove_iopipe(info, region, function_arn, layer_arn):
+def _remove_iopipe(config, region, function_arn, layer_arn):
+    info = config.copy()
     runtime = info.get("Configuration", {}).get("Runtime", "")
     orig_handler = info.get("Configuration", {}).get("Handler", "")
 
