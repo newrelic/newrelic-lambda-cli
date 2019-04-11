@@ -96,6 +96,21 @@ def is_valid_handler(runtime, handler):
     return False
 
 
+def local_apply_updates(config, updates):
+    result = config.copy()
+    result["Configuration"]["Handler"] = (
+        updates.get("Handler") or result["Configuration"]["Handler"]
+    )
+
+    new_envvars = updates.get("Environment", {}).get("Variables")
+    if new_envvars:
+        result["Configuration"]["Environment"]["Variables"].update(new_envvars)
+
+    layer_map = map(lambda layer: {"Arn": layer}, updates.get("Layers", []))
+    result["Layers"] = layer_map
+    return result
+
+
 def error(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
     sys.exit(1)

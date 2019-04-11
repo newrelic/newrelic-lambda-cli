@@ -21,21 +21,6 @@ def _mock_function_config(runtime):
     }
 
 
-def _local_apply_updates(config, updates):
-    result = config.copy()
-    result["Configuration"]["Handler"] = (
-        updates.get("Handler") or result["Configuration"]["Handler"]
-    )
-
-    new_envvars = updates.get("Environment", {}).get("Variables")
-    if new_envvars:
-        result["Configuration"]["Environment"]["Variables"].update(new_envvars)
-
-    layer_map = map(lambda layer: {"Arn": layer}, updates.get("Layers", []))
-    result["Layers"] = layer_map
-    return result
-
-
 def test_add_iopipe_error_no_token():
     with pytest.raises(awslambda.UpdateLambdaException):
         result = awslambda._add_iopipe(
@@ -74,7 +59,7 @@ def test_add_iopipe_updates_handler():
 
 def test_remove_iopipe_removes_handler():
     fake_function_config = _mock_function_config("nodejs8.10")
-    wrapped = _local_apply_updates(
+    wrapped = utils.local_apply_updates(
         fake_function_config,
         awslambda._add_iopipe(
             fake_function_config, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
@@ -95,7 +80,7 @@ def test_add_iopipe_keeps_existing_layers():
 
 def test_add_iopipe_upgrade_requires_flag():
     fake_function_config = _mock_function_config("nodejs8.10")
-    wrapped = _local_apply_updates(
+    wrapped = utils.local_apply_updates(
         fake_function_config,
         awslambda._add_iopipe(
             fake_function_config, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
@@ -109,7 +94,7 @@ def test_add_iopipe_upgrade_requires_flag():
 
 def test_add_iopipe_upgrade_success():
     fake_function_config = _mock_function_config("nodejs8.10")
-    wrapped = _local_apply_updates(
+    wrapped = utils.local_apply_updates(
         fake_function_config,
         awslambda._add_iopipe(
             fake_function_config, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
@@ -122,10 +107,16 @@ def test_add_iopipe_upgrade_success():
 
 def test_add_iopipe_upgrade_success_java8():
     fake_function_config = _mock_function_config("java8")
-    wrapped = _local_apply_updates(
+    wrapped = utils.local_apply_updates(
         fake_function_config,
         awslambda._add_iopipe(
-            fake_function_config, "us-east-1", "fakeArn", None, TEST_TOKEN, "request", None
+            fake_function_config,
+            "us-east-1",
+            "fakeArn",
+            None,
+            TEST_TOKEN,
+            "request",
+            None,
         ),
     )
     assert awslambda._add_iopipe(
@@ -137,7 +128,7 @@ def test_on_off_on_again_node810():
     fake_function_config = _mock_function_config("nodejs8.10")
     runtime = fake_function_config["Configuration"]["Runtime"]
     print(fake_function_config)
-    wrapped = _local_apply_updates(
+    wrapped = utils.local_apply_updates(
         fake_function_config,
         awslambda._add_iopipe(
             fake_function_config, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
@@ -146,7 +137,7 @@ def test_on_off_on_again_node810():
     removal_updates = awslambda._remove_iopipe(wrapped, "us-east-1", "fakeArn", None)
     assert not utils.is_valid_handler(runtime, removal_updates["Handler"])
 
-    unwrapped = _local_apply_updates(wrapped, removal_updates)
+    unwrapped = utils.local_apply_updates(wrapped, removal_updates)
     rewrapped_updates = awslambda._add_iopipe(
         unwrapped, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
     )
@@ -157,7 +148,7 @@ def test_on_off_on_again_java_request():
     fake_function_config = _mock_function_config("java8")
     runtime = fake_function_config["Configuration"]["Runtime"]
     print(fake_function_config)
-    wrapped = _local_apply_updates(
+    wrapped = utils.local_apply_updates(
         fake_function_config,
         awslambda._add_iopipe(
             fake_function_config,
@@ -172,7 +163,7 @@ def test_on_off_on_again_java_request():
     removal_updates = awslambda._remove_iopipe(wrapped, "us-east-1", "fakeArn", None)
     assert not utils.is_valid_handler(runtime, removal_updates["Handler"])
 
-    unwrapped = _local_apply_updates(wrapped, removal_updates)
+    unwrapped = utils.local_apply_updates(wrapped, removal_updates)
     rewrapped_updates = awslambda._add_iopipe(
         unwrapped, "us-east-1", "fakeArn", None, TEST_TOKEN, "request", None
     )
@@ -183,7 +174,7 @@ def test_on_off_on_again_java_stream():
     fake_function_config = _mock_function_config("java8")
     runtime = fake_function_config["Configuration"]["Runtime"]
     print(fake_function_config)
-    wrapped = _local_apply_updates(
+    wrapped = utils.local_apply_updates(
         fake_function_config,
         awslambda._add_iopipe(
             fake_function_config,
@@ -198,7 +189,7 @@ def test_on_off_on_again_java_stream():
     removal_updates = awslambda._remove_iopipe(wrapped, "us-east-1", "fakeArn", None)
     assert not utils.is_valid_handler(runtime, removal_updates["Handler"])
 
-    unwrapped = _local_apply_updates(wrapped, removal_updates)
+    unwrapped = utils.local_apply_updates(wrapped, removal_updates)
     rewrapped_updates = awslambda._add_iopipe(
         unwrapped, "us-east-1", "fakeArn", None, TEST_TOKEN, "stream", None
     )
@@ -209,7 +200,7 @@ def test_on_off_on_again_python37():
     fake_function_config = _mock_function_config("python3.7")
     runtime = fake_function_config["Configuration"]["Runtime"]
     print(fake_function_config)
-    wrapped = _local_apply_updates(
+    wrapped = utils.local_apply_updates(
         fake_function_config,
         awslambda._add_iopipe(
             fake_function_config, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
@@ -218,7 +209,7 @@ def test_on_off_on_again_python37():
     removal_updates = awslambda._remove_iopipe(wrapped, "us-east-1", "fakeArn", None)
     assert not utils.is_valid_handler(runtime, removal_updates["Handler"])
 
-    unwrapped = _local_apply_updates(wrapped, removal_updates)
+    unwrapped = utils.local_apply_updates(wrapped, removal_updates)
     rewrapped_updates = awslambda._add_iopipe(
         unwrapped, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
     )
