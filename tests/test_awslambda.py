@@ -11,7 +11,7 @@ TEST_TOKEN = jwt.encode({}, "its_a_secret_to_everyone")
 def _mock_function_config(runtime):
     return {
         "Configuration": {
-            "Layers": [{"Arn": "arn:aws:lambda:us-east-1:9999:layer:existing_layer:1"}],
+            "Layers": [{"Arn": "existing_layer_arn"}],
             "FunctionName": "aws-python3-dev-hello",
             "FunctionArn": "arn:aws:lambda:us-east-1:5558675309:function:aws-python3-dev-hello",
             "Environment": {"Variables": {"EXISTING_ENV_VAR": "Hello World"}},
@@ -83,6 +83,14 @@ def test_remove_iopipe_removes_handler():
     runtime = fake_function_config["Configuration"]["Runtime"]
     result = awslambda._remove_iopipe(wrapped, "us-east-1", "fakeArn", None)
     assert not utils.is_valid_handler(runtime, result["Handler"])
+
+
+def test_add_iopipe_keeps_existing_layers():
+    fake_function_config = _mock_function_config("nodejs8.10")
+    result = awslambda._add_iopipe(
+        fake_function_config, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
+    )
+    assert "existing_layer_arn" in result["Layers"]
 
 
 def test_on_off_on_again_node810():
