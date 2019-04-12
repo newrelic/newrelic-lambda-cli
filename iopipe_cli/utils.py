@@ -8,8 +8,8 @@ import sys
 
 IOPIPE_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:5558675309"
 RUNTIME_CONFIG = {
-    "nodejs6.10": {"Handler": "node_modules/@iopipe/iopipe/handler"},
-    "nodejs8.10": {"Handler": "node_modules/@iopipe/iopipe/handler"},
+    "nodejs6.10": {"Handler": "@iopipe/iopipe.handler"},
+    "nodejs8.10": {"Handler": "@iopipe/iopipe.handler"},
     "java8": {
         "Handler": {
             "request": "com.iopipe.generic.GenericAWSRequestHandler",
