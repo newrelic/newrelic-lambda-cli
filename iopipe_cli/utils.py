@@ -8,8 +8,6 @@ import sys
 
 IOPIPE_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:5558675309"
 RUNTIME_CONFIG = {
-    "nodejs": {"Handler": "node_modules/@iopipe/iopipe/handler"},
-    "nodejs4.3": {"Handler": "node_modules/@iopipe/iopipe/handler"},
     "nodejs6.10": {"Handler": "node_modules/@iopipe/iopipe/handler"},
     "nodejs8.10": {"Handler": "node_modules/@iopipe/iopipe/handler"},
     "java8": {
@@ -19,9 +17,17 @@ RUNTIME_CONFIG = {
         }
     },
     "python2.7": {"Handler": "iopipe.handler.wrapper"},
-    "python3.0.6": {"Handler": "iopipe.handler.wrapper"},
     "python3.7": {"Handler": "iopipe.handler.wrapper"},
 }
+
+
+def runtime_config_iter():
+    for runtime, obj in RUNTIME_CONFIG.items():
+        if isinstance(obj.get("Handler"), dict):
+            for java_type in obj.get("Handler").keys():
+                yield {"runtime": runtime, "java_type": java_type}
+        else:
+            yield {"runtime": runtime, "java_type": None}
 
 
 def catch_boto_errors(func):

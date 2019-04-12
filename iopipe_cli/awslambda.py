@@ -50,15 +50,6 @@ def _add_iopipe(
     if not token:
         raise (UpdateLambdaException("Token missing from parameters."))
 
-    if not allow_upgrade and orig_handler == runtime_handler:
-        raise (
-            UpdateLambdaException(
-                "Already installed. Pass --upgrade (or -u) to allow upgrade or reinstall to latest layer version."
-            )
-        )
-    if runtime == "provider" or runtime not in utils.RUNTIME_CONFIG.keys():
-        raise UpdateLambdaException("Unsupported Lambda runtime: %s" % (runtime,))
-
     if runtime.startswith("java"):
         # Special case of multiple legal handlers for Java
         if not java_type:
@@ -68,6 +59,15 @@ def _add_iopipe(
         runtime_handler = (
             utils.RUNTIME_CONFIG.get(runtime, {}).get("Handler", {}).get(java_type)
         )
+
+    if not allow_upgrade and orig_handler == runtime_handler:
+        raise (
+            UpdateLambdaException(
+                "Already installed. Pass --upgrade (or -u) to allow upgrade or reinstall to latest layer version."
+            )
+        )
+    if runtime == "provider" or runtime not in utils.RUNTIME_CONFIG.keys():
+        raise UpdateLambdaException("Unsupported Lambda runtime: %s" % (runtime,))
 
     def _filter_iopipe_layers(layer_arn):
         if layer_arn.startswith(utils.get_arn_prefix(region)):
@@ -170,7 +170,8 @@ def _remove_iopipe(config, region, function_arn, layer_arn):
         .get("Variables", {})
         .get("IOPIPE_GENERIC_HANDLER")
     )
-    if not (env_handler or env_alt_handler):
+    env_handler = env_handler or env_alt_handler
+    if not env_handler:
         raise UpdateLambdaException(
             "IOpipe installation (via layers) not auto-detected for the specified function.\n"
             + "Error: Environment variable IOPIPE_HANDLER or IOPIPE_GENERIC_HANDLER not found."

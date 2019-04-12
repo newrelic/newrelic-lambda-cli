@@ -21,15 +21,23 @@ def _mock_function_config(runtime):
     }
 
 
-def test_add_iopipe_error_no_token():
+@pytest.fixture(
+    params=utils.runtime_config_iter(),
+    ids=map(lambda x: x["runtime"], utils.runtime_config_iter()),
+)
+def runtime_config(request):
+    return request.param
+
+
+def test_add_iopipe_error_no_token(runtime_config):
     with pytest.raises(awslambda.UpdateLambdaException):
         awslambda._add_iopipe(
-            _mock_function_config("nodejs8.10"),
+            _mock_function_config(runtime_config.get("runtime")),
             "us-east-1",
             "fakeArn",
             None,
             None,
-            None,
+            runtime_config.get("java_type"),
             None,
         )
 
@@ -48,65 +56,80 @@ def test_add_iopipe_error_no_token():
 #    assert result["Environment"]["Variables"]["IOPIPE_TOKEN"] == TEST_TOKEN
 
 
-def test_add_iopipe_updates_handler():
-    fake_function_config = _mock_function_config("nodejs8.10")
+def test_add_iopipe_updates_handler(runtime_config):
+    fake_function_config = _mock_function_config(runtime_config.get("runtime"))
     result = awslambda._add_iopipe(
-        fake_function_config, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
+        fake_function_config,
+        "us-east-1",
+        "fakeArn",
+        None,
+        TEST_TOKEN,
+        runtime_config.get("java_type"),
+        None,
     )
-    runtime = fake_function_config["Configuration"]["Runtime"]
-    assert utils.is_valid_handler(runtime, result["Handler"])
+    assert utils.is_valid_handler(runtime_config.get("runtime"), result["Handler"])
 
 
-def test_remove_iopipe_removes_handler():
-    fake_function_config = _mock_function_config("nodejs8.10")
+def test_remove_iopipe_removes_handler(runtime_config):
+    fake_function_config = _mock_function_config(runtime_config.get("runtime"))
     wrapped = utils.local_apply_updates(
         fake_function_config,
         awslambda._add_iopipe(
-            fake_function_config, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
+            fake_function_config,
+            "us-east-1",
+            "fakeArn",
+            None,
+            TEST_TOKEN,
+            runtime_config.get("java_type"),
+            None,
         ),
     )
-    runtime = fake_function_config["Configuration"]["Runtime"]
     result = awslambda._remove_iopipe(wrapped, "us-east-1", "fakeArn", None)
-    assert not utils.is_valid_handler(runtime, result["Handler"])
+    assert not utils.is_valid_handler(runtime_config.get("runtime"), result["Handler"])
 
 
-def test_add_iopipe_keeps_existing_layers():
-    fake_function_config = _mock_function_config("nodejs8.10")
+def test_add_iopipe_keeps_existing_layers(runtime_config):
+    fake_function_config = _mock_function_config(runtime_config.get("runtime"))
     result = awslambda._add_iopipe(
-        fake_function_config, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
+        fake_function_config,
+        "us-east-1",
+        "fakeArn",
+        None,
+        TEST_TOKEN,
+        runtime_config.get("java_type"),
+        None,
     )
     assert "existing_layer_arn" in result["Layers"]
 
 
-def test_add_iopipe_upgrade_requires_flag():
-    fake_function_config = _mock_function_config("nodejs8.10")
+def test_add_iopipe_upgrade_requires_flag(runtime_config):
+    fake_function_config = _mock_function_config(runtime_config.get("runtime"))
     wrapped = utils.local_apply_updates(
         fake_function_config,
         awslambda._add_iopipe(
-            fake_function_config, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
+            fake_function_config,
+            "us-east-1",
+            "fakeArn",
+            None,
+            TEST_TOKEN,
+            runtime_config.get("java_type"),
+            None,
         ),
     )
     with pytest.raises(awslambda.UpdateLambdaException):
         awslambda._add_iopipe(
-            wrapped, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
+            wrapped,
+            "us-east-1",
+            "fakeArn",
+            None,
+            TEST_TOKEN,
+            runtime_config.get("java_type"),
+            None,
         )
 
 
-def test_add_iopipe_upgrade_success():
-    fake_function_config = _mock_function_config("nodejs8.10")
-    wrapped = utils.local_apply_updates(
-        fake_function_config,
-        awslambda._add_iopipe(
-            fake_function_config, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
-        ),
-    )
-    assert awslambda._add_iopipe(
-        wrapped, "us-east-1", "fakeArn", None, TEST_TOKEN, None, True
-    )
-
-
-def test_add_iopipe_upgrade_success_java8():
-    fake_function_config = _mock_function_config("java8")
+def test_add_iopipe_upgrade_success(runtime_config):
+    fake_function_config = _mock_function_config(runtime_config.get("runtime"))
     wrapped = utils.local_apply_updates(
         fake_function_config,
         awslambda._add_iopipe(
@@ -115,39 +138,25 @@ def test_add_iopipe_upgrade_success_java8():
             "fakeArn",
             None,
             TEST_TOKEN,
-            "request",
+            runtime_config.get("java_type"),
             None,
         ),
     )
-    assert awslambda._add_iopipe(
-        wrapped, "us-east-1", "fakeArn", None, TEST_TOKEN, "request", True
+    result = awslambda._add_iopipe(
+        wrapped,
+        "us-east-1",
+        "fakeArn",
+        None,
+        TEST_TOKEN,
+        runtime_config.get("java_type"),
+        True,
     )
+    assert result
 
 
-def test_on_off_on_again_node810():
-    fake_function_config = _mock_function_config("nodejs8.10")
-    runtime = fake_function_config["Configuration"]["Runtime"]
-    print(fake_function_config)
-    wrapped = utils.local_apply_updates(
-        fake_function_config,
-        awslambda._add_iopipe(
-            fake_function_config, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
-        ),
-    )
-    removal_updates = awslambda._remove_iopipe(wrapped, "us-east-1", "fakeArn", None)
-    assert not utils.is_valid_handler(runtime, removal_updates["Handler"])
-
-    unwrapped = utils.local_apply_updates(wrapped, removal_updates)
-    rewrapped_updates = awslambda._add_iopipe(
-        unwrapped, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
-    )
-    assert utils.is_valid_handler(runtime, rewrapped_updates["Handler"])
-
-
-def test_on_off_on_again_java_request():
-    fake_function_config = _mock_function_config("java8")
-    runtime = fake_function_config["Configuration"]["Runtime"]
-    print(fake_function_config)
+def test_on_off_on_again(runtime_config):
+    fake_function_config = _mock_function_config(runtime_config.get("runtime"))
+    print("Mock function: %s" % (fake_function_config,))
     wrapped = utils.local_apply_updates(
         fake_function_config,
         awslambda._add_iopipe(
@@ -156,61 +165,32 @@ def test_on_off_on_again_java_request():
             "fakeArn",
             None,
             TEST_TOKEN,
-            "request",
+            runtime_config.get("java_type"),
             None,
         ),
     )
+    print("Wrapped: %s" % (wrapped,))
+    assert utils.is_valid_handler(
+        runtime_config.get("runtime"), wrapped["Configuration"]["Handler"]
+    )
+
     removal_updates = awslambda._remove_iopipe(wrapped, "us-east-1", "fakeArn", None)
-    assert not utils.is_valid_handler(runtime, removal_updates["Handler"])
-
     unwrapped = utils.local_apply_updates(wrapped, removal_updates)
+    print("Unwrapped: %s" % (unwrapped,))
+    assert not utils.is_valid_handler(
+        runtime_config.get("runtime"), unwrapped["Configuration"]["Handler"]
+    )
+
     rewrapped_updates = awslambda._add_iopipe(
-        unwrapped, "us-east-1", "fakeArn", None, TEST_TOKEN, "request", None
+        unwrapped,
+        "us-east-1",
+        "fakeArn",
+        None,
+        TEST_TOKEN,
+        runtime_config.get("java_type"),
+        None,
     )
-    assert utils.is_valid_handler(runtime, rewrapped_updates["Handler"])
-
-
-def test_on_off_on_again_java_stream():
-    fake_function_config = _mock_function_config("java8")
-    runtime = fake_function_config["Configuration"]["Runtime"]
-    print(fake_function_config)
-    wrapped = utils.local_apply_updates(
-        fake_function_config,
-        awslambda._add_iopipe(
-            fake_function_config,
-            "us-east-1",
-            "fakeArn",
-            None,
-            TEST_TOKEN,
-            "stream",
-            None,
-        ),
+    print("Rewrapped: %s" % (rewrapped_updates,))
+    assert utils.is_valid_handler(
+        runtime_config.get("runtime"), rewrapped_updates["Handler"]
     )
-    removal_updates = awslambda._remove_iopipe(wrapped, "us-east-1", "fakeArn", None)
-    assert not utils.is_valid_handler(runtime, removal_updates["Handler"])
-
-    unwrapped = utils.local_apply_updates(wrapped, removal_updates)
-    rewrapped_updates = awslambda._add_iopipe(
-        unwrapped, "us-east-1", "fakeArn", None, TEST_TOKEN, "stream", None
-    )
-    assert utils.is_valid_handler(runtime, rewrapped_updates["Handler"])
-
-
-def test_on_off_on_again_python37():
-    fake_function_config = _mock_function_config("python3.7")
-    runtime = fake_function_config["Configuration"]["Runtime"]
-    print(fake_function_config)
-    wrapped = utils.local_apply_updates(
-        fake_function_config,
-        awslambda._add_iopipe(
-            fake_function_config, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
-        ),
-    )
-    removal_updates = awslambda._remove_iopipe(wrapped, "us-east-1", "fakeArn", None)
-    assert not utils.is_valid_handler(runtime, removal_updates["Handler"])
-
-    unwrapped = utils.local_apply_updates(wrapped, removal_updates)
-    rewrapped_updates = awslambda._add_iopipe(
-        unwrapped, "us-east-1", "fakeArn", None, TEST_TOKEN, None, None
-    )
-    assert utils.is_valid_handler(runtime, rewrapped_updates["Handler"])
