@@ -23,6 +23,7 @@ if os.getenv("IOPIPE_FF_NODEJS"):
     RUNTIME_CONFIG["nodejs6.10"] = {"Handler": "@iopipe/iopipe.handler"}
     RUNTIME_CONFIG["nodejs8.10"] = {"Handler": "@iopipe/iopipe.handler"}
 
+
 def runtime_config_iter():
     for runtime, obj in RUNTIME_CONFIG.items():
         if isinstance(obj.get("Handler"), dict):
@@ -37,9 +38,7 @@ def catch_boto_errors(func):
         try:
             return func(*args, **kwargs)
         except botocore.exceptions.NoRegionError:
-            error(
-                "You must specify a region. Pass `--region` or run `aws configure`."
-            )
+            error("You must specify a region. Pass `--region` or run `aws configure`.")
         except botocore.exceptions.NoCredentialsError:
             error("No AWS credentials configured. Did you run `aws configure`?")
         except botocore.exceptions.BotoCoreError as e:
