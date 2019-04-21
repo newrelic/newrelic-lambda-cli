@@ -4,12 +4,11 @@ import boto3
 import botocore
 import click
 import jwt
+import os
 import sys
 
 IOPIPE_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:5558675309"
 RUNTIME_CONFIG = {
-    "nodejs6.10": {"Handler": "@iopipe/iopipe.handler"},
-    "nodejs8.10": {"Handler": "@iopipe/iopipe.handler"},
     "java8": {
         "Handler": {
             "request": "com.iopipe.generic.GenericAWSRequestHandler",
@@ -20,6 +19,9 @@ RUNTIME_CONFIG = {
     "python3.7": {"Handler": "iopipe.handler.wrapper"},
 }
 
+if os.getenv("IOPIPE_FF_NODEJS"):
+    RUNTIME_CONFIG["nodejs6.10"] = {"Handler": "@iopipe/iopipe.handler"}
+    RUNTIME_CONFIG["nodejs8.10"] = {"Handler": "@iopipe/iopipe.handler"}
 
 def runtime_config_iter():
     for runtime, obj in RUNTIME_CONFIG.items():
@@ -36,7 +38,6 @@ def catch_boto_errors(func):
             return func(*args, **kwargs)
         except botocore.exceptions.NoRegionError:
             error(
-                "You must specify a region. Pass `--region` or run `aws configure`."
                 "You must specify a region. Pass `--region` or run `aws configure`."
             )
         except botocore.exceptions.NoCredentialsError:
