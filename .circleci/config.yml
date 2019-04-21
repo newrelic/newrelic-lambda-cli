@@ -57,7 +57,7 @@ jobs:
 
 
   code-style:
-    working_directory: ~/iopipe-python
+    working_directory: ~/iopipe-cli
     docker:
       - image: circleci/python:3.6-stretch
     steps:
@@ -68,11 +68,11 @@ jobs:
           name: Check code style
           command: |
             pip install black==18.6b2
-            black --check --line-length=88 --safe iopipe
+            black --check --line-length=88 --safe iopipe_cli
             black --check --line-length=88 --safe tests
 
   coverage:
-    working_directory: ~/iopipe-python
+    working_directory: ~/iopipe-cli
     docker:
       - image: circleci/python:3.6
     steps:
@@ -83,15 +83,15 @@ jobs:
           name: Generate coverage report
           command: |
             unset AWS_REGION IOPIPE_DEBUG IOPIPE_ENABLED IOPIPE_TIMEOUT_WINDOW IOPIPE_TOKEN
-            python setup.py test --addopts="--cov iopipe"
+            python setup.py test --addopts="--cov iopipe_cli"
       - run:
           name: Upload coverage report
           command: |
             pip install -U codecov
             codecov
 
-release:
-    working_directory: ~/iopipe-python
+  release:
+    working_directory: ~/iopipe-cli
     docker:
       - image: circleci/python:3.6
     steps:
