@@ -18,12 +18,14 @@ def list_functions(region, quiet, filter_choice):
         funcs = func_resp.get("Functions", [])
 
         for f in funcs:
-            runtime = f.get("Runtime")
-            if utils.is_valid_handler(runtime, f.get("Handler")):
-                f["-x-iopipe-enabled"] = True
-                if not all and filter_choice != "installed":
+            for layer in f.get("Layers", []):
+                if layer.get("Arn", "").startswith(utils.get_arn_prefix(region)):
+                    f["-x-iopipe-enabled"] = True
+                    if not all and filter_choice != "installed":
+                        continue
+                    yield f
                     continue
-            elif not all and filter_choice == "installed":
+            if not all and filter_choice == "installed":
                 continue
             yield f
 
