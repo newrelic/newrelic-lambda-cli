@@ -33,6 +33,7 @@ jobs:
             python3 -m venv venv
             . venv/bin/activate
             pip install -r requirements.txt
+            pip install -r test_requirements.txt
 
       - save_cache:
           paths:
@@ -48,8 +49,62 @@ jobs:
           name: run tests
           command: |
             . venv/bin/activate
-            python manage.py test
+            pytest
 
       - store_artifacts:
           path: test-reports
           destination: test-reports
+
+
+  code-style:
+    working_directory: ~/iopipe-python
+    docker:
+      - image: circleci/python:3.6-stretch
+    steps:
+      - checkout
+      - run: sudo chown -R circleci:circleci /usr/local/bin
+      - run: sudo chown -R circleci:circleci /usr/local/lib/python3.6/site-packages
+      - run:
+          name: Check code style
+          command: |
+            pip install black==18.6b2
+            black --check --line-length=88 --safe iopipe
+            black --check --line-length=88 --safe tests
+
+  coverage:
+    working_directory: ~/iopipe-python
+    docker:
+      - image: circleci/python:3.6
+    steps:
+      - checkout
+      - run: sudo chown -R circleci:circleci /usr/local/bin
+      - run: sudo chown -R circleci:circleci /usr/local/lib/python3.6/site-packages
+      - run:
+          name: Generate coverage report
+          command: |
+            unset AWS_REGION IOPIPE_DEBUG IOPIPE_ENABLED IOPIPE_TIMEOUT_WINDOW IOPIPE_TOKEN
+            python setup.py test --addopts="--cov iopipe"
+      - run:
+          name: Upload coverage report
+          command: |
+            pip install -U codecov
+            codecov
+
+release:
+    working_directory: ~/iopipe-python
+    docker:
+      - image: circleci/python:3.6
+    steps:
+      - checkout
+      - run: sudo chown -R circleci:circleci /usr/local/bin
+      - run: sudo chown -R circleci:circleci /usr/local/lib/python3.6/site-packages
+      - run:
+          name: Install release dependencies
+          command: |
+            sudo apt-get install -y pandoc
+            sudo pip install -U pyOpenSSL pypandoc setuptools twine
+      - run:
+          name: Release package
+          command: |
+            python setup.py sdist
+            twine upload dist/*
