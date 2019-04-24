@@ -6,9 +6,7 @@ version: 2
 jobs:
   build:
     docker:
-      # specify the version you desire here
-      # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
-      - image: circleci/python:3.6.1
+      - image: circleci/python:3.7
 
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
@@ -59,11 +57,11 @@ jobs:
   code-style:
     working_directory: ~/iopipe-cli
     docker:
-      - image: circleci/python:3.6-stretch
+      - image: circleci/python:3.7
     steps:
       - checkout
       - run: sudo chown -R circleci:circleci /usr/local/bin
-      - run: sudo chown -R circleci:circleci /usr/local/lib/python3.6/site-packages
+      - run: sudo chown -R circleci:circleci /usr/local/lib/python3.7/site-packages
       - run:
           name: Check code style
           command: |
@@ -74,11 +72,11 @@ jobs:
   coverage:
     working_directory: ~/iopipe-cli
     docker:
-      - image: circleci/python:3.6
+      - image: circleci/python:3.7
     steps:
       - checkout
       - run: sudo chown -R circleci:circleci /usr/local/bin
-      - run: sudo chown -R circleci:circleci /usr/local/lib/python3.6/site-packages
+      - run: sudo chown -R circleci:circleci /usr/local/lib/python3.7/site-packages
       - run:
           name: Generate coverage report
           command: |
@@ -93,11 +91,11 @@ jobs:
   release:
     working_directory: ~/iopipe-cli
     docker:
-      - image: circleci/python:3.6
+      - image: circleci/python:3.7
     steps:
       - checkout
       - run: sudo chown -R circleci:circleci /usr/local/bin
-      - run: sudo chown -R circleci:circleci /usr/local/lib/python3.6/site-packages
+      - run: sudo chown -R circleci:circleci /usr/local/lib/python3.7/site-packages
       - run:
           name: Install release dependencies
           command: |
@@ -108,3 +106,54 @@ jobs:
           command: |
             python setup.py sdist
             twine upload dist/*
+
+workflows:
+  version: 2
+  build-all:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only: /.*/
+            tags:
+              only: /.*/
+      - code-style:
+          filters:
+            branches:
+              only: /.*/
+            tags:
+              only: /.*/
+      - coverage:
+          filters:
+            branches:
+              only: /.*/
+            tags:
+              only: /.*/
+      - acceptance:
+          requires:
+            - build
+            - code-style
+          filters:
+            branches:
+              only: master
+            tags:
+              ignore: /.*/
+      - release:
+          requires:
+            - build
+            - code-style
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
+      - publish-py3x:
+          requires:
+            - build
+            - code-style
+            - release
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
