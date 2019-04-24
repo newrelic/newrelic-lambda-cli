@@ -9,7 +9,7 @@ for the AWS CLI.
 On your system CLI:
 
 ```
-pip3 install git+https://github.com/iopipe/iopipe-cli.git
+pip3 install iopipe-cli
 ```
 
 This tool assumes the AWS cli tool is configured correctly. Install and configure the AWS CLI as such:
