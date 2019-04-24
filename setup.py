@@ -1,10 +1,22 @@
 #!/usr/bin/env python3
 from setuptools import setup, find_packages
 
+try:
+    from pypandoc import convert
+
+    README = convert("README.md", "rst")
+except (ImportError, OSError):
+    README = open(os.path.join(os.path.dirname(__file__), "README.md"), "r").read()
+
 setup(
     name='iopipe-cli',
     version='0.1.1',
     python_requires='>=3.3',
+    description="cli utility for managing and instrumenting serverless applications",
+    long_description=README,
+    author="IOpipe",
+    author_email="dev@iopipe.com",
+    url="https://github.com/iopipe/iopipe-cli",
     packages=find_packages(),
     install_requires=[
         'click',
