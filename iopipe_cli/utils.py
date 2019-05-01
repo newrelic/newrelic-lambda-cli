@@ -3,6 +3,7 @@ from . import layers
 import boto3
 import botocore
 import click
+import collections
 import jwt
 import os
 import sys
@@ -23,6 +24,56 @@ if os.getenv("IOPIPE_FF_NODEJS"):
     RUNTIME_CONFIG["nodejs6.10"] = {"Handler": "@iopipe/iopipe.handler"}
     RUNTIME_CONFIG["nodejs8.10"] = {"Handler": "@iopipe/iopipe.handler"}
 
+def format_generic_arn(arn):
+    return collections.namedtuple(
+        "GenericArn",
+        [
+            "arn",
+            "partition",
+            "service",
+            "region",
+            "account_id",
+            "resource_type",
+            "resource",
+            "qualifier"
+        ],
+        defaults=[
+            "arn",
+            "aws",
+            None,
+            get_region(),
+            None,
+            None,
+            None,
+            None
+        ]
+    )(arn.split(":"))
+
+def format_lambda_arn(arn):
+    generic_arn = format_generic_arn(arn)
+    return collections.namedtuple(
+        "LambdaArn",
+        [
+            "arn",
+            "partition",
+            "service",
+            "region",
+            "account_id",
+            "resource_type",
+            "function_name",
+            "version"
+        ],
+        defaults=[
+           "arn",
+           "aws",
+           "lambda",
+            get_region(),
+            None,
+            "function",
+            None,
+            "$LATEST"
+        ]
+    )
 
 def runtime_config_iter():
     for runtime, obj in RUNTIME_CONFIG.items():
