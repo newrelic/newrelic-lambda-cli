@@ -25,7 +25,7 @@ Resources:
     Properties:
       ManagedPolicyArns: 
         - arn:aws:iam::aws:policy/ReadOnlyAccess
-      RoleName: !Sub NewRelicLambdaIntegrationRole
+      RoleName: !Join ['_', ['NewRelicLambdaIntegrationRole', !Ref NewRelicAccountNumber]]
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -41,7 +41,7 @@ Resources:
     Type: 'AWS::IAM::Role'
     Condition: UseCustomPolicy
     Properties:
-      RoleName: !Sub NewRelicLambdaIntegrationRole
+      RoleName: !Join ['_', ['NewRelicLambdaIntegrationRole', !Ref NewRelicAccountNumber]]
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
