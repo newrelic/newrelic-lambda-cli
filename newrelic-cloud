@@ -20,7 +20,7 @@ class NewRelicGraphQLClient:
         self.debug = False
         self.url = url if url else self._GRAPHQL_API_URL
 
-    def _extract_errors(self, errors, operation=None):
+    def _extract_errors(self, errors):
         """
         extract error messages from the errors lists. we need to parse 2 types
         of errors:
@@ -40,8 +40,11 @@ class NewRelicGraphQLClient:
 
     def _raise_if_failed(self, response, operation=None):
         errors = response['errors'] if 'errors' in response else None
+        if errors is None and operation is not None:
+            errors = response['data'][operation]['errors']
+
         if errors:
-            error_messages = self._extract_errors(errors, operation)
+            error_messages = self._extract_errors(errors)
             error_message = '\n'.join(error_messages)
             raise Exception(error_message)
 
@@ -347,12 +350,13 @@ def list_all_regions():
 
 
 def create_integration_role(role_policy, nr_account_id):
-    role = get_role('NewRelicLambdaIntegrationRole')
-    if role is None:
-        print(f'Creating role [NewRelicLambdaIntegrationRole] '
-              f'with policy [{role_policy}] in you AWS account...')
+    role = get_role(f'NewRelicLambdaIntegrationRole_{nr_account_id}')
+    if role is None:       
         create_role('NewRelicLambdaIntegrationRole', role_policy, nr_account_id)
         role = get_role('NewRelicLambdaIntegrationRole')
+        print(f'Created role [NewRelicLambdaIntegrationRole] '
+              f'with policy [{role_policy}] in your default AWS account.')
+
     return role
 
 
@@ -362,9 +366,7 @@ def create_integration_account(nr_account_id, linked_account_name,
     role_arn = role['Role']['Arn']
     account = api_client.get_linked_account_by_name(linked_account_name)
     if account is None:
-        account = api_client.create_linked_account(
-          role_arn, linked_account_name)
-
+        account = api_client.create_linked_account(role_arn, linked_account_name)
         print(f'Cloud integrations account [{linked_account_name}] '
               f'was created in New Relic account [{nr_account_id}] '
               f'with role [{role_arn}].')
@@ -372,6 +374,7 @@ def create_integration_account(nr_account_id, linked_account_name,
         print(f'Cloud integrations account '
               f'[{account["name"]}] already exists '
               f'in New Relic account [{nr_account_id}].')
+    
     return account
 
 
@@ -382,17 +385,13 @@ def enable_lamba_integration(nr_account_id, linked_account_name, api_client):
                         f'[{linked_account_name}] in New Relic account '
                         f'[{nr_account_id}].')
 
-    is_lambda_enabled = api_client.is_integration_enabled(
-      account['id'], 'lambda')
-
+    is_lambda_enabled = api_client.is_integration_enabled(account['id'], 'lambda')
     if is_lambda_enabled:
         print(f'The AWS Lambda integration is already enabled in '
               f'Cloud integrations account [{linked_account_name}] '
               f'of New Relic account [{nr_account_id}].')
     else:
-        integration = api_client.enable_integration(
-          account['id'], 'aws', 'lambda')
-
+        integration = api_client.enable_integration(account['id'], 'aws', 'lambda')
         print(f'Integration [id={integration["id"]}, '
               f'name={integration["name"]}] has been enabled in '
               f'Cloud integrations account [{linked_account_name}] '
@@ -421,43 +420,45 @@ def validate_linked_account(linked_account_name, api_client):
                   f"the AWS account of your default AWS-CLI profile [{user_info['Account']}].")
 
 
-def print_summary(failures, successes):
-    print('\n')
-    print("Failed actions:")
-    for result in failures:
-        print(f'  Function: {result.function}, Region: {result.region}, Error: {result.error}')
+def print_summary(results):
+    failures = list((result for result in results if result.failed))
+    sucesses = list((result for result in results if not result.failed))
 
-    print('\n')
-    print("Completed actions:")
-    for result in successes:
-        print(f'  Function: {result.function}, Region: {result.region}')
+    if failures:
+        print('\n')
+        print("Failed actions:")
+        for failure in failures:
+            print(f'  Function: {failure.function}, Region: {failure.region}, Error: {failure.error}')
+
+    if sucesses:
+        print('\n')
+        print("Completed actions:")
+        for success in sucesses:
+            print(f'  Function: {success.function}, Region: {success.region}')
 
 
 def setup_log_ingestion(nr_license_key, regions):
     regions = regions if regions else list_all_regions()
     results = []
 
-    print(f'Setting up "newrelic-log-ingestion" function in regions: {regions}')
     for region in regions:
-        try:
-            function = get_function('newrelic-log-ingestion', region)
-            if function is None:
+        function = get_function('newrelic-log-ingestion', region)
+        if function is None:
+            print(f'Setting up "newrelic-log-ingestion" function in regions: {regions}')
+            try:
                 create_function(region, 'newrelic-log-ingestion', nr_license_key)
                 results.append(
-                  OperationResult(function='newrelic-log-ingestion',
-                                  region=region))
-            else:
-                error_msg = f'"newrelic-log-ingestion" function already exists.'
+                  OperationResult(function='newrelic-log-ingestion', region=region))
+            except Exception as e:
+                error_msg = f'Failed to create "newrelic-log-ingestion" function: {e}.'
                 results.append(
                   OperationResult(function='newrelic-log-ingestion',
                                   region=region, failed=True,
                                   error=error_msg))
-        except Exception as e:
-            error_msg = f'Failed to create "newrelic-log-ingestion" function: {e}.'
-            results.append(OperationResult(function='newrelic-log-ingestion',
-                                           region=region, failed=True,
-                                           error=error_msg))
-
+        else:
+            print(f'The "newrelic-log-ingestion" function already exists in '
+                  f'region {region}')
+    
     return results
 
 
@@ -599,9 +600,7 @@ def main():
     elif args.command == 'stream-lambda-logs':
         results = setup_lambda_streaming(vars(args))
 
-    failures = (result for result in results if result.failed)
-    sucesses = (result for result in results if not result.failed)
-    print_summary(failures, sucesses)
+    print_summary(results)
 
 
 if __name__ == '__main__':
