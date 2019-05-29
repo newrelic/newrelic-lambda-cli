@@ -249,14 +249,14 @@ def get_streaming_filters(region, function_name):
         return response["subscriptionFilters"]
 
 
-def create_role(role_name, role_policy, nr_account_number):
+def create_role(role_policy, nr_account_id):
     role_policy_name = "" if role_policy is None else role_policy
     cmd = (
       f'aws cloudformation create-stack '
-      f'--stack-name NewRelicLambdaIntegrationRole '
+      f'--stack-name NewRelicLambdaIntegrationRole-{nr_account_id} '
       f'--template-body file://./templates/nr-lambda-integration-role.yaml '
       f'--parameters '
-      f'ParameterKey=NewRelicAccountNumber,ParameterValue={nr_account_number} '
+      f'ParameterKey=NewRelicAccountNumber,ParameterValue={nr_account_id} '
       f'ParameterKey=PolicyName,ParameterValue={role_policy_name} '
       f'--capabilities CAPABILITY_NAMED_IAM')
     response = subprocess.run(
@@ -268,7 +268,7 @@ def create_role(role_name, role_policy, nr_account_number):
         # wait for stack to create
         cmd = (
           f'aws cloudformation wait stack-create-complete '
-          f'--stack-name NewRelicLambdaIntegrationRole')
+          f'--stack-name NewRelicLambdaIntegrationRole-{nr_account_id}')
         response = subprocess.run(
             cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         exit_code = response.returncode
@@ -350,11 +350,12 @@ def list_all_regions():
 
 
 def create_integration_role(role_policy, nr_account_id):
-    role = get_role(f'NewRelicLambdaIntegrationRole_{nr_account_id}')
-    if role is None:       
-        create_role('NewRelicLambdaIntegrationRole', role_policy, nr_account_id)
-        role = get_role('NewRelicLambdaIntegrationRole')
-        print(f'Created role [NewRelicLambdaIntegrationRole] '
+    roleName = f'NewRelicLambdaIntegrationRole_{nr_account_id}'
+    role = get_role(roleName)
+    if role is None:
+        create_role(role_policy, nr_account_id)
+        role = get_role(roleName)
+        print(f'Created role [{roleName}] '
               f'with policy [{role_policy}] in your default AWS account.')
 
     return role
@@ -374,7 +375,7 @@ def create_integration_account(nr_account_id, linked_account_name,
         print(f'Cloud integrations account '
               f'[{account["name"]}] already exists '
               f'in New Relic account [{nr_account_id}].')
-    
+
     return account
 
 
