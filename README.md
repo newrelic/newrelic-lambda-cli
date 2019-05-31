@@ -5,29 +5,34 @@ This script relies in AWS CLI to perform some actions in your AWS account, so yo
 
 ## Requirements
 
-* Python 3
+* Python >= 3.6
 * [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html).
 * You also have to perform the [initial configuration](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html) of the AWS CLI to set the proper credentials and default region.
 
-The following section explains how to use the script.
+## Note on permissions
+
+In order to use the script you will need to have enough permissions in your New Relic account and in you AWS account.
+In your New Relic account your user will have to either be an `Admin` or an `User` with the `Infrastructure manager` role.
+
+In your AWS account will need to have enough permissions to create IAM resources (Role and Policy) and Lambda functions.
 
 ## Installation
 
 1. Download [this zip file](https://github.com/newrelic/nr-lambda-onboarding/archive/master.zip) that contains all files of this repository:
 
-`curl -L -O https://github.com/newrelic/nr-lambda-onboarding/archive/master.zip`
+    `curl -L -O https://github.com/newrelic/nr-lambda-onboarding/archive/master.zip`
 
 2. Uncompress the zip file:
 
-`unzip master.zip`
+    `unzip master.zip`
 
 3. Change to `nr-lambda-onboarding-master` directory:
 
-`cd nr-lambda-onboarding-master`
+    `cd nr-lambda-onboarding-master`
 
 4. Add execution permission to `newrelic-cloud` script:
 
-`chmod +x newrelic-cloud`
+    `chmod +x newrelic-cloud`
 
 ## Enable Lambda integration
 
@@ -49,13 +54,13 @@ The steps are:
 * **--nr-license-key** *NR_LICENSE_KEY* : Your New Relic license key. [Check the documentation](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/license-key) on how to obtain a license key.
 * **--regions** *REGIONS* : (Optional) List of regions where to install the New Relic log ingestion function. If no value is supplied it will fetch the list of regions from EC2 and use that as the list of regions.
 
-**Example:** `./newrelic-cloud set-up-lambda-integration --nr-account-id 747894 --linked-account-name "myt-test-account" --aws-role-policy "NewRelicLambdaPolicy" --nr-api-key abcdef12234567 --nr-license-key abcdef12345 --regions eu-west-1 eu-west-2`
+**Example:**
+
+    ./newrelic-cloud set-up-lambda-integration --nr-account-id 747894 --linked-account-name "myt-test-account" --aws-role-policy "NewRelicLambdaPolicy" --nr-api-key abcdef12234567 --nr-license-key abcdef12345 --regions eu-west-1 eu-west-2
 
 ## Enable Lambda log streaming
 
 `usage: ./newrelic-cloud stream-lambda-logs [args]`
-
-**Example:** `./newrelic-cloud stream-lambda-logs --functions my-function-1 my-function-2 --regions eu-west-1 eu-west-2`
 
 This command will execute all the required steps necessary to start sending Lambda agent data to New Relic.
 It will create a log subscription filter for each of the given intrumented Lambdas to NewRelic-log-ingestion function, so agent data will be streamed to this function which will forward it to New Relic ingestion services.
@@ -64,3 +69,7 @@ It will create a log subscription filter for each of the given intrumented Lambd
 
 * **--functions** *FUNCTIONS* : One of more function (names) to enable log streaming.
 * **--regions** *REGIONS* : (Optional) List of regions where the script will try to setup the log streaming for the given functions. If no value is supplied it will fetch the list of regions from EC2 and use that as the list of regions.
+
+**Example:**
+
+    ./newrelic-cloud stream-lambda-logs --functions my-function-1 my-function-2 --regions eu-west-1 eu-west-2
