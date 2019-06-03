@@ -445,7 +445,7 @@ def setup_log_ingestion(nr_license_key, regions):
     for region in regions:
         function = get_function('newrelic-log-ingestion', region)
         if function is None:
-            print(f'Setting up "newrelic-log-ingestion" function in regions: {regions}')
+            print(f'Setting up "newrelic-log-ingestion" function in region: {region}')
             try:
                 create_function(region, 'newrelic-log-ingestion', nr_license_key)
                 results.append(
