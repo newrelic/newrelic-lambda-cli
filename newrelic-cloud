@@ -205,10 +205,15 @@ class NewRelicGraphQLClient:
         return response['data']['cloudConfigureIntegration']['integrations'][0]
 
 
+def execute_shell_command(command):
+    response = subprocess.run(command, shell=True, stdout=subprocess.PIPE, 
+                              stderr=subprocess.PIPE)
+    return response
+
+
 def get_role(role_name):
     cmd = f'aws iam get-role --role-name {role_name}'
-    response = subprocess.run(
-        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    response = execute_shell_command(cmd)
     exit_code = response.returncode
     # error:most likely role does not exist
     if exit_code > 0:
@@ -222,8 +227,7 @@ def get_role(role_name):
 
 def get_function(function_name, region):
     cmd = f'aws --region {region} lambda get-function --function-name {function_name}'
-    response = subprocess.run(
-        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    response = execute_shell_command(cmd)
     exit_code = response.returncode
     # error:most likely function does not exist
     if exit_code > 0:
@@ -239,8 +243,7 @@ def get_streaming_filters(region, function_name):
     cmd = (
           f'aws --region {region} logs describe-subscription-filters '
           f'--log-group-name "/aws/lambda/{function_name}" ')
-    response = subprocess.run(
-        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    response = execute_shell_command(cmd)
     exit_code = response.returncode
     if exit_code > 0:
         raise Exception(response.stderr)
@@ -259,8 +262,7 @@ def create_role(role_policy, nr_account_id):
       f'ParameterKey=NewRelicAccountNumber,ParameterValue={nr_account_id} '
       f'ParameterKey=PolicyName,ParameterValue={role_policy_name} '
       f'--capabilities CAPABILITY_NAMED_IAM')
-    response = subprocess.run(
-        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    response = execute_shell_command(cmd)
     exit_code = response.returncode
     if exit_code > 0:
         raise Exception(response.stderr)
@@ -285,8 +287,7 @@ def create_function(region, function_name, nr_license_key):
       f'ParameterKey=NewRelicLicenseKey,ParameterValue={nr_license_key} '
       f'--capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND')
 
-    response = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE)
+    response = execute_shell_command(cmd)
     exit_code = response.returncode
     if exit_code > 0:
         raise Exception(response.stderr)
@@ -304,6 +305,31 @@ def create_function(region, function_name, nr_license_key):
             return response.stdout
 
 
+def add_function_streaming_filter(region, function_name, function_arn):
+    cmd = (
+        f'aws --region {region} logs put-subscription-filter '
+        f'--log-group-name "/aws/lambda/{function_name}" '
+        f'--filter-name NewRelicLogStreaming '
+        f'--filter-pattern "NR_LAMBDA_MONITORING" '
+        f'--destination-arn "{function_arn}"')
+    response = execute_shell_command(cmd)
+    exit_code = response.returncode
+    if exit_code > 0:
+        raise Exception(response.stderr)
+
+
+def remove_function_streaming_filter(streaming_filters, region, function_name):
+    print('Removing invalid subscrition filter..')
+    cmd = (
+        f'aws --region {region} logs delete-subscription-filter '
+        f'--log-group-name "/aws/lambda/{function_name}" '
+        f'--filter-name NewRelicLogStreaming ')
+    response = execute_shell_command(cmd)
+    exit_code = response.returncode
+    if exit_code > 0:
+        raise Exception(response.stderr)
+
+
 def create_log_subscription(region, function_name):
     function = get_function("newrelic-log-ingestion", region)
     if function is None:
@@ -317,29 +343,22 @@ def create_log_subscription(region, function_name):
     # avoid throwing LimitExceeded.
     streaming_filters = get_streaming_filters(region, function_name)
     if not streaming_filters:
-        cmd = (
-          f'aws --region {region} logs put-subscription-filter '
-          f'--log-group-name "/aws/lambda/{function_name}" '
-          f'--filter-name NewRelicLogStreaming '
-          f'--filter-pattern "" '
-          f'--destination-arn "{function_arn}"')
-        response = subprocess.run(
-          cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        exit_code = response.returncode
-        if exit_code > 0:
-            raise Exception(response.stderr)
+        add_function_streaming_filter(region, function_name, function_arn)
     else:
-        error_msg = 'Log streaming already enabled.'
-        return OperationResult(function=function_name, region=region,
-                               failed=True, error=error_msg)
+        filter = streaming_filters[0]
+        if filter['filterName'] == 'NewRelicLogStreaming' and filter['filterPattern'] == "":
+            remove_function_streaming_filter(streaming_filters, region, function_name)
+            add_function_streaming_filter(region, function_name, function_arn)
+        elif filter['filterName'] != 'NewRelicLogStreaming':
+            print(f'Function {function_name} already has a streaming '
+                  f'subscription assigned. Skipping...')                         
 
     return OperationResult(function=function_name, region=region)
 
 
 def list_all_regions():
     cmd = f'aws ec2 describe-regions'
-    response = subprocess.run(
-        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    response = execute_shell_command(cmd)
     exit_code = response.returncode
     # error:most likely role does not exist
     if exit_code > 0:
@@ -408,8 +427,7 @@ def validate_linked_account(linked_account_name, api_client):
     account = api_client.get_linked_account_by_name(linked_account_name)
     if account is not None:
         cmd = f'aws sts get-caller-identity'
-        response = subprocess.run(
-            cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        response = execute_shell_command(cmd)
         exit_code = response.returncode
         if exit_code > 0:
             raise Exception(response.stderr)
@@ -527,7 +545,7 @@ def setup_lambda_streaming(args):
                                                    region=region, failed=True,
                                                    error=error_msg))
             except Exception as e:
-                results.append(OperationResult(function=function,
+                results.append(OperationResult(function=function_name,
                                                region=region, failed=True,
                                                error=e))
 
