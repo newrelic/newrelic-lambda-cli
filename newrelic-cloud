@@ -11,7 +11,7 @@ OperationResult = collections.namedtuple(
 
 
 class NewRelicGraphQLClient:
-    _GRAPHQL_API_URL = 'https://staging-api.newrelic.com/graphql'
+    _GRAPHQL_API_URL = 'https://api.newrelic.com/graphql'
 
     def __init__(self, nr_account_id, api_key, url=None):
         self.api_key = api_key
