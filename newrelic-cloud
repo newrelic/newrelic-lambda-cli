@@ -7,12 +7,11 @@ import urllib.request
 import collections
 
 OperationResult = collections.namedtuple(
-  'OperationResult', ['function', 'region', 'failed', 'error'],
-  defaults=(None, None, False, None))
+  'OperationResult', ['function', 'region', 'failed', 'error'])
 
 
 class NewRelicGraphQLClient:
-    _GRAPHQL_API_URL = 'https://api.newrelic.com/graphql'
+    _GRAPHQL_API_URL = 'https://staging-api.newrelic.com/graphql'
 
     def __init__(self, nr_account_id, api_key, url=None):
         self.api_key = api_key
@@ -336,8 +335,7 @@ def create_log_subscription(region, function_name):
         error_msg = (
               f'Could not find "newrelic-log-ingestion function". '
               f'Please create it first before enabling log streaming.')
-        return OperationResult(function=function_name, region=region,
-                               failed=True, error=error_msg)
+        return OperationResult(function_name, region, True, error_msg)
     function_arn = function['Configuration']['FunctionArn']
     # check if any subscription filter already exists for the function to
     # avoid throwing LimitExceeded.
@@ -353,7 +351,7 @@ def create_log_subscription(region, function_name):
             print(f'Function {function_name} already has a streaming '
                   f'subscription assigned. Skipping...')                         
 
-    return OperationResult(function=function_name, region=region)
+    return OperationResult(function_name, region, False, None)
 
 
 def list_all_regions():
@@ -467,13 +465,11 @@ def setup_log_ingestion(nr_license_key, regions):
             try:
                 create_function(region, 'newrelic-log-ingestion', nr_license_key)
                 results.append(
-                  OperationResult(function='newrelic-log-ingestion', region=region))
+                  OperationResult('newrelic-log-ingestion', region, False, None))
             except Exception as e:
                 error_msg = f'Failed to create "newrelic-log-ingestion" function: {e}.'
                 results.append(
-                  OperationResult(function='newrelic-log-ingestion',
-                                  region=region, failed=True,
-                                  error=error_msg))
+                  OperationResult('newrelic-log-ingestion', region, True, error_msg))
         else:
             print(f'The "newrelic-log-ingestion" function already exists in '
                   f'region {region}')
@@ -514,7 +510,7 @@ def enable_lambda_monitoring(args):
         results = setup_log_ingestion(nr_license_key, regions)
     except Exception as e:
         error_msg = f'Failed to set up lambda integration: {e}'
-        results.append(OperationResult(failed=True, error=error_msg))
+        results.append(OperationResult(None, None, True, error_msg))
     return results
 
 
@@ -541,13 +537,9 @@ def setup_lambda_streaming(args):
                     results.append(result)
                 else:
                     error_msg = f'Function {function_name} does not exist in region {region}'
-                    results.append(OperationResult(function=function_name,
-                                                   region=region, failed=True,
-                                                   error=error_msg))
+                    results.append(OperationResult(function_name, region, True, error_msg))
             except Exception as e:
-                results.append(OperationResult(function=function_name,
-                                               region=region, failed=True,
-                                               error=e))
+                results.append(OperationResult(function_name, region, True, e))
 
     return results
 
