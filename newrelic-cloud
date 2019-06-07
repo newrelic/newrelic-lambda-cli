@@ -240,7 +240,7 @@ def get_function(function_name, region, aws_profile):
         return json.loads(response.stdout)
 
 
-def get_streaming_filters(region, function_name):
+def get_streaming_filters(region, function_name, aws_profile):
     cmd = (
           f'aws --region {region} logs describe-subscription-filters --profile {aws_profile} '
           f'--log-group-name "/aws/lambda/{function_name}" ')
@@ -619,6 +619,10 @@ def main():
         f'(Optional) List of (space-separated) regions where the script will '
         f'try to setup the log streaming for the given functions. '
         f'If no value is supplied, it will use all available regions.'))
+    log_ingestion_parser.add_argument(
+      '--aws-profile', default='default',
+      help=(
+        f'(Optional) Use a specific profile from your aws credential file '))
 
     args = main_parser.parse_args()
     results = []
