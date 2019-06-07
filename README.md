@@ -8,13 +8,22 @@ This script relies in AWS CLI to perform some actions in your AWS account, so yo
 * Python >= 3.6
 * [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html).
 * You also have to perform the [initial configuration](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html) of the AWS CLI to set the proper credentials and default region.
+ 
+  **Note**: If you have multiple AWS profiles and you don't want to use the default while running this script, set the `AWS_DEFAULT_PROFILE` environment variable to the name of the required profile.
+  
+  Make sure this new profile is properly configured (including the default region).
+  Example:
+
+        export AWS_DEFAULT_PROFILE=my-other-profile
+
+
 
 ## Note on permissions
 
 In order to use the script you will need to have enough permissions in your New Relic account and in you AWS account.
 In your New Relic account your user will have to either be an `Admin` or an `User` with the `Infrastructure manager` role.
 
-In your AWS account will need to have enough permissions to create IAM resources (Role and Policy) and Lambda functions.
+In your AWS account will need to have enough permissions to create IAM resources (Role and Policy) and Lambda functions. These resources will be created via Coudformation stacks, so you will need permissions to create those.
 
 ## Installation
 
