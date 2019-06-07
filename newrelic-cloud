@@ -59,7 +59,7 @@ class NewRelicGraphQLClient:
           'api-key': self.api_key,
           'Content-Length': len(post_data)}
 
-        req = urllib.request.Request(url=self.url, data=post_data, 
+        req = urllib.request.Request(url=self.url, data=post_data,
                                      headers=headers, method='POST')
         res = urllib.request.urlopen(req)
         response = res.read()
@@ -207,13 +207,13 @@ class NewRelicGraphQLClient:
 
 
 def execute_shell_command(command):
-    response = subprocess.run(command, shell=True, stdout=subprocess.PIPE, 
+    response = subprocess.run(command, shell=True, stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
     return response
 
 
-def get_role(role_name):
-    cmd = f'aws iam get-role --role-name {role_name}'
+def get_role(role_name, aws_profile):
+    cmd = f'aws iam get-role --role-name {role_name} --profile {aws_profile} '
     response = execute_shell_command(cmd)
     exit_code = response.returncode
     # error:most likely role does not exist
@@ -226,8 +226,8 @@ def get_role(role_name):
         return json.loads(response.stdout)
 
 
-def get_function(function_name, region):
-    cmd = f'aws --region {region} lambda get-function --function-name {function_name}'
+def get_function(function_name, region, aws_profile):
+    cmd = f'aws --region {region} lambda get-function --function-name {function_name} --profile {aws_profile} '
     response = execute_shell_command(cmd)
     exit_code = response.returncode
     # error:most likely function does not exist
@@ -242,7 +242,7 @@ def get_function(function_name, region):
 
 def get_streaming_filters(region, function_name):
     cmd = (
-          f'aws --region {region} logs describe-subscription-filters '
+          f'aws --region {region} logs describe-subscription-filters --profile {aws_profile} '
           f'--log-group-name "/aws/lambda/{function_name}" ')
     response = execute_shell_command(cmd)
     exit_code = response.returncode
@@ -253,10 +253,10 @@ def get_streaming_filters(region, function_name):
         return response["subscriptionFilters"]
 
 
-def create_role(role_policy, nr_account_id):
+def create_role(role_policy, nr_account_id, aws_profile):
     role_policy_name = "" if role_policy is None else role_policy
     cmd = (
-      f'aws cloudformation create-stack '
+      f'aws cloudformation create-stack --profile {aws_profile} '
       f'--stack-name NewRelicLambdaIntegrationRole-{nr_account_id} '
       f'--template-body file://./templates/nr-lambda-integration-role.yaml '
       f'--parameters '
@@ -270,7 +270,7 @@ def create_role(role_policy, nr_account_id):
     else:
         # wait for stack to create
         cmd = (
-          f'aws cloudformation wait stack-create-complete '
+          f'aws cloudformation wait stack-create-complete --profile {aws_profile} '
           f'--stack-name NewRelicLambdaIntegrationRole-{nr_account_id}')
         response = subprocess.run(
             cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -279,9 +279,9 @@ def create_role(role_policy, nr_account_id):
             raise Exception(response.stderr)
 
 
-def create_function(region, function_name, nr_license_key):
+def create_function(region, function_name, nr_license_key, aws_profile):
     cmd = (
-      f'aws --region {region} cloudformation create-stack '
+      f'aws --region {region} cloudformation create-stack --profile {aws_profile} '
       f'--stack-name NewRelicLogIngestion '
       f'--template-body file://./templates/newrelic-log-ingestion.yaml '
       f'--parameters '
@@ -294,7 +294,7 @@ def create_function(region, function_name, nr_license_key):
         raise Exception(response.stderr)
     else:
         cmd = (
-          f'aws --region {region} cloudformation wait '
+          f'aws --region {region} cloudformation wait --profile {aws_profile} '
           f'stack-create-complete --stack-name NewRelicLogIngestion')
 
         response = subprocess.run(
@@ -306,9 +306,9 @@ def create_function(region, function_name, nr_license_key):
             return response.stdout
 
 
-def add_function_streaming_filter(region, function_name, function_arn):
+def add_function_streaming_filter(region, function_name, function_arn, aws_profile):
     cmd = (
-        f'aws --region {region} logs put-subscription-filter '
+        f'aws --region {region} logs put-subscription-filter --profile {aws_profile} '
         f'--log-group-name "/aws/lambda/{function_name}" '
         f'--filter-name NewRelicLogStreaming '
         f'--filter-pattern "NR_LAMBDA_MONITORING" '
@@ -319,10 +319,10 @@ def add_function_streaming_filter(region, function_name, function_arn):
         raise Exception(response.stderr)
 
 
-def remove_function_streaming_filter(streaming_filters, region, function_name):
+def remove_function_streaming_filter(streaming_filters, region, function_name, aws_profile):
     print('Removing invalid subscrition filter..')
     cmd = (
-        f'aws --region {region} logs delete-subscription-filter '
+        f'aws --region {region} logs delete-subscription-filter --profile {aws_profile} '
         f'--log-group-name "/aws/lambda/{function_name}" '
         f'--filter-name NewRelicLogStreaming ')
     response = execute_shell_command(cmd)
@@ -331,8 +331,8 @@ def remove_function_streaming_filter(streaming_filters, region, function_name):
         raise Exception(response.stderr)
 
 
-def create_log_subscription(region, function_name):
-    function = get_function("newrelic-log-ingestion", region)
+def create_log_subscription(region, function_name, aws_profile):
+    function = get_function("newrelic-log-ingestion", region, aws_profile)
     if function is None:
         error_msg = (
               f'Could not find "newrelic-log-ingestion function". '
@@ -341,23 +341,23 @@ def create_log_subscription(region, function_name):
     function_arn = function['Configuration']['FunctionArn']
     # check if any subscription filter already exists for the function to
     # avoid throwing LimitExceeded.
-    streaming_filters = get_streaming_filters(region, function_name)
+    streaming_filters = get_streaming_filters(region, function_name, aws_profile)
     if not streaming_filters:
-        add_function_streaming_filter(region, function_name, function_arn)
+        add_function_streaming_filter(region, function_name, function_arn, aws_profile)
     else:
         filter = streaming_filters[0]
         if filter['filterName'] == 'NewRelicLogStreaming' and filter['filterPattern'] == "":
-            remove_function_streaming_filter(streaming_filters, region, function_name)
-            add_function_streaming_filter(region, function_name, function_arn)
+            remove_function_streaming_filter(streaming_filters, region, function_name, aws_profile)
+            add_function_streaming_filter(region, function_name, function_arn, aws_profile)
         elif filter['filterName'] != 'NewRelicLogStreaming':
             print(f'Function {function_name} already has a streaming '
-                  f'subscription assigned. Skipping...')                         
+                  f'subscription assigned. Skipping...')
 
     return OperationResult(function_name, region, False, None)
 
 
-def list_all_regions():
-    cmd = f'aws ec2 describe-regions'
+def list_all_regions(aws_profile):
+    cmd = f'aws ec2 describe-regions --profile {aws_profile}'
     response = execute_shell_command(cmd)
     exit_code = response.returncode
     # error:most likely role does not exist
@@ -368,12 +368,12 @@ def list_all_regions():
         return [region['RegionName'] for region in response['Regions']]
 
 
-def create_integration_role(role_policy, nr_account_id):
+def create_integration_role(role_policy, nr_account_id, aws_profile):
     roleName = f'NewRelicLambdaIntegrationRole_{nr_account_id}'
-    role = get_role(roleName)
+    role = get_role(roleName, aws_profile)
     if role is None:
-        create_role(role_policy, nr_account_id)
-        role = get_role(roleName)
+        create_role(role_policy, nr_account_id, aws_profile)
+        role = get_role(roleName, aws_profile)
         print(f'Created role [{roleName}] '
               f'with policy [{role_policy}] in your default AWS account.')
 
@@ -418,7 +418,7 @@ def enable_lamba_integration(nr_account_id, linked_account_name, api_client):
               f' of New Relic account [{nr_account_id}].')
 
 
-def validate_linked_account(linked_account_name, api_client):
+def validate_linked_account(linked_account_name, api_client, aws_profile):
     """
     ensure that the aws account associated with the 'provider account',
     if it exists, is the same as the aws account of the default aws-cli
@@ -426,7 +426,7 @@ def validate_linked_account(linked_account_name, api_client):
     """
     account = api_client.get_linked_account_by_name(linked_account_name)
     if account is not None:
-        cmd = f'aws sts get-caller-identity'
+        cmd = f'aws sts get-caller-identity --profile {aws_profile}'
         response = execute_shell_command(cmd)
         exit_code = response.returncode
         if exit_code > 0:
@@ -456,16 +456,16 @@ def print_summary(results):
             print(f'  Function: {success.function}, Region: {success.region}')
 
 
-def setup_log_ingestion(nr_license_key, regions):
-    regions = regions if regions else list_all_regions()
+def setup_log_ingestion(nr_license_key, regions, aws_profile):
+    regions = regions if regions else list_all_regions(aws_profile)
     results = []
 
     for region in regions:
-        function = get_function('newrelic-log-ingestion', region)
+        function = get_function('newrelic-log-ingestion', region, aws_profile)
         if function is None:
             print(f'Setting up "newrelic-log-ingestion" function in region: {region}')
             try:
-                create_function(region, 'newrelic-log-ingestion', nr_license_key)
+                create_function(region, 'newrelic-log-ingestion', nr_license_key, aws_profile)
                 results.append(
                   OperationResult('newrelic-log-ingestion', region, False, None))
             except Exception as e:
@@ -475,7 +475,7 @@ def setup_log_ingestion(nr_license_key, regions):
         else:
             print(f'The "newrelic-log-ingestion" function already exists in '
                   f'region {region}')
-    
+
     return results
 
 
@@ -501,15 +501,16 @@ def enable_lambda_monitoring(args):
     nr_license_key = args['nr_license_key']
     api_key = args['nr_api_key']
     regions = args['regions']
+    aws_profile = args['aws_profile']
 
     results = []
     api_endpoint = get_endpoint(nr_license_key)
     api_client = NewRelicGraphQLClient(nr_account_id, api_key, api_endpoint)
     try:
 
-        validate_linked_account(linked_account_name, api_client)
+        validate_linked_account(linked_account_name, api_client, aws_profile)
 
-        role = create_integration_role(role_policy, nr_account_id)
+        role = create_integration_role(role_policy, nr_account_id, aws_profile)
 
         create_integration_account(
           nr_account_id, linked_account_name, role, api_client)
@@ -517,7 +518,7 @@ def enable_lambda_monitoring(args):
         enable_lamba_integration(
           nr_account_id, linked_account_name, api_client)
 
-        results = setup_log_ingestion(nr_license_key, regions)
+        results = setup_log_ingestion(nr_license_key, regions, aws_profile)
     except Exception as e:
         error_msg = f'Failed to set up lambda integration: {e}'
         results.append(OperationResult(None, None, True, error_msg))
@@ -531,9 +532,10 @@ def setup_lambda_streaming(args):
     """
     function_names = args['functions']
     regions = args['regions']
+    aws_profile = args['aws_profile']
 
     results = []
-    regions = regions if regions else list_all_regions()
+    regions = regions if regions else list_all_regions(aws_profile)
     for region in regions:
         for function_name in function_names:
             print(f'Enabling log streaming for function : {function_name} '
@@ -541,9 +543,9 @@ def setup_lambda_streaming(args):
             try:
                 # try to find the function in the region.
                 # enable streaming only if we find it
-                function = get_function(function_name, region)
+                function = get_function(function_name, region, aws_profile)
                 if function:
-                    result = create_log_subscription(region, function_name)
+                    result = create_log_subscription(region, function_name, aws_profile)
                     results.append(result)
                 else:
                     error_msg = f'Function {function_name} does not exist in region {region}'
@@ -558,7 +560,7 @@ def main():
     main_parser = argparse.ArgumentParser(
         usage='newrelic-cloud command [args]',
         description='New Relic installer for AWS Lambda monitoring.')
-    subparsers = main_parser.add_subparsers(dest='command', required=True)
+    subparsers = main_parser.add_subparsers(dest='command')
     # lambda integration command
     lambda_parser = subparsers.add_parser(
       name='set-up-lambda-integration',
@@ -598,6 +600,10 @@ def main():
       help=(
         f'(Optional) List of (space-separated) regions where the log '
         f'ingestion function will be installed.'))
+    lambda_parser.add_argument(
+      '--aws-profile', default='default',
+      help=(
+        f'(Optional) Use a specific profile from your aws credential file '))
 
     # log ingestion command
     log_ingestion_parser = subparsers.add_parser(
