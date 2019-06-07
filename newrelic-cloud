@@ -558,7 +558,9 @@ def main():
     main_parser = argparse.ArgumentParser(
         usage='newrelic-cloud command [args]',
         description='New Relic installer for AWS Lambda monitoring.')
-    subparsers = main_parser.add_subparsers(dest='command', required=True)
+    subparsers = main_parser.add_subparsers(dest='command')
+    # comaptibility with 3.6.+
+    subparsers.required=True
     # lambda integration command
     lambda_parser = subparsers.add_parser(
       name='set-up-lambda-integration',
