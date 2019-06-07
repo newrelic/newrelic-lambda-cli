@@ -9,15 +9,17 @@ import collections
 OperationResult = collections.namedtuple(
   'OperationResult', ['function', 'region', 'failed', 'error'])
 
+_GRAPHQL_API_URL = 'https://api.newrelic.com/graphql'
+_GRAPHQL_EU_API_URL = 'https://api.eu.newrelic.com/graphql'
+
 
 class NewRelicGraphQLClient:
-    _GRAPHQL_API_URL = 'https://api.newrelic.com/graphql'
 
-    def __init__(self, nr_account_id, api_key, url=None):
+    def __init__(self, nr_account_id, api_key, endpoint):
         self.api_key = api_key
         self.nr_account_id = int(nr_account_id)
         self.debug = False
-        self.url = url if url else self._GRAPHQL_API_URL
+        self.url = endpoint
 
     def _extract_errors(self, errors):
         """
@@ -477,6 +479,13 @@ def setup_log_ingestion(nr_license_key, regions):
     return results
 
 
+def get_endpoint(nr_license_key):
+    if nr_license_key.startswith("eu"):
+        return _GRAPHQL_EU_API_URL
+    else:
+        return _GRAPHQL_API_URL
+
+
 def enable_lambda_monitoring(args):
     """
     Execute the full workflow to enable AWS lambda monitoring.
@@ -494,7 +503,8 @@ def enable_lambda_monitoring(args):
     regions = args['regions']
 
     results = []
-    api_client = NewRelicGraphQLClient(nr_account_id, api_key)
+    api_endpoint = get_endpoint(nr_license_key)
+    api_client = NewRelicGraphQLClient(nr_account_id, api_key, api_endpoint)
     try:
 
         validate_linked_account(linked_account_name, api_client)
