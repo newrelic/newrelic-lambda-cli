@@ -23,7 +23,7 @@ This script relies in AWS CLI to perform some actions in your AWS account, so yo
 In order to use the script you will need to have enough permissions in your New Relic account and in you AWS account.
 In your New Relic account your user will have to either be an `Admin` or an `User` with the `Infrastructure manager` role.
 
-In your AWS account will need to have enough permissions to create IAM resources (Role and Policy) and Lambda functions. These resources will be created via Coudformation stacks, so you will need permissions to create those.
+In your AWS account will need to have enough permissions to create IAM resources (Role and Policy) and Lambda functions. These resources will be created via CloudFormation stacks, so you will need permissions to create those.
 
 ## Installation
 
