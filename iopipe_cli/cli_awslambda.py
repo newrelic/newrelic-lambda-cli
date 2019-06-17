@@ -152,7 +152,7 @@ def lambda_list_functions(region, quiet, filter):
         if idx > 0 and idx % consrows == 0:
             click.echo_via_pager(itertools.chain(iter(buffer), _format(functions_iter)))
             buffer = []
-            break
+            return
     # Print all lines for non-paged results.
     for line in iter(buffer):
         click.echo(line, nl=False)

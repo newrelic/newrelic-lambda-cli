@@ -21,6 +21,7 @@ RUNTIME_CONFIG = {
     "python3.7": {"Handler": "iopipe.handler.wrapper"},
 }
 
+
 def format_generic_arn(arn):
     return collections.namedtuple(
         "GenericArn",
@@ -32,19 +33,11 @@ def format_generic_arn(arn):
             "account_id",
             "resource_type",
             "resource",
-            "qualifier"
+            "qualifier",
         ],
-        defaults=[
-            "arn",
-            "aws",
-            None,
-            get_region(None),
-            None,
-            None,
-            None,
-            None
-        ]
+        defaults=["arn", "aws", None, get_region(None), None, None, None, None],
     )(arn.split(":"))
+
 
 def format_lambda_arn(arn):
     return collections.namedtuple(
@@ -57,19 +50,20 @@ def format_lambda_arn(arn):
             "account_id",
             "resource_type",
             "function_name",
-            "version"
+            "version",
         ],
         defaults=[
-           "arn",
-           "aws",
-           "lambda",
+            "arn",
+            "aws",
+            "lambda",
             get_region(None),
             None,
             "function",
             None,
-            "$LATEST"
-        ]
+            "$LATEST",
+        ],
     )(arn.split(":"))
+
 
 def runtime_config_iter():
     for runtime, obj in RUNTIME_CONFIG.items():
