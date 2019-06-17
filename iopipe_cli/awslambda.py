@@ -8,29 +8,23 @@ def list_functions(region, quiet, filter_choice):
     # set all if the filter_choice is "all" or there is no filter_choice active.
     all = filter_choice == "all" or not filter_choice
 
-    next_marker = None
-    while True:
-        list_func_args = {}
-        if next_marker:
-            list_func_args = {"Marker": next_marker}
-        func_resp = AwsLambda.list_functions(**list_func_args)
-        next_marker = func_resp.get("NextMarker", None)
-        funcs = func_resp.get("Functions", [])
+    pager = AwsLambda.get_paginator("list_functions")
 
+    for func_resp in pager.paginate():
+        funcs = func_resp.get("Functions", [])
         for f in funcs:
             for layer in f.get("Layers", []):
                 if layer.get("Arn", "").startswith(utils.get_arn_prefix(region)):
                     f["-x-iopipe-enabled"] = True
-                    if not all and filter_choice != "installed":
-                        continue
+            if all:
+                yield f
+            elif filter_choice == "installed":
+                if f["-x-iopipe-enabled"]:
                     yield f
-                    continue
-            if not all and filter_choice == "installed":
                 continue
-            yield f
-
-        if not next_marker:
-            break
+            else:
+                if not f["-x-iopipe-enabled"]:
+                    yield f
 
 
 class MultipleLayersException(Exception):
