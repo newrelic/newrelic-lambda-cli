@@ -41,7 +41,7 @@ def format_generic_arn(arn):
             "arn",
             "aws",
             None,
-            get_region(),
+            get_region(None),
             None,
             None,
             None,
@@ -50,7 +50,6 @@ def format_generic_arn(arn):
     )(arn.split(":"))
 
 def format_lambda_arn(arn):
-    generic_arn = format_generic_arn(arn)
     return collections.namedtuple(
         "LambdaArn",
         [
@@ -67,13 +66,13 @@ def format_lambda_arn(arn):
            "arn",
            "aws",
            "lambda",
-            get_region(),
+            get_region(None),
             None,
             "function",
             None,
             "$LATEST"
         ]
-    )
+    )(arn.split(":"))
 
 def runtime_config_iter():
     for runtime, obj in RUNTIME_CONFIG.items():

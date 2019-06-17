@@ -55,3 +55,7 @@ Your token may be malformed or corrupted. Try copying-and-pasting again, or usin
 
 Some users also report that they have the incorrect `jwt` library installed on their system. This project
 uses the popular `pyjwt` module installable from PyPi.
+
+## Error: `Unknown parameter in input: "Layers", must be one of: FunctionName, Role, Handler, Description, Timeout, MemorySize, VpcConfig, Environment, Runtime, DeadLetterConfig, KMSKeyArn, TracingConfig, RevisionId`
+
+If you encounter this error, please update your boto3 dependency to the latest version.
