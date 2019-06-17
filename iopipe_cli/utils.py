@@ -16,13 +16,10 @@ RUNTIME_CONFIG = {
             "stream": "com.iopipe.generic.GenericAWSRequestStreamHandler",
         }
     },
+    "nodejs10.x": {"Handler": "/opt/nodejs/node_modules/@iopipe/iopipe.handler"},
     "python2.7": {"Handler": "iopipe.handler.wrapper"},
     "python3.7": {"Handler": "iopipe.handler.wrapper"},
 }
-
-if os.getenv("IOPIPE_FF_NODEJS"):
-    RUNTIME_CONFIG["nodejs6.10"] = {"Handler": "@iopipe/iopipe.handler"}
-    RUNTIME_CONFIG["nodejs8.10"] = {"Handler": "@iopipe/iopipe.handler"}
 
 def format_generic_arn(arn):
     return collections.namedtuple(
