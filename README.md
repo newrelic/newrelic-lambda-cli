@@ -5,7 +5,7 @@ This script relies in AWS CLI to perform some actions in your AWS account, so yo
 
 ## Requirements
 
-* Python >= 3.6
+* Python >= 2.6.6
 * [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html).
 * You also have to perform the [initial configuration](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html) of the AWS CLI to set the proper credentials and default region.
  
