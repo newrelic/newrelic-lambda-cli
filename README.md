@@ -20,10 +20,34 @@ This script relies in AWS CLI to perform some actions in your AWS account, so yo
 
 ## Note on permissions
 
-In order to use the script you will need to have enough permissions in your New Relic account and in your AWS account.
-In your New Relic account, your user will have to either be an `Admin` or a `User` with the `Infrastructure manager` role.
+In order to use the script you will need to have enough permissions in your New Relic account and in you AWS account.
+In your New Relic account your user will have to either be an `Admin` or an `User` with the `Infrastructure manager` role.
 
-In your AWS account, your user will need to have enough permissions to create IAM resources (Role and Policy) and Lambda functions. These resources will be created via CloudFormation stacks, so you will need permissions to create those.
+In your AWS account will need to have enough permissions to create IAM resources (Role and Policy) and Lambda functions. These resources will be created via Coudformation stacks, so you will need permissions to create those.
+
+The full list of permissions required in AWS are:
+
+    Resource: *
+    Actions:
+        "cloudformation:CreateChangeSet",
+        "cloudformation:CreateStack",
+        "cloudformation:DescribeStacks",
+        "iam:AttachRolePolicy",
+        "iam:CreateRole",
+        "iam:GetRole",
+        "iam:PassRole",
+        "lambda:AddPermission",
+        "lambda:CreateFunction",
+        "lambda:GetFunction",
+        "logs:DeleteSubscriptionFilter",
+        "logs:DescribeSubscriptionFilters",
+        "logs:PutSubscriptionFilter"
+        "s3:GetObject"
+
+    Resource: "arn:aws:serverlessrepo:us-east-1:463657938898:applications/NewRelic-log-ingestion"
+    Actions:
+        "serverlessrepo:CreateCloudFormationTemplate"
+        "serverlessrepo:GetCloudFormationTemplate"
 
 ## Installation
 
@@ -65,7 +89,7 @@ The steps are:
 
 **Example:**
 
-    ./newrelic-cloud set-up-lambda-integration --nr-account-id 747894 --linked-account-name "myt-test-account" --aws-role-policy "NewRelicLambdaPolicy" --nr-api-key abcdef12234567 --nr-license-key abcdef12345 --regions eu-west-1 eu-west-2
+    ./newrelic-cloud set-up-lambda-integration --nr-account-id "account_id" --linked-account-name "account_name" --aws-role-policy "NewRelicLambdaPolicy" --nr-api-key "api_key" --nr-license-key "license_key" --regions "region_1" "region_2"
 
 ## Enable Lambda log streaming
 
@@ -81,4 +105,24 @@ It will create a log subscription filter for each of the given intrumented Lambd
 
 **Example:**
 
-    ./newrelic-cloud stream-lambda-logs --functions my-function-1 my-function-2 --regions eu-west-1 eu-west-2
+    ./newrelic-cloud stream-lambda-logs --functions "my-function-1" "my-function-2" --regions "region_1" "region_2"
+
+## Check Lambda setup status
+
+`usage: ./newrelic-cloud check-lambda-setup-status [args]`
+
+This command will perform a few simple checks of the basic requirements for having Lambda instrumentation working.
+It will not check for required permissions either in AWS or New Relic.
+
+### Arguments
+
+* **--nr-account-id** *NR_ACCOUNT_ID* : Your New Relic account id.
+* **--linked-account-name** *LINKED_ACCOUNT_NAME* : Name of your AWS account that appears in NR Cloud integrations you want to check.
+* **--nr-api-key** *NR_API_KEY* : Your New Relic user API key. Check the documentation on how to obtain an API key.
+* **--nr-license-key** *NR_LICENSE_KEY* : Your New Relic license key. Check the documentation on how to obtain an license key.
+* **--functions** *FUNCTIONS* : List of (space-separated) function names to check.
+* **--regions** *REGIONS* (Optional) List of (space-separated) regions where to perform the checks.
+
+**Example:**
+
+    ./newrelic-cloud check-lambda-setup-status --nr-account-id "account_id" --linked-account-name "account_name"  --nr-api-key "api_key" --nr-license-key "license_key" --functions "my-function-1" "my-function-2" --regions "region_1" "region_2"
