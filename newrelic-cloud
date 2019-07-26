@@ -39,7 +39,7 @@ except ImportError:
 OperationResult = collections.namedtuple(
   'OperationResult', ['function', 'region', 'failed', 'error'])
 
-_GRAPHQL_API_URL = 'https://staging-api.newrelic.com/graphql'
+_GRAPHQL_API_URL = 'https://api.newrelic.com/graphql'
 _GRAPHQL_EU_API_URL = 'https://api.eu.newrelic.com/graphql'
 _DEBUG = False
 
