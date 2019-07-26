@@ -39,7 +39,7 @@ except ImportError:
 OperationResult = collections.namedtuple(
   'OperationResult', ['function', 'region', 'failed', 'error'])
 
-_GRAPHQL_API_URL = 'https://api.newrelic.com/graphql'
+_GRAPHQL_API_URL = 'https://staging-api.newrelic.com/graphql'
 _GRAPHQL_EU_API_URL = 'https://api.eu.newrelic.com/graphql'
 _DEBUG = False
 
@@ -256,10 +256,10 @@ def execute_shell_command(command):
     try:
         response = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
         debug_print('Shell command response: {0}'.format(response))
-        return 0, response
+        return 0, response.decode('utf-8')
     except subprocess.CalledProcessError as e:
         debug_print('Shell command error: {0}'.format(e.output))
-        return e.returncode, e.output
+        return e.returncode, e.output.decode('utf-8')
 
 
 def list_all_regions():
