@@ -4,6 +4,12 @@ Applies the IOpipe layers to functions in your
 AWS account. Uses credentials as configured
 for the AWS CLI.
 
+## Runtimes supported
+- Node10.x
+- Java8.x
+- Python2.7
+- Python3.6
+
 # Installation & configuration
 
 On your system CLI:
