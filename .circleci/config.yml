@@ -147,3 +147,13 @@ workflows:
               ignore: /.*/
             tags:
               only: /^v.*/
+      - publish-py3x:
+          requires:
+            - build
+            - code-style
+            - release
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
