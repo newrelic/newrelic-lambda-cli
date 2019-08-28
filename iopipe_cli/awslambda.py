@@ -18,13 +18,10 @@ def list_functions(region, quiet, filter_choice):
                     f["-x-iopipe-enabled"] = True
             if all:
                 yield f
-            elif filter_choice == "installed":
-                if f["-x-iopipe-enabled"]:
-                    yield f
-                continue
-            else:
-                if not f["-x-iopipe-enabled"]:
-                    yield f
+            elif filter_choice == "installed" and f["-x-iopipe-enabled"]:
+                yield f
+            elif filter_choice == "not_installed" and not f["-x-iopipe-enabled"]:
+                yield f
 
 
 class MultipleLayersException(Exception):
