@@ -11,7 +11,7 @@ except (ImportError, OSError):
 
 setup(
     name='iopipe-cli',
-    version='0.1.6',
+    version='0.1.7',
     python_requires='>=3.3',
     description="cli utility for managing and instrumenting serverless applications",
     long_description=README,
