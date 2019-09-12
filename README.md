@@ -93,7 +93,7 @@ The steps are:
 
 * **--nr-account-id** *NR_ACCOUNT_ID* : Your New Relic account ID.
 * **--aws-role-policy** : (Optional) Name of the policy assigned to the AWS role. Supply a name if you want to create the role with a restricted policy (only Lambda permissions). Omit the parameter to create the role with the AWS default [`ReadOnlyAccess` policy](https://docs.newrelic.com/docs/integrations/amazon-integrations/getting-started/integrations-managed-policies).
-* **--linked-account-name** *LINKED_ACCOUNT_NAME* : Name of your AWS account that will appear in NR Cloud integrations. It is used to easily identify you account in NR. The cloud account will be created if it does not exist yet.
+* **--linked-account-name** *LINKED_ACCOUNT_NAME* : Name of your AWS account that will appear in NR Cloud integrations. It is used to easily identify your account in NR. The cloud account will be created if it does not exist yet.
 * **--nr-api-key** *NR_API_KEY* : Your New Relic User API key (different from New Relic REST API key!). [Check the documentation](https://docs.newrelic.com/docs/apis/getting-started/intro-apis/understand-new-relic-api-keys#user-api-key) on how to obtain a user API key.
 * **--nr-license-key** *NR_LICENSE_KEY* : Your New Relic license key. [Check the documentation](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/license-key) on how to obtain a license key.
 * **--regions** *REGIONS* : (Optional) List of regions where to install the New Relic log ingestion function. If no value is supplied it will fetch the list of regions from EC2 and use that as the list of regions.
