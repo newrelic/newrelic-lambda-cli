@@ -129,6 +129,28 @@ class NewRelicGraphQLClient:
         account = response['data']['actor']['account']
         return account['cloud']['linkedAccounts']
 
+    def get_license_key(self):
+        query = '''
+            query($accountId: Int!) {
+              requestContext {
+                apiKey
+              }
+              actor {
+                account(id: $accountId) {
+                  licenseKey
+                  id
+                  name
+                }
+              }
+            }
+            '''
+        params = {'accountId': self.nr_account_id}
+        response = self._execute_query(query=query, params=params)
+        self._raise_if_failed(response)
+        account = response['data']['actor']['account']
+
+        return account['licenseKey']
+
     def get_linked_account_by_name(self, account_name):
         """
         return a specific linked account of the current New Relic account
@@ -273,8 +295,8 @@ def list_all_regions():
             'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2']
 
 
-def get_endpoint(nr_license_key):
-    if nr_license_key.startswith("eu"):
+def get_endpoint(nr_region):
+    if nr_region == "eu":
         debug_print('Using GraphQL EU endpoint for GraphQL API')
         return _GRAPHQL_EU_API_URL
     else:
@@ -547,14 +569,16 @@ def enable_lambda_monitoring(args):
     nr_account_id = args['nr_account_id']
     linked_account_name = args['linked_account_name']
     role_policy = args['aws_role_policy']
-    nr_license_key = args['nr_license_key']
+    nr_region = args['nr_region']
     api_key = args['nr_api_key']
     regions = args['regions']
 
     results = []
-    api_endpoint = get_endpoint(nr_license_key)
+    api_endpoint = get_endpoint(nr_region)
     api_client = NewRelicGraphQLClient(nr_account_id, api_key, api_endpoint)
     try:
+        print("Validating credentials and retrieving integration license key")
+        nr_license_key = api_client.get_license_key()
 
         validate_linked_account(linked_account_name, api_client)
 
@@ -611,11 +635,11 @@ def check_lambda_setup(args):
     nr_account_id = args['nr_account_id']
     linked_account_name = args['linked_account_name']
     api_key = args['nr_api_key']
-    nr_license_key = args['nr_license_key']
+    nr_region = args['nr_region']
     function_names = args['functions']
     regions = args['regions']
 
-    api_endpoint = get_endpoint(nr_license_key)
+    api_endpoint = get_endpoint(nr_region)
     api_client = NewRelicGraphQLClient(nr_account_id, api_key, api_endpoint)
 
     results = []
@@ -714,9 +738,8 @@ def main():
     lambda_parser.add_argument('--nr-api-key', required=True,
       help=('Your New Relic user API key. '
             'Check the documentation on how to obtain an API key.'))
-    lambda_parser.add_argument('--nr-license-key', required=True,
-      help=('Your New Relic license key. '
-            'Check the documentation on how to obtain an license key.'))
+    lambda_parser.add_argument('--nr-region', default="us",
+      help=('(Optional) "eu" to use the New Relic EU region'))
     lambda_parser.add_argument('--regions', nargs='+',
       help=('(Optional) List of (space-separated) regions where the log '
             'ingestion function will be installed.'))
@@ -744,9 +767,8 @@ def main():
     status_parser.add_argument('--nr-api-key', required=True,
       help=('Your New Relic user API key. '
             'Check the documentation on how to obtain an API key.'))
-    status_parser.add_argument('--nr-license-key', required=True,
-      help=('Your New Relic license key. '
-            'Check the documentation on how to obtain an license key.'))
+    status_parser.add_argument('--nr-region', default="us",
+      help=('(Optional) "eu" to use the New Relic EU region'))
     status_parser.add_argument('--functions', required=True, nargs='+',
       help='List of (space-separated) function names to set up log streaming.')
     status_parser.add_argument('--regions', nargs='+',
