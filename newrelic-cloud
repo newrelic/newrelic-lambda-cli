@@ -556,17 +556,24 @@ def enable_lambda_monitoring(args):
     api_client = NewRelicGraphQLClient(nr_account_id, api_key, api_endpoint)
     try:
 
+        print("Validating linked account")
         validate_linked_account(linked_account_name, api_client)
 
+        print("Creating integration role")
         role = create_integration_role(role_policy, nr_account_id)
 
+        print("Creating integration account")
         create_integration_account(
           nr_account_id, linked_account_name, role, api_client)
 
+        print("Enabling integration")
         enable_lamba_integration(
           nr_account_id, linked_account_name, api_client)
 
+        print("Setting up log ingestion")
         results = setup_log_ingestion(nr_license_key, regions)
+
+        print("Lambda monitoring integration set up")
     except Exception as e:
         error_msg = 'Failed to set up lambda integration: {0}'.format(e)
         results.append(OperationResult(None, None, True, error_msg))
@@ -709,7 +716,7 @@ def main():
             '(only Lambda permissions.'))
     lambda_parser.add_argument('--linked-account-name', required=True,
       help=('Name of your AWS account that will appear in NR Cloud integrations. '
-            'It is used to easily identify you account in NR. '
+            'It is used to easily identify your account in NR. '
             'The cloud account will be created if it does not exist yet.'))
     lambda_parser.add_argument('--nr-api-key', required=True,
       help=('Your New Relic user API key. '
