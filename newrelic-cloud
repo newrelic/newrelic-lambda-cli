@@ -6,8 +6,10 @@ import json
 from datetime import datetime
 try:
     import urllib.request as urlrequest
+    from urllib.error import HTTPError
 except ImportError:
     import urllib2 as urlrequest
+    from urllib2 import HTTPError
 import collections
 
 # compatibility with python 2.6+
@@ -47,6 +49,7 @@ _DOCS_CONFIGURE_AWS_CLI_LINK = 'https://docs.aws.amazon.com/cli/latest/userguide
 _DOCS_CONNECT_ACCOUNT_LINK = 'https://docs.newrelic.com/docs/serverless-function-monitoring/aws-lambda-monitoring/get-started/enable-new-relic-monitoring-aws-lambda#connect-aws'
 _DOCS_INSTRUMENT_LAMBDA_LINK = 'https://docs.newrelic.com/docs/serverless-function-monitoring/aws-lambda-monitoring/get-started/enable-new-relic-monitoring-aws-lambda#instrument-lambda'
 _DOCS_STREAM_LOGS_LINK = 'https://docs.newrelic.com/docs/serverless-function-monitoring/aws-lambda-monitoring/get-started/enable-new-relic-monitoring-aws-lambda#stream-logs'
+_DOCS_NR_API_KEY_LINK = 'https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key'
 
 class NewRelicGraphQLClient:
 
@@ -130,6 +133,10 @@ class NewRelicGraphQLClient:
         return account['cloud']['linkedAccounts']
 
     def get_license_key(self):
+        """
+        Fetch the license key for this NR Account. Validates that the nr-api-key is correct, that this API key
+        can access the account, and attempts to provide helpful messages if anything goes wrong.
+        """
         query = '''
             query($accountId: Int!) {
               requestContext {
@@ -145,7 +152,19 @@ class NewRelicGraphQLClient:
             }
             '''
         params = {'accountId': self.nr_account_id}
-        response = self._execute_query(query=query, params=params)
+        try:
+            response = self._execute_query(query=query, params=params)
+        except HTTPError as e:
+            if e.code == 401:
+                print("\nUnauthorized error when querying New Relic. Make sure that your New Relic API Key is correct.\nFind your API Key: %s" % _DOCS_NR_API_KEY_LINK)
+                if not self.api_key.startswith("NRAK-"):
+                    print("Valid New Relic API Keys generally start with \"NRAK-\". You supplied %s" % self.api_key)
+            raise e
+
+        if "errors" in response:
+            if len([e for e in response["errors"] if e["message"] == "Access denied."]) > 0:
+                print("\nCouldn't find New Relic Account ID %d using this API key, but the API Key appears valid. Is that the right account ID?" % self.nr_account_id)
+
         self._raise_if_failed(response)
         account = response['data']['actor']['account']
 
