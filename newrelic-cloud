@@ -738,7 +738,7 @@ def main():
     lambda_parser.add_argument('--nr-api-key', required=True,
       help=('Your New Relic user API key. '
             'Check the documentation on how to obtain an API key.'))
-    lambda_parser.add_argument('--nr-region', default="us",
+    lambda_parser.add_argument('--nr-region', default="us", choices=('eu', 'us'),
       help=('(Optional) "eu" to use the New Relic EU region'))
     lambda_parser.add_argument('--regions', nargs='+',
       help=('(Optional) List of (space-separated) regions where the log '
@@ -767,7 +767,7 @@ def main():
     status_parser.add_argument('--nr-api-key', required=True,
       help=('Your New Relic user API key. '
             'Check the documentation on how to obtain an API key.'))
-    status_parser.add_argument('--nr-region', default="us",
+    status_parser.add_argument('--nr-region', default="us", choices=('eu', 'us'),
       help=('(Optional) "eu" to use the New Relic EU region'))
     status_parser.add_argument('--functions', required=True, nargs='+',
       help='List of (space-separated) function names to set up log streaming.')
