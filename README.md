@@ -95,8 +95,8 @@ The steps are:
 * **--aws-role-policy** : (Optional) Name of the policy assigned to the AWS role. Supply a name if you want to create the role with a restricted policy (only Lambda permissions). Omit the parameter to create the role with the AWS default [`ReadOnlyAccess` policy](https://docs.newrelic.com/docs/integrations/amazon-integrations/getting-started/integrations-managed-policies).
 * **--linked-account-name** *LINKED_ACCOUNT_NAME* : Name of your AWS account that will appear in NR Cloud integrations. It is used to easily identify your account in NR. The cloud account will be created if it does not exist yet.
 * **--nr-api-key** *NR_API_KEY* : Your New Relic User API key (different from New Relic REST API key!). [Check the documentation](https://docs.newrelic.com/docs/apis/getting-started/intro-apis/understand-new-relic-api-keys#user-api-key) on how to obtain a user API key.
-* **--nr-license-key** *NR_LICENSE_KEY* : Your New Relic license key. [Check the documentation](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/license-key) on how to obtain a license key.
 * **--regions** *REGIONS* : (Optional) List of regions where to install the New Relic log ingestion function. If no value is supplied it will fetch the list of regions from EC2 and use that as the list of regions.
+* **--nr-region** *NR_REGION* : (Optional) Set to "eu" if you're integrating with the New Relic EU region. Defaults to US. 
 
 **Note**: if this command fails with the error `(UnrecognizedClientException) when calling the GetFunction operation: The security token included in the request is invalid.`, it is commonly because there was no region supplied. Just add the --regions flag with your authorized regions,  then run the command again and it should pass.
 
@@ -108,7 +108,6 @@ The steps are:
     --linked-account-name "account_name" \
     --aws-role-policy "NewRelicLambdaPolicy" \
     --nr-api-key "api_key" \
-    --nr-license-key "license_key" \
     --regions "region_1" "region-2"
 ```
 
@@ -140,7 +139,7 @@ It will not check for required permissions either in AWS or New Relic.
 * **--nr-account-id** *NR_ACCOUNT_ID* : Your New Relic account id.
 * **--linked-account-name** *LINKED_ACCOUNT_NAME* : Name of your AWS account that appears in NR Cloud integrations you want to check.
 * **--nr-api-key** *NR_API_KEY* : Your New Relic user API key. Check the documentation on how to obtain an API key.
-* **--nr-license-key** *NR_LICENSE_KEY* : Your New Relic license key. Check the documentation on how to obtain an license key.
+* **--nr-region** *NR_REGION* : (Optional) Set to "eu" if you're integrating with the New Relic EU region. Defaults to US. 
 * **--functions** *FUNCTIONS* : List of (space-separated) function names to check.
 * **--regions** *REGIONS* (Optional) List of (space-separated) regions where to perform the checks.
 
@@ -151,7 +150,6 @@ It will not check for required permissions either in AWS or New Relic.
 --nr-account-id "account_id" \
 --linked-account-name "account_name" \
 --nr-api-key "api_key" \
---nr-license-key "license_key" \
 --functions "my-function-1" "my-function-2" \
 --regions "region_1" "region_2"
 ```

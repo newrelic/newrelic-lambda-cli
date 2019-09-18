@@ -6,8 +6,10 @@ import json
 from datetime import datetime
 try:
     import urllib.request as urlrequest
+    from urllib.error import HTTPError
 except ImportError:
     import urllib2 as urlrequest
+    from urllib2 import HTTPError
 import collections
 
 # compatibility with python 2.6+
@@ -47,6 +49,7 @@ _DOCS_CONFIGURE_AWS_CLI_LINK = 'https://docs.aws.amazon.com/cli/latest/userguide
 _DOCS_CONNECT_ACCOUNT_LINK = 'https://docs.newrelic.com/docs/serverless-function-monitoring/aws-lambda-monitoring/get-started/enable-new-relic-monitoring-aws-lambda#connect-aws'
 _DOCS_INSTRUMENT_LAMBDA_LINK = 'https://docs.newrelic.com/docs/serverless-function-monitoring/aws-lambda-monitoring/get-started/enable-new-relic-monitoring-aws-lambda#instrument-lambda'
 _DOCS_STREAM_LOGS_LINK = 'https://docs.newrelic.com/docs/serverless-function-monitoring/aws-lambda-monitoring/get-started/enable-new-relic-monitoring-aws-lambda#stream-logs'
+_DOCS_NR_API_KEY_LINK = 'https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key'
 
 class NewRelicGraphQLClient:
 
@@ -128,6 +131,44 @@ class NewRelicGraphQLClient:
         self._raise_if_failed(response)
         account = response['data']['actor']['account']
         return account['cloud']['linkedAccounts']
+
+    def get_license_key(self):
+        """
+        Fetch the license key for this NR Account. Validates that the nr-api-key is correct, that this API key
+        can access the account, and attempts to provide helpful messages if anything goes wrong.
+        """
+        query = '''
+            query($accountId: Int!) {
+              requestContext {
+                apiKey
+              }
+              actor {
+                account(id: $accountId) {
+                  licenseKey
+                  id
+                  name
+                }
+              }
+            }
+            '''
+        params = {'accountId': self.nr_account_id}
+        try:
+            response = self._execute_query(query=query, params=params)
+        except HTTPError as e:
+            if e.code == 401:
+                print("\nUnauthorized error when querying New Relic. Make sure that your New Relic API Key is correct.\nFind your API Key: %s" % _DOCS_NR_API_KEY_LINK)
+                if not self.api_key.startswith("NRAK-"):
+                    print("Valid New Relic API Keys generally start with \"NRAK-\". You supplied %s" % self.api_key)
+            raise e
+
+        if "errors" in response:
+            if len([e for e in response["errors"] if e["message"] == "Access denied."]) > 0:
+                print("\nCouldn't find New Relic Account ID %d using this API key, but the API Key appears valid. Is that the right account ID?" % self.nr_account_id)
+
+        self._raise_if_failed(response)
+        account = response['data']['actor']['account']
+
+        return account['licenseKey']
 
     def get_linked_account_by_name(self, account_name):
         """
@@ -273,8 +314,8 @@ def list_all_regions():
             'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2']
 
 
-def get_endpoint(nr_license_key):
-    if nr_license_key.startswith("eu"):
+def get_endpoint(nr_region):
+    if nr_region == "eu":
         debug_print('Using GraphQL EU endpoint for GraphQL API')
         return _GRAPHQL_EU_API_URL
     else:
@@ -547,14 +588,16 @@ def enable_lambda_monitoring(args):
     nr_account_id = args['nr_account_id']
     linked_account_name = args['linked_account_name']
     role_policy = args['aws_role_policy']
-    nr_license_key = args['nr_license_key']
+    nr_region = args['nr_region']
     api_key = args['nr_api_key']
     regions = args['regions']
 
     results = []
-    api_endpoint = get_endpoint(nr_license_key)
+    api_endpoint = get_endpoint(nr_region)
     api_client = NewRelicGraphQLClient(nr_account_id, api_key, api_endpoint)
     try:
+        print("Validating credentials and retrieving integration license key")
+        nr_license_key = api_client.get_license_key()
 
         print("Validating linked account")
         validate_linked_account(linked_account_name, api_client)
@@ -618,11 +661,11 @@ def check_lambda_setup(args):
     nr_account_id = args['nr_account_id']
     linked_account_name = args['linked_account_name']
     api_key = args['nr_api_key']
-    nr_license_key = args['nr_license_key']
+    nr_region = args['nr_region']
     function_names = args['functions']
     regions = args['regions']
 
-    api_endpoint = get_endpoint(nr_license_key)
+    api_endpoint = get_endpoint(nr_region)
     api_client = NewRelicGraphQLClient(nr_account_id, api_key, api_endpoint)
 
     results = []
@@ -721,9 +764,8 @@ def main():
     lambda_parser.add_argument('--nr-api-key', required=True,
       help=('Your New Relic user API key. '
             'Check the documentation on how to obtain an API key.'))
-    lambda_parser.add_argument('--nr-license-key', required=True,
-      help=('Your New Relic license key. '
-            'Check the documentation on how to obtain an license key.'))
+    lambda_parser.add_argument('--nr-region', default="us", choices=('eu', 'us'),
+      help=('(Optional) "eu" to use the New Relic EU region'))
     lambda_parser.add_argument('--regions', nargs='+',
       help=('(Optional) List of (space-separated) regions where the log '
             'ingestion function will be installed.'))
@@ -751,9 +793,8 @@ def main():
     status_parser.add_argument('--nr-api-key', required=True,
       help=('Your New Relic user API key. '
             'Check the documentation on how to obtain an API key.'))
-    status_parser.add_argument('--nr-license-key', required=True,
-      help=('Your New Relic license key. '
-            'Check the documentation on how to obtain an license key.'))
+    status_parser.add_argument('--nr-region', default="us", choices=('eu', 'us'),
+      help=('(Optional) "eu" to use the New Relic EU region'))
     status_parser.add_argument('--functions', required=True, nargs='+',
       help='List of (space-separated) function names to set up log streaming.')
     status_parser.add_argument('--regions', nargs='+',
