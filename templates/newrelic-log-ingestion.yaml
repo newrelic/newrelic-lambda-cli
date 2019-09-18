@@ -12,6 +12,6 @@ Resources:
     Properties:
       Location:
         ApplicationId: arn:aws:serverlessrepo:us-east-1:463657938898:applications/NewRelic-log-ingestion
-        SemanticVersion: 2.0.0
+        SemanticVersion: 2.0.1
       Parameters:
         NRLicenseKey: !Ref NewRelicLicenseKey
