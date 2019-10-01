@@ -31,7 +31,7 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS: !Sub 'arn:aws:iam::754728514883:root'
+              AWS: !Sub 'arn:aws:iam::5558675309:root'
             Action: 'sts:AssumeRole'
             Condition:
               StringEquals:
@@ -47,7 +47,7 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS: !Sub 'arn:aws:iam::754728514883:root'
+              AWS: !Sub 'arn:aws:iam::5558675309:root'
             Action: 'sts:AssumeRole'
             Condition:
               StringEquals:
