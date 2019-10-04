@@ -153,3 +153,32 @@ It will not check for required permissions either in AWS or New Relic.
 --functions "my-function-1" "my-function-2" \
 --regions "region_1" "region_2"
 ```  
+
+## Troubleshooting
+
+**404 Error:**  
+Solution: ensure you are using the most recent version of the onboarding script.
+
+**AWS Credentials error:**
+>Function: None, Region: None, Error: Failed to set up lambda integration: 'Unable to locate credentials. You can configure credentials by running "aws configure".'
+
+There are a couple of potential solutions here:
+
+1. The AWS profile may not be properly configured; review documentation to [Configure your AWS Profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) (make sure the default region is set!).
+2. If there are multiple AWS profiles and the correct one is not specified, you can run `export AWS_DEFAULT_PROFILE=MY_OTHER_PROFILE` to set the environment variable to the proper profile.
+
+**Python3 certificate error:**  
+>`Failed to set up lambda integration: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED]` 
+>`certificate verify failed: unable to get local issuer certificate (_ssl.c:1056)>`
+
+Solution: install Certifi and run the certificate installation command (make sure to change the second command to reflect your Python version!):
+
+```
+pip install certifi 
+/Applications/Python\ 3.7/Install\ Certificates.command
+```
+
+**AWS Console "Module Import" error:**
+>Unable to Import Module 'index' Error
+
+This happens on file upload when users zip a directory containing files, instead of selecting the files within the directory and zipping them for upload: [Zipping files for AWS](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/applications-sourcebundle.html#using-features.deployment.source.gui)
