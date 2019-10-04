@@ -156,9 +156,6 @@ It will not check for required permissions either in AWS or New Relic.
 
 ## Troubleshooting
 
-**404 Error:**  
-Solution: ensure you are using the most recent version of the onboarding script.
-
 **AWS Credentials error:**
 >Function: None, Region: None, Error: Failed to set up lambda integration: 'Unable to locate credentials. You can configure credentials by running "aws configure".'
 
@@ -182,3 +179,13 @@ pip install certifi
 >Unable to Import Module 'index' Error
 
 This happens on file upload when users zip a directory containing files, instead of selecting the files within the directory and zipping them for upload: [Zipping files for AWS](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/applications-sourcebundle.html#using-features.deployment.source.gui)
+
+
+**AWS CLI output error**
+>Failed actions:
+  Function: None, Region: None, Error: Failed to set up lambda integration: Extra data: line 1 column 14 (char 13)
+  
+This was an error that happened in earlier versions of the script if users did not specify JSON format for AWS CLI output; JSON output is now forced by the script, so make sure you are using the most recent version of the script.
+
+**404 Error (usually an older script version):**  
+Solution: ensure you are using the most recent version of the onboarding script.
