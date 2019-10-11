@@ -1,4 +1,3 @@
-from . import layers
 from . import utils
 
 
@@ -56,7 +55,8 @@ def _add_iopipe(
     if not allow_upgrade and orig_handler == runtime_handler:
         raise (
             UpdateLambdaException(
-                "Already installed. Pass --upgrade (or -u) to allow upgrade or reinstall to latest layer version."
+                "Already installed. Pass --upgrade (or -u) to allow upgrade or "
+                "reinstall to latest layer version."
             )
         )
     if runtime == "provider" or runtime not in utils.RUNTIME_CONFIG.keys():
@@ -147,7 +147,8 @@ def _remove_iopipe(config, region, function_arn, layer_arn):
     # Detect non-IOpipe handler and error if necessary.
     if not utils.is_valid_handler(runtime, orig_handler):
         raise UpdateLambdaException(
-            "IOpipe installation (via layers) not auto-detected for the specified function.\n"
+            "IOpipe installation (via layers) not auto-detected for the specified "
+            "function.\n"
             "Error: Unrecognized handler in deployed function."
         )
 
@@ -166,8 +167,10 @@ def _remove_iopipe(config, region, function_arn, layer_arn):
     env_handler = env_handler or env_alt_handler
     if not env_handler:
         raise UpdateLambdaException(
-            "IOpipe installation (via layers) not auto-detected for the specified function.\n"
-            + "Error: Environment variable IOPIPE_HANDLER or IOPIPE_GENERIC_HANDLER not found."
+            "IOpipe installation (via layers) not auto-detected for the specified "
+            "function.\n"
+            "Error: Environment variable IOPIPE_HANDLER or IOPIPE_GENERIC_HANDLER not "
+            "found."
         )
 
     # Delete IOpipe env vars

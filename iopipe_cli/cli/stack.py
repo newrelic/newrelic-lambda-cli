@@ -1,16 +1,14 @@
-from . import stack
-from . import utils
-
 import click
 import os
 
+from .. import stack, utils
 
-IOPIPE_FF_CLOUDFORMATION = os.environ.get("IOPIPE_FF_CLOUDFORMATION")
+IOPIPE_FF_CLOUDFORMATION = os.getenv("IOPIPE_FF_CLOUDFORMATION")
 
 
 @click.group(name="stack")
 def stack_group():
-    None
+    pass
 
 
 def register(group):

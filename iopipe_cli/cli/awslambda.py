@@ -1,17 +1,14 @@
-from . import awslambda
-from . import utils
-
-import boto3
-import botocore
 import click
 import itertools
 import json
 import shutil
 
+from .. import awslambda, utils
+
 
 @click.group(name="lambda")
 def lambda_group():
-    None
+    pass
 
 
 def register(group):

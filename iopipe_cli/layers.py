@@ -1,11 +1,9 @@
-import json
 import requests
 
 
 def index(region, runtime):
     req = requests.get(
-        "https://%s.layers.iopipe.com/get-layers?CompatibleRuntime=%s"
-        % (region, runtime)
+        f"https://{region}.layers.iopipe.com/get-layers?CompatibleRuntime={runtime}"
     )
-    layers_response = json.loads(req.content)
+    layers_response = req.json()
     return layers_response.get("Layers", [])

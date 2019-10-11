@@ -1,4 +1,3 @@
-# import boto3
 import requests
 
 
@@ -51,7 +50,7 @@ def zip_list_files(url):
 
         return _check_blob_magic_bytes(blob, magic, 0)
 
-    eocd_block = check_blob_magic_bytes(reverse(iter(eocd_blob)), 0x06054B50)
+    eocd_block = check_blob_magic_bytes(reversed(iter(eocd_blob)), 0x06054B50)
     if not eocd_block:
         raise Exception("No zip central directory signature found.")
 

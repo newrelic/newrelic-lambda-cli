@@ -1,12 +1,11 @@
-from . import layers
-
 import boto3
 import botocore
 import click
 import collections
 import jwt
-import os
 import sys
+
+from . import layers
 
 IOPIPE_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:5558675309"
 RUNTIME_CONFIG = {
@@ -127,7 +126,7 @@ def check_token(ctx, param, value):
     try:
         jwt.decode(value, verify=False)
         return value
-    except:
+    except Exception:
         raise click.BadParameter("token invalid.")
 
 

@@ -1,10 +1,9 @@
-from . import awslambda
-from . import utils
-from .combine_dict import combine_dict
-
 import boto3
 import itertools
 import json
+
+from . import awslambda, utils
+from .combine_dict import combine_dict
 
 
 def get_stack_ids():
@@ -33,7 +32,8 @@ def get_stack_ids():
 
 def get_template(stackid):
     CloudFormation = boto3.client("cloudformation")
-    # DOC get_template: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/cloudformation.html#CloudFormation.Client.get_template
+    # DOC get_template:
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/cloudformation.html#CloudFormation.Client.get_template
     template_body = CloudFormation.get_template(StackName=stackid)
     #    example_get_template_body = '''
     #    {
@@ -99,5 +99,6 @@ def update_cloudformation_stack(stack_id, function_arn, token):
     # stackid = get_stack_ids(function_arn)
     orig_template = get_template(stack_id)
     template_body = modify_cloudformation(orig_template, function_arn, token)
-    # DOC update_stack: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/cloudformation.html#CloudFormation.Client.update_stack
+    # DOC update_stack:
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/cloudformation.html#CloudFormation.Client.update_stack
     CloudFormation.update_stack(StackName=stack_id, TemplateBody=template_body)

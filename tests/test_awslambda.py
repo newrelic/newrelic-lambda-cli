@@ -1,9 +1,7 @@
-from iopipe_cli import awslambda
-from iopipe_cli import utils
-
 import jwt
-import os
 import pytest
+
+from iopipe_cli import awslambda, utils
 
 TEST_TOKEN = jwt.encode({}, "its_a_secret_to_everyone")
 
