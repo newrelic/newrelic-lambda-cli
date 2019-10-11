@@ -1,58 +1,17 @@
-# Python CircleCI 2.0 configuration file
-#
-# Check https://circleci.com/docs/2.0/language-python/ for more details
-#
 version: 2
 jobs:
   build:
     docker:
       - image: circleci/python:3.7
-
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
-
-    working_directory: ~/repo
-
+    working_directory: ~/iopipe-cli
     steps:
       - checkout
-
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-            - v1-dependencies-{{ checksum "requirements.txt" }}
-            # fallback to using the latest cache if no exact match is found
-            - v1-dependencies-
-
+      - run: sudo chown -R circleci:circleci /usr/local/bin
+      - run: sudo chown -R circleci:circleci /usr/local/lib/python3.7/site-packages
       - run:
-          name: install dependencies
+          name: Run tests
           command: |
-            python3 -m venv venv
-            . venv/bin/activate
-            pip install -r requirements.txt
-            pip install -r test_requirements.txt
-
-      - save_cache:
-          paths:
-            - ./venv
-          key: v1-dependencies-{{ checksum "requirements.txt" }}
-
-      # run tests!
-      # this example uses Django's built-in test-runner
-      # other common Python testing frameworks include pytest and nose
-      # https://pytest.org
-      # https://nose.readthedocs.io
-      - run:
-          name: run tests
-          command: |
-            . venv/bin/activate
-            pytest
-
-      - store_artifacts:
-          path: test-reports
-          destination: test-reports
-
+            python setup.py test
 
   code-style:
     working_directory: ~/iopipe-cli
@@ -65,7 +24,7 @@ jobs:
       - run:
           name: Check code style
           command: |
-            pip install black==18.6b2
+            pip install black==19.3b0
             black --check --line-length=88 --safe iopipe_cli
             black --check --line-length=88 --safe tests
 
@@ -80,7 +39,6 @@ jobs:
       - run:
           name: Generate coverage report
           command: |
-            unset AWS_REGION IOPIPE_DEBUG IOPIPE_ENABLED IOPIPE_TIMEOUT_WINDOW IOPIPE_TOKEN
             python setup.py test --addopts="--cov iopipe_cli"
       - run:
           name: Upload coverage report
@@ -129,29 +87,10 @@ workflows:
               only: /.*/
             tags:
               only: /.*/
-      - acceptance:
-          requires:
-            - build
-            - code-style
-          filters:
-            branches:
-              only: master
-            tags:
-              ignore: /.*/
       - release:
           requires:
             - build
             - code-style
-          filters:
-            branches:
-              ignore: /.*/
-            tags:
-              only: /^v.*/
-      - publish-py3x:
-          requires:
-            - build
-            - code-style
-            - release
           filters:
             branches:
               ignore: /.*/
