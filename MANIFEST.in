@@ -1,2 +1,0 @@
-include *.md LICENSE
-recursive-include iopipe_cli *.py
