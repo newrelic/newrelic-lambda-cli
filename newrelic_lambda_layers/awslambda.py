@@ -32,15 +32,15 @@ class UpdateLambdaException(Exception):
 
 
 def _add_new_relic(
-    config, region, function_arn, layer_arn, token, java_type, allow_upgrade
+    config, region, function_arn, layer_arn, account_id, java_type, allow_upgrade
 ):
     info = config.copy()
     runtime = info.get("Configuration", {}).get("Runtime", "")
     orig_handler = info.get("Configuration", {}).get("Handler")
     runtime_handler = utils.RUNTIME_CONFIG.get(runtime, {}).get("Handler")
 
-    if not token:
-        raise (UpdateLambdaException("Token missing from parameters."))
+    if not account_id:
+        raise (UpdateLambdaException("Account ID missing from parameters."))
 
     if runtime.startswith("java"):
         # Special case of multiple legal handlers for Java
@@ -112,8 +112,8 @@ def _add_new_relic(
         "Layers": new_relic_layers + existing_layers,
     }
 
-    # Update the token
-    update_kwargs["Environment"]["Variables"]["NEW_RELIC_ACCOUNT_ID"] = token
+    # Update the account id
+    update_kwargs["Environment"]["Variables"]["NEW_RELIC_ACCOUNT_ID"] = account_id
 
     # Update the NEW_RELIC_LAMBDA_HANDLER envvars only when it's a new install.
     if orig_handler != runtime_handler:
@@ -129,11 +129,11 @@ def _add_new_relic(
     return update_kwargs
 
 
-def install(region, function_arn, layer_arn, token, java_type, allow_upgrade):
+def install(region, function_arn, layer_arn, account_id, java_type, allow_upgrade):
     AwsLambda = utils.get_lambda_client(region)
     info = AwsLambda.get_function(FunctionName=function_arn)
     update_kwargs = _add_new_relic(
-        info, region, function_arn, layer_arn, token, java_type, allow_upgrade
+        info, region, function_arn, layer_arn, account_id, java_type, allow_upgrade
     )
     return AwsLambda.update_function_configuration(**update_kwargs)
 
