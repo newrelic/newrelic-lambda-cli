@@ -47,7 +47,7 @@ def _add_new_relic(config, region, function_arn, layer_arn, account_id, allow_up
             )
         )
 
-    if runtime == "provided" or runtime not in utils.RUNTIME_CONFIG.keys():
+    if runtime not in utils.RUNTIME_CONFIG:
         raise UpdateLambdaException("Unsupported Lambda runtime: %s" % (runtime,))
 
     existing_layers = [
@@ -116,7 +116,7 @@ def _remove_new_relic(config, region, function_arn, layer_arn):
     runtime = info.get("Configuration", {}).get("Runtime", "")
     orig_handler = info.get("Configuration", {}).get("Handler", "")
 
-    if runtime == "provided" or runtime not in utils.RUNTIME_CONFIG.keys():
+    if runtime not in utils.RUNTIME_CONFIG:
         raise UpdateLambdaException("Unsupported Lambda runtime: %s" % (runtime,))
 
     # Detect non-New Relic handler and error if necessary.
