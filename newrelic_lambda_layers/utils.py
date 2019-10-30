@@ -20,58 +20,6 @@ RUNTIME_CONFIG = {
 }
 
 
-def format_generic_arn(arn):
-    return collections.namedtuple(
-        "GenericArn",
-        [
-            "arn",
-            "partition",
-            "service",
-            "region",
-            "account_id",
-            "resource_type",
-            "resource",
-            "qualifier",
-        ],
-        defaults=["arn", "aws", None, get_region(None), None, None, None, None],
-    )(arn.split(":"))
-
-
-def format_lambda_arn(arn):
-    return collections.namedtuple(
-        "LambdaArn",
-        [
-            "arn",
-            "partition",
-            "service",
-            "region",
-            "account_id",
-            "resource_type",
-            "function_name",
-            "version",
-        ],
-        defaults=[
-            "arn",
-            "aws",
-            "lambda",
-            get_region(None),
-            None,
-            "function",
-            None,
-            "$LATEST",
-        ],
-    )(arn.split(":"))
-
-
-def runtime_config_iter():
-    for runtime, obj in RUNTIME_CONFIG.items():
-        if isinstance(obj.get("Handler"), dict):
-            for java_type in obj.get("Handler").keys():
-                yield {"runtime": runtime, "java_type": java_type}
-        else:
-            yield {"runtime": runtime, "java_type": None}
-
-
 def catch_boto_errors(func):
     def _boto_error_wrapper(*args, **kwargs):
         try:
@@ -127,21 +75,6 @@ def is_valid_handler(runtime, handler):
     elif handler == runtime_handler:
         return True
     return False
-
-
-def local_apply_updates(config, updates):
-    result = config.copy()
-    result["Configuration"]["Handler"] = (
-        updates.get("Handler") or result["Configuration"]["Handler"]
-    )
-
-    new_envvars = updates.get("Environment", {}).get("Variables")
-    if new_envvars:
-        result["Configuration"]["Environment"]["Variables"].update(new_envvars)
-
-    layer_map = map(lambda layer: {"Arn": layer}, updates.get("Layers", []))
-    result["Layers"] = layer_map
-    return result
 
 
 def error(*args, **kwargs):
