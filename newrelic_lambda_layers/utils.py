@@ -6,17 +6,12 @@ import botocore
 
 from . import layers
 
-NEW_RELIC_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:5558675309"
+NEW_RELIC_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:451483290750"
 RUNTIME_CONFIG = {
-    "java8": {
-        "Handler": {
-            "request": "com.iopipe.generic.GenericAWSRequestHandler",
-            "stream": "com.iopipe.generic.GenericAWSRequestStreamHandler",
-        }
-    },
-    "nodejs10.x": {"Handler": "/opt/nodejs/node_modules/@iopipe/iopipe.handler"},
-    "python2.7": {"Handler": "iopipe.handler.wrapper"},
-    "python3.7": {"Handler": "iopipe.handler.wrapper"},
+    "nodejs10.x": {"Handler": "newrelic-lambda-wrapper.handler"},
+    "python2.7": {"Handler": "newrelic_lambda_wrapper.handler"},
+    "python3.6": {"Handler": "newrelic_lambda_wrapper.handler"},
+    "python3.7": {"Handler": "newrelic_lambda_wrapper.handler"},
 }
 
 
