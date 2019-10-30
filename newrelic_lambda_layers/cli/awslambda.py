@@ -43,12 +43,6 @@ def register(group):
     is_flag=True,
 )
 @click.option(
-    "--java-type",
-    "-j",
-    help="Specify Java handler type, required for Java functions.",
-    type=click.Choice(["request", "stream"]),
-)
-@click.option(
     "--account-id",
     "-a",
     envvar="NEW_RELIC_ACCOUNT_ID",
@@ -62,13 +56,9 @@ def register(group):
     help="Permit upgrade of function layers to new version.",
     is_flag=True,
 )
-def lambda_install(
-    region, function, layer_arn, verbose, account_id, java_type, upgrade
-):
+def lambda_install(region, function, layer_arn, verbose, account_id, upgrade):
     try:
-        resp = awslambda.install(
-            region, function, layer_arn, account_id, java_type, upgrade
-        )
+        resp = awslambda.install(region, function, layer_arn, account_id, upgrade)
     except awslambda.MultipleLayersException:
         utils.error("Multiple layers found. Pass --layer-arn to specify layer ARN")
     except awslambda.UpdateLambdaException as e:
