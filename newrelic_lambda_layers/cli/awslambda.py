@@ -63,7 +63,12 @@ def register(group):
     is_flag=True,
 )
 def lambda_install(region, function, layer_arn, verbose, token, java_type, upgrade):
-    resp = awslambda.install(region, function, layer_arn, token, java_type, upgrade)
+    try:
+        resp = awslambda.install(region, function, layer_arn, token, java_type, upgrade)
+    except awslambda.MultipleLayersException:
+        utils.error("Multiple layers found. Pass --layer-arn to specify layer ARN")
+    except awslambda.UpdateLambdaException as e:
+        utils.error(e)
     if not resp:
         click.echo("\nInstallation failed.")
         return
@@ -96,7 +101,12 @@ def lambda_install(region, function, layer_arn, verbose, token, java_type, upgra
     is_flag=True,
 )
 def lambda_uninstall(region, function, layer_arn, verbose):
-    resp = awslambda.uninstall(region, function, layer_arn)
+    try:
+        resp = awslambda.uninstall(region, function, layer_arn)
+    except awslambda.MultipleLayersException:
+        utils.error("Multiple layers found. Pass --layer-arn to specify layer ARN")
+    except awslambda.UpdateLambdaException as e:
+        utils.error(e)
     if not resp:
         click.echo("\nRemoval failed.")
         return
