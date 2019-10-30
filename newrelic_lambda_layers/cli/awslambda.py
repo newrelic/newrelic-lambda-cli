@@ -34,7 +34,7 @@ def register(group):
     "--layer-arn",
     "-l",
     metavar="<arn>",
-    help="Layer ARN for IOpipe library (default: auto-detect)",
+    help="ARN for New Relic layer (default: auto-detect)",
 )
 @click.option(
     "--verbose",
@@ -49,12 +49,12 @@ def register(group):
     type=click.Choice(["request", "stream"]),
 )
 @click.option(
-    "--token",
-    "-t",
-    envvar="IOPIPE_TOKEN",
+    "--account-id",
+    "-a",
+    envvar="NEW_RELIC_ACCOUNT_ID",
     required=True,
-    metavar="<token>",
-    help="IOpipe Token",
+    metavar="<account_id>",
+    help="New Relic Account ID",
 )
 @click.option(
     "--upgrade",
@@ -62,9 +62,13 @@ def register(group):
     help="Permit upgrade of function layers to new version.",
     is_flag=True,
 )
-def lambda_install(region, function, layer_arn, verbose, token, java_type, upgrade):
+def lambda_install(
+    region, function, layer_arn, verbose, account_id, java_type, upgrade
+):
     try:
-        resp = awslambda.install(region, function, layer_arn, token, java_type, upgrade)
+        resp = awslambda.install(
+            region, function, layer_arn, account_id, java_type, upgrade
+        )
     except awslambda.MultipleLayersException:
         utils.error("Multiple layers found. Pass --layer-arn to specify layer ARN")
     except awslambda.UpdateLambdaException as e:
@@ -92,7 +96,7 @@ def lambda_install(region, function, layer_arn, verbose, token, java_type, upgra
     "--layer-arn",
     "-l",
     metavar="<arn>",
-    help="Layer ARN for IOpipe library (default: auto-detect)",
+    help="ARN for New Relic layer (default: auto-detect)",
 )
 @click.option(
     "--verbose",
@@ -112,7 +116,7 @@ def lambda_uninstall(region, function, layer_arn, verbose):
         return
     if verbose:
         click.echo(json.dumps(resp, indent=2))
-    click.echo("\nRemoval of IOpipe layers and configuration complete.")
+    click.echo("\nRemoval of New Relic layers and configuration complete.")
 
 
 @click.command(name="list")
@@ -144,7 +148,7 @@ def lambda_list_functions(region, quiet, filter):
             yield coltmpl.format(
                 f.get("FunctionName"),
                 f.get("Runtime"),
-                f.get("-x-iopipe-enabled", False),
+                f.get("-x-new-relic-enabled", False),
             )
 
     buffer = []
