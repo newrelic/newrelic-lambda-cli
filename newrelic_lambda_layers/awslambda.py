@@ -2,13 +2,12 @@ from . import utils
 
 
 def list_functions(region, quiet, filter_choice):
-    AwsLambda = utils.get_lambda_client(region)
+    client = utils.get_lambda_client(region)
 
     # set all if the filter_choice is "all" or there is no filter_choice active.
     all = filter_choice == "all" or not filter_choice
 
-    pager = AwsLambda.get_paginator("list_functions")
-
+    pager = client.get_paginator("list_functions")
     for func_resp in pager.paginate():
         funcs = func_resp.get("Functions", [])
         for f in funcs:
@@ -31,9 +30,7 @@ class UpdateLambdaException(Exception):
     pass
 
 
-def _add_new_relic(
-    config, region, function_arn, layer_arn, account_id, java_type, allow_upgrade
-):
+def _add_new_relic(config, region, function_arn, layer_arn, account_id, allow_upgrade):
     info = config.copy()
     runtime = info.get("Configuration", {}).get("Runtime", "")
     orig_handler = info.get("Configuration", {}).get("Handler")
@@ -42,16 +39,6 @@ def _add_new_relic(
     if not account_id:
         raise (UpdateLambdaException("Account ID missing from parameters."))
 
-    if runtime.startswith("java"):
-        # Special case of multiple legal handlers for Java
-        if not java_type:
-            raise UpdateLambdaException(
-                "Must specify a handler type for java functions."
-            )
-        runtime_handler = (
-            utils.RUNTIME_CONFIG.get(runtime, {}).get("Handler", {}).get(java_type)
-        )
-
     if not allow_upgrade and orig_handler == runtime_handler:
         raise (
             UpdateLambdaException(
@@ -59,23 +46,15 @@ def _add_new_relic(
                 "reinstall to latest layer version."
             )
         )
-    if runtime == "provider" or runtime not in utils.RUNTIME_CONFIG.keys():
+
+    if runtime == "provided" or runtime not in utils.RUNTIME_CONFIG.keys():
         raise UpdateLambdaException("Unsupported Lambda runtime: %s" % (runtime,))
 
-    def _filter_new_relic_layers(layer_arn):
-        if layer_arn.startswith(utils.get_arn_prefix(region)):
-            return False
-        return True
-
-    def _map_response_to_arns(layer):
-        return layer.get("Arn")
-
-    existing_layers = list(
-        filter(
-            _filter_new_relic_layers,
-            map(_map_response_to_arns, info.get("Configuration", {}).get("Layers", [])),
-        )
-    )
+    existing_layers = [
+        layer.get("Arn")
+        for layer in info.get("Configuration", {}).get("Layers", [])
+        if not layer.get("Arn").startswith(utils.get_arn_prefix(region))
+    ]
 
     new_relic_layers = []
     if layer_arn:
@@ -100,7 +79,6 @@ def _add_new_relic(
             disco_layers[0].get("LatestMatchingVersion", {}).get("LayerVersionArn", "")
         ]
 
-    # print(json.dumps(info, indent=2))
     update_kwargs = {
         "FunctionName": function_arn,
         "Handler": runtime_handler,
@@ -117,25 +95,20 @@ def _add_new_relic(
 
     # Update the NEW_RELIC_LAMBDA_HANDLER envvars only when it's a new install.
     if orig_handler != runtime_handler:
-        if runtime.startswith("java"):
-            update_kwargs["Environment"]["Variables"][
-                "NEW_RELIC_GENERIC_HANDLER"
-            ] = orig_handler
-        else:
-            update_kwargs["Environment"]["Variables"][
-                "NEW_RELIC_LAMBDA_HANDLER"
-            ] = orig_handler
+        update_kwargs["Environment"]["Variables"][
+            "NEW_RELIC_LAMBDA_HANDLER"
+        ] = orig_handler
 
     return update_kwargs
 
 
-def install(region, function_arn, layer_arn, account_id, java_type, allow_upgrade):
-    AwsLambda = utils.get_lambda_client(region)
-    info = AwsLambda.get_function(FunctionName=function_arn)
+def install(region, function_arn, layer_arn, account_id, allow_upgrade):
+    client = utils.get_lambda_client(region)
+    info = client.get_function(FunctionName=function_arn)
     update_kwargs = _add_new_relic(
-        info, region, function_arn, layer_arn, account_id, java_type, allow_upgrade
+        info, region, function_arn, layer_arn, account_id, allow_upgrade
     )
-    return AwsLambda.update_function_configuration(**update_kwargs)
+    return client.update_function_configuration(**update_kwargs)
 
 
 def _remove_new_relic(config, region, function_arn, layer_arn):
@@ -143,7 +116,7 @@ def _remove_new_relic(config, region, function_arn, layer_arn):
     runtime = info.get("Configuration", {}).get("Runtime", "")
     orig_handler = info.get("Configuration", {}).get("Handler", "")
 
-    if runtime == "provider" or runtime not in utils.RUNTIME_CONFIG.keys():
+    if runtime == "provided" or runtime not in utils.RUNTIME_CONFIG.keys():
         raise UpdateLambdaException("Unsupported Lambda runtime: %s" % (runtime,))
 
     # Detect non-New Relic handler and error if necessary.
@@ -160,37 +133,28 @@ def _remove_new_relic(config, region, function_arn, layer_arn):
         .get("Variables", {})
         .get("NEW_RELIC_LAMBDA_HANDLER")
     )
-    env_alt_handler = (
-        info.get("Configuration", {})
-        .get("Environment", {})
-        .get("Variables", {})
-        .get("NEW_RELIC_GENERIC_HANDLER")
-    )
-    env_handler = env_handler or env_alt_handler
+
     if not env_handler:
         raise UpdateLambdaException(
             "New Relic installation (via layers) not auto-detected for the specified "
             "function.\n"
-            "Error: Environment variable NEW_RELIC_LAMBDA_HANDLER or NEW_RELIC_GENERIC_HANDLER not "
+            "Error: Environment variable NEW_RELIC_LAMBDA_HANDLER not "
             "found."
         )
 
     # Delete New Relic env vars
-    for key in [
-        "NEW_RELIC_LAMBDA_HANDLER",
-        "NEW_RELIC_GENERIC_HANDLER",
-        "NEW_RELIC_ACCOUNT_ID",
-    ]:
-        try:
-            del info["Configuration"]["Environment"]["Variables"][key]
-        except KeyError:
-            pass
+    env_vars = info["Configuration"]["Environment"]["Variables"]
+    env_vars = {
+        key: value for key, value in env_vars.items() if key.startswith("NEW_RELIC")
+    }
 
     # Remove New Relic layers
     layers = info.get("Configuration", {}).get("Layers", [])
-    for layer_idx, layer_arn in enumerate(layers):
-        if layer_arn["Arn"].startswith(utils.get_arn_prefix(region)):
-            del layers[layer_idx]
+    layers = [
+        layer
+        for layer in layers
+        if layer["Arn"].startswith(utils.get_arn_prefix(region))
+    ]
 
     return {
         "FunctionName": function_arn,
@@ -201,7 +165,7 @@ def _remove_new_relic(config, region, function_arn, layer_arn):
 
 
 def uninstall(region, function_arn, layer_arn):
-    AwsLambda = utils.get_lambda_client(region)
-    info = AwsLambda.get_function(FunctionName=function_arn)
+    client = utils.get_lambda_client(region)
+    info = client.get_function(FunctionName=function_arn)
     update_kwargs = _remove_new_relic(info, region, function_arn, layer_arn)
-    return AwsLambda.update_function_configuration(**update_kwargs)
+    return client.update_function_configuration(**update_kwargs)
