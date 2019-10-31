@@ -1,8 +1,7 @@
-import itertools
 import json
-import shutil
 
 import click
+from tabulate import tabulate
 
 from .. import awslambda, utils
 
@@ -121,39 +120,18 @@ def lambda_uninstall(region, function, layer_arn, verbose):
     type=click.Choice(["all", "installed", "not-installed"]),
 )
 def lambda_list_functions(region, quiet, filter):
-    # this use of `filter` worries me as it's a keyword,
-    # but it actually works? Clickly doesn't give
-    # us enough control here to change the variable name? -Erica
-    coltmpl = "{:<64}\t{:<12}\t{:>12}\n"
-    conscols, consrows = shutil.get_terminal_size((80, 50))
+    """List Lambda Functions"""
+    funcs = awslambda.list_functions(region, quiet, filter)
 
-    def _header():
-        if not quiet:
-            yield coltmpl.format("Function Name", "Runtime", "Installed")
-            # ascii table limbo line ---
-            yield ("{:-^%s}\n" % (str(conscols),)).format("")
-
-    def _format(funcs):
-        for f in funcs:
-            yield coltmpl.format(
-                f.get("FunctionName"),
-                f.get("Runtime"),
-                f.get("-x-new-relic-enabled", False),
-            )
-
-    buffer = []
-    functions_iter = awslambda.list_functions(region, quiet, filter)
-    for idx, line in enumerate(itertools.chain(_header(), _format(functions_iter))):
-        buffer.append(line)
-
-        # This is designed to ONLY page when there's
-        # more rows than the height of the console.
-        # If we've buffered as many lines as the height of the console,
-        # then start a pager and empty the buffer.
-        if idx > 0 and idx % consrows == 0:
-            click.echo_via_pager(itertools.chain(iter(buffer), _format(functions_iter)))
-            buffer = []
-            return
-    # Print all lines for non-paged results.
-    for line in iter(buffer):
-        click.echo(line, nl=False)
+    table = []
+    for func in funcs:
+        table.append(
+            [
+                func.get("FunctionName"),
+                func.get("Runtime"),
+                "Yes" if func.get("-x-new-relic-enabled", False) else "No",
+            ]
+        )
+    click.echo_via_pager(
+        tabulate(table, headers=["Function Name", "Runtime", "Installed"]).rstrip()
+    )
