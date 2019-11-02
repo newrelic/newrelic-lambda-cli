@@ -1,4 +1,5 @@
 import json
+import shutil
 
 import click
 from tabulate import tabulate
@@ -121,6 +122,7 @@ def lambda_uninstall(region, function, layer_arn, verbose):
 )
 def lambda_list_functions(region, quiet, filter):
     """List Lambda Functions"""
+    _, rows = shutil.get_terminal_size((80, 50))
     funcs = awslambda.list_functions(region, quiet, filter)
 
     table = []
@@ -132,6 +134,12 @@ def lambda_list_functions(region, quiet, filter):
                 "Yes" if func.get("-x-new-relic-enabled", False) else "No",
             ]
         )
-    click.echo_via_pager(
-        tabulate(table, headers=["Function Name", "Runtime", "Installed"]).rstrip()
-    )
+
+    rendered_table = tabulate(
+        table, headers=["Function Name", "Runtime", "Installed"]
+    ).rstrip()
+
+    if len(table) > rows:
+        click.echo_via_pager(rendered_table)
+    else:
+        click.echo(rendered_table)
