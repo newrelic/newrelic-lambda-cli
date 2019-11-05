@@ -1,4 +1,5 @@
 import json
+import itertools
 import shutil
 
 import click
@@ -125,21 +126,27 @@ def lambda_list_functions(region, quiet, filter):
     _, rows = shutil.get_terminal_size((80, 50))
     funcs = awslambda.list_functions(region, quiet, filter)
 
-    table = []
-    for func in funcs:
-        table.append(
-            [
-                func.get("FunctionName"),
-                func.get("Runtime"),
-                "Yes" if func.get("x-new-relic-enabled", False) else "No",
-            ]
-        )
+    def _format(funcs, header=False):
+        table = []
+        for func in funcs:
+            table.append(
+                [
+                    func.get("FunctionName"),
+                    func.get("Runtime"),
+                    "Yes" if func.get("x-new-relic-enabled", False) else "No",
+                ]
+            )
+        return tabulate(
+            table, headers=["Function Name", "Runtime", "Installed"] if header else []
+        ).rstrip()
 
-    rendered_table = tabulate(
-        table, headers=["Function Name", "Runtime", "Installed"]
-    ).rstrip()
-
-    if len(table) > rows:
-        click.echo_via_pager(rendered_table)
-    else:
-        click.echo(rendered_table)
+    buffer = []
+    for i, func in enumerate(funcs):
+        buffer.append(func)
+        if i > 0 and i % rows == 0:
+            click.echo_via_pager(
+                itertools.chain(iter(_format(buffer, header=True)), _format(funcs))
+            )
+            buffer = []
+            return
+    click.echo(_format(buffer, header=True))
