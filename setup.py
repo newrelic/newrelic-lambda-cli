@@ -21,7 +21,7 @@ setup(
     author_email="dev@iopipe.com",
     url="https://github.com/iopipe/newrelic-lambda-layers-cli",
     packages=find_packages(exclude=("tests", "tests.*")),
-    install_requires=["boto3", "click", "requests", "tabulate"],
+    install_requires=["boto3", "click", "gql", "requests", "tabulate"],
     setup_requires=["pytest-runner"],
     tests_require=["coverage", "pytest", "pytest-cov", "requests"],
     entry_points={
