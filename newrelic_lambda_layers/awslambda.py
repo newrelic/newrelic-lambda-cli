@@ -10,15 +10,17 @@ def list_functions(region, quiet, filter_choice):
     pager = client.get_paginator("list_functions")
     for func_resp in pager.paginate():
         funcs = func_resp.get("Functions", [])
+
         for f in funcs:
+            f.setdefault("x-new-relic-enabled", False)
             for layer in f.get("Layers", []):
                 if layer.get("Arn", "").startswith(utils.get_arn_prefix(region)):
-                    f["-x-new-relic-enabled"] = True
+                    f["x-new-relic-enabled"] = True
             if all:
                 yield f
-            elif filter_choice == "installed" and f["-x-new-relic-enabled"]:
+            elif filter_choice == "installed" and f["x-new-relic-enabled"]:
                 yield f
-            elif filter_choice == "not_installed" and not f["-x-new-relic-enabled"]:
+            elif filter_choice == "not_installed" and not f["x-new-relic-enabled"]:
                 yield f
 
 

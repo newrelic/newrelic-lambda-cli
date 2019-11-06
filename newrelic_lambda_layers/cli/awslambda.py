@@ -131,7 +131,7 @@ def lambda_list_functions(region, quiet, filter):
             [
                 func.get("FunctionName"),
                 func.get("Runtime"),
-                "Yes" if func.get("-x-new-relic-enabled", False) else "No",
+                "Yes" if func.get("x-new-relic-enabled", False) else "No",
             ]
         )
 
