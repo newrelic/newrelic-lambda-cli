@@ -28,6 +28,12 @@ A CLI to install New Relic AWS LAmbda layers.
 pip install newrelic-lambda-layers-cli
 ```
 
+Or clone this repo and run:
+
+```bash
+python setup.py install
+```
+
 ## Usage
 
 ### Install Layer
@@ -46,4 +52,10 @@ newrelic-layers lambda uninstall --function <name or arn>
 
 ```bash
 newrelic-layers lambda list
+```
+
+List functions with layer installed:
+
+```bash
+newrelic-layers lambda list --filter installed
 ```
