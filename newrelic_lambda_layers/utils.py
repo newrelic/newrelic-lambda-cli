@@ -1,8 +1,8 @@
-import collections
 import sys
 
 import boto3
 import botocore
+import click
 
 from . import layers
 
@@ -20,7 +20,9 @@ def catch_boto_errors(func):
         try:
             return func(*args, **kwargs)
         except botocore.exceptions.NoRegionError:
-            error("You must specify a region. Pass `--region` or run `aws configure`.")
+            error(
+                "You must specify a region. Pass `--aws-region` or run `aws configure`."
+            )
         except botocore.exceptions.NoCredentialsError:
             error("No AWS credentials configured. Did you run `aws configure`?")
         except botocore.exceptions.BotoCoreError as e:
@@ -42,22 +44,18 @@ def get_region(region):
     return session.region_name
 
 
-def get_layers(region, runtime):
-    return layers.index(get_region(region), runtime)
+def get_layers(session, runtime):
+    return layers.index(session.region_name, runtime)
 
 
 @catch_boto_errors
-def get_lambda_client(region):
-    boto_kwargs = {}
-    if region:
-        boto_kwargs["region_name"] = region
-    AwsLambda = boto3.client("lambda", **boto_kwargs)
-    return AwsLambda
+def get_lambda_client(session):
+    return session.client("lambda")
 
 
 @catch_boto_errors
 def all_lambda_regions():
-    return boto3.session.Session().get_available_regions("lambda")
+    return boto3.Session().get_available_regions("lambda")
 
 
 def is_valid_handler(runtime, handler):
@@ -75,3 +73,13 @@ def is_valid_handler(runtime, handler):
 def error(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
     sys.exit(1)
+
+
+def validate_aws_profile(ctx, param, value):
+    """A click callback to validate that an AWS profile exists"""
+    try:
+        boto3.Session(profile_name=value)
+    except botocore.exceptions.ProfileNotFound as e:
+        raise click.BadParameter(e.fmt)
+    else:
+        return value

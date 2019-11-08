@@ -1,8 +1,8 @@
 from . import utils
 
 
-def list_functions(region, quiet, filter_choice):
-    client = utils.get_lambda_client(region)
+def list_functions(session, filter_choice):
+    client = session.client("lambda")
 
     # set all if the filter_choice is "all" or there is no filter_choice active.
     all = filter_choice == "all" or not filter_choice
@@ -14,7 +14,9 @@ def list_functions(region, quiet, filter_choice):
         for f in funcs:
             f.setdefault("x-new-relic-enabled", False)
             for layer in f.get("Layers", []):
-                if layer.get("Arn", "").startswith(utils.get_arn_prefix(region)):
+                if layer.get("Arn", "").startswith(
+                    utils.get_arn_prefix(session.region_name)
+                ):
                     f["x-new-relic-enabled"] = True
             if all:
                 yield f
@@ -104,11 +106,11 @@ def _add_new_relic(config, region, function_arn, layer_arn, account_id, allow_up
     return update_kwargs
 
 
-def install(region, function_arn, layer_arn, account_id, allow_upgrade):
-    client = utils.get_lambda_client(region)
+def install(session, function_arn, layer_arn, account_id, allow_upgrade):
+    client = session.client("lambda")
     info = client.get_function(FunctionName=function_arn)
     update_kwargs = _add_new_relic(
-        info, region, function_arn, layer_arn, account_id, allow_upgrade
+        info, session.region_name, function_arn, layer_arn, account_id, allow_upgrade
     )
     return client.update_function_configuration(**update_kwargs)
 
@@ -166,8 +168,10 @@ def _remove_new_relic(config, region, function_arn, layer_arn):
     }
 
 
-def uninstall(region, function_arn, layer_arn):
-    client = utils.get_lambda_client(region)
+def uninstall(session, function_arn, layer_arn):
+    client = session.client("lambda")
     info = client.get_function(FunctionName=function_arn)
-    update_kwargs = _remove_new_relic(info, region, function_arn, layer_arn)
+    update_kwargs = _remove_new_relic(
+        info, session.region_name, function_arn, layer_arn
+    )
     return client.update_function_configuration(**update_kwargs)
