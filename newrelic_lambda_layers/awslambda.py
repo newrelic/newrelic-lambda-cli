@@ -147,17 +147,19 @@ def _remove_new_relic(config, region, function_arn, layer_arn):
         )
 
     # Delete New Relic env vars
-    env_vars = info["Configuration"]["Environment"]["Variables"]
-    env_vars = {
-        key: value for key, value in env_vars.items() if key.startswith("NEW_RELIC")
+    info["Configuration"]["Environment"]["Variables"] = {
+        key: value
+        for key, value in info["Configuration"]["Environment"]
+        .get("Variables", {})
+        .items()
+        if not key.startswith("NEW_RELIC")
     }
 
     # Remove New Relic layers
-    layers = info.get("Configuration", {}).get("Layers", [])
     layers = [
-        layer
-        for layer in layers
-        if layer["Arn"].startswith(utils.get_arn_prefix(region))
+        layer["Arn"]
+        for layer in info["Configuration"].get("Layers", [])
+        if not layer["Arn"].startswith(utils.get_arn_prefix(region))
     ]
 
     return {

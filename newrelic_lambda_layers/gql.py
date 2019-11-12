@@ -19,13 +19,13 @@ from gql.transport.requests import RequestsHTTPTransport
 
 
 class NewRelicGQL(object):
-    def __init__(self, api_key, account_id, region="us"):
-        self.api_key = api_key
-
+    def __init__(self, account_id, api_key, region="us"):
         try:
             self.account_id = int(account_id)
         except ValueError:
             raise ValueError("Account ID must be an integer")
+
+        self.api_key = api_key
 
         if region == "us":
             self.url = "https://api.newrelic.com/graphql"

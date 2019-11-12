@@ -6,7 +6,7 @@ import boto3
 import click
 from tabulate import tabulate
 
-from .. import awslambda, utils
+from .. import awslambda, permissions, utils
 from .decorators import add_options, AWS_OPTIONS
 
 
@@ -25,7 +25,7 @@ def register(group):
 
 @click.command(name="install")
 @click.option(
-    "--account-id",
+    "--nr-account-id",
     "-a",
     envvar="NEW_RELIC_ACCOUNT_ID",
     help="New Relic Account ID",
@@ -61,6 +61,7 @@ def lambda_install(
 ):
     """Install New Relic AWS Lambda Layer"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
+    permissions.ensure_lambda_install_permissions(session)
 
     try:
         resp = awslambda.install(session, function, layer_arn, account_id, upgrade)
@@ -98,6 +99,7 @@ def lambda_install(
 def lambda_uninstall(ctx, aws_profile, aws_region, function, layer_arn):
     """Uninstall New Relic AWS Lambda Layer"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
+    permissions.ensure_lambda_uninstall_permissions(session)
 
     try:
         resp = awslambda.uninstall(session, function, layer_arn)
@@ -128,6 +130,7 @@ def lambda_list_functions(aws_profile, aws_region, filter):
     """List AWS Lambda Functions"""
     _, rows = shutil.get_terminal_size((80, 50))
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
+    permissions.ensure_lambda_list_permissions(session)
     funcs = awslambda.list_functions(session, filter)
 
     def _format(funcs, header=False):

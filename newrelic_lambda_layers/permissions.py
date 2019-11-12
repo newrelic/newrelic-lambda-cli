@@ -34,14 +34,15 @@ def check_permissions(session, actions, resources=None, context=None):
 
     # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/iam.html
     iam = session.client("iam")
+    sts = session.client("sts")
 
-    # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/iam.html#IAM.Client.get_user
-    user = iam.get_user()
-    user_arn = user["User"]["Arn"]
+    # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sts.html#STS.Client.get_caller_identity
+    caller = sts.get_caller_identity()
+    caller_arn = caller["Arn"]
 
     # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/iam.html#IAM.Client.simulate_principal_policy
     results = iam.simulate_principal_policy(
-        PolicySourceArn=user_arn,
+        PolicySourceArn=caller_arn,
         ActionNames=actions,
         ResourceArns=resources,
         ContextEntries=context_entries,
@@ -56,7 +57,7 @@ def check_permissions(session, actions, resources=None, context=None):
     )
 
 
-def ensure_setup_permissions(session):
+def ensure_integration_install_permissions(session):
     """
     Ensures that the current AWS session has the necessary permissions to setup the
     New Relic AWS integration.
@@ -85,10 +86,89 @@ def ensure_setup_permissions(session):
 
     if needed_permissions:
         message = [
-            "The following IAM permissions are needed to install the New RElic AWS integration:\n"
+            "The following AWS permissions are needed to install the New RElic AWS "
+            "integration:\n"
         ]
 
         for needed_permission in needed_permissions:
             message.append(" * %s" % needed_permission)
 
+        message.append("\nEnsure your AWS user has these permissions and try again.")
+
+        raise click.UsageError("\n".join(message))
+
+
+def ensure_lambda_install_permissions(session):
+    """
+    Ensures that the current AWS session has the necessary permissions to install the
+    New Relic AWS Lambda layer and log subscription.
+
+    :param session: A boto3 session
+    """
+    needed_permissions = check_permissions(
+        session,
+        actions=[
+            "lambda:GetFunction",
+            "lambda:UpdateFunctionConfiguration",
+            "logs:DeleteSubscriptionFilter",
+            "logs:DescribeSubscriptionFilters",
+            "logs:PutSubscriptionFilter",
+        ],
+    )
+
+    if needed_permissions:
+        message = [
+            "The following AWS permissions are needed to install the New RElic AWS Lambda layer:\n"
+        ]
+
+        for needed_permission in needed_permissions:
+            message.append(" * %s" % needed_permission)
+
+        message.append("\nEnsure your AWS user has these permissions and try again.")
+
+        raise click.UsageError("\n".join(message))
+
+
+def ensure_lambda_uninstall_permissions(session):
+    """
+    Ensures that the current AWS session has the necessary permissions to uninstall the
+    New Relic AWS Lambda layer and log subscription.
+
+    :param session: A boto3 session
+    """
+    needed_permissions = check_permissions(
+        session,
+        actions=[
+            "lambda:GetFunction",
+            "lambda:UpdateFunctionConfiguration",
+            "logs:DeleteSubscriptionFilter",
+            "logs:DescribeSubscriptionFilters",
+        ],
+    )
+
+    if needed_permissions:
+        message = [
+            "The following AWS permissions are needed to uninstall the New RElic AWS "
+            "Lambda layer:\n"
+        ]
+        for needed_permission in needed_permissions:
+            message.append(" * %s" % needed_permission)
+        message.append("\nEnsure your AWS user has these permissions and try again.")
+        raise click.UsageError("\n".join(message))
+
+
+def ensure_lambda_list_permissions(session):
+    """
+    Ensures that the current AWS session has the necessary permissions to list the functions
+    with New Relic AWS Lambda layers.
+
+    :param session: A boto3 session
+    """
+    needed_permissions = check_permissions(session, actions=["lambda:ListFunctions"])
+
+    if needed_permissions:
+        message = ["The following AWS permissions are needed to list functions:\n"]
+        for needed_permission in needed_permissions:
+            message.append(" * %s" % needed_permission)
+        message.append("\nEnsure your AWS user has these permissions and try again.")
         raise click.UsageError("\n".join(message))

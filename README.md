@@ -1,9 +1,10 @@
 # newrelic-lambda-layers-cli
 
-A CLI to install New Relic AWS LAmbda layers.
+A CLI to install the New Relic AWS integration and Lambda layers.
 
 ## Features
 
+* Install the New Relic AWS integration
 * Installs and configures a New Relic AWS Lambda layer onto your AWS Lambda function
 * Automatically selects the correct layer for your function's runtime and region
 * Wraps your function without requiring a code change
@@ -19,8 +20,7 @@ A CLI to install New Relic AWS LAmbda layers.
 
 ## Requirements
 
-* Set up the [New Relic AWS Integration](https://docs.newrelic.com/docs/serverless-function-monitoring/aws-lambda-monitoring/get-started/enable-new-relic-monitoring-aws-lambda#enable-process)
-* Retrieve your [New relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id)
+* Retrieve your [New relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) and [User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key)
 
 ## Installation
 
@@ -35,6 +35,15 @@ python setup.py install
 ```
 
 ## Usage
+
+### Install Integration
+
+```bash
+newrelic-layers integration install \
+    --nr-account-id <account id> \
+    --nr-api-key <api key> \
+    --linked-account-name <linked account name>
+```
 
 ### Install Layer
 
