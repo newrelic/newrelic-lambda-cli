@@ -95,7 +95,7 @@ def _add_new_relic(config, region, function_arn, layer_arn, account_id, allow_up
     }
 
     # Update the account id
-    update_kwargs["Environment"]["Variables"]["NEW_RELIC_ACCOUNT_ID"] = account_id
+    update_kwargs["Environment"]["Variables"]["NEW_RELIC_ACCOUNT_ID"] = str(account_id)
 
     # Update the NEW_RELIC_LAMBDA_HANDLER envvars only when it's a new install.
     if orig_handler != runtime_handler:

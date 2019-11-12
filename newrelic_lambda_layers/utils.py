@@ -44,8 +44,8 @@ def get_region(region):
     return session.region_name
 
 
-def get_layers(session, runtime):
-    return layers.index(session.region_name, runtime)
+def get_layers(region, runtime):
+    return layers.index(region, runtime)
 
 
 @catch_boto_errors
