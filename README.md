@@ -180,6 +180,9 @@ pip install certifi
 
 This happens on file upload when users zip a directory containing files, instead of selecting the files within the directory and zipping them for upload: [Zipping files for AWS](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/applications-sourcebundle.html#using-features.deployment.source.gui)
 
+**AWS Log Ingestion UI error:**
+This is a common UI bug that does not affect anything and can be safely ignored.
+![](https://drive.google.com/uc?id=1soeSfMiFT068_K6dhxa649UtKlY30qGQ)
 
 **AWS CLI output error**
 >Failed actions:
