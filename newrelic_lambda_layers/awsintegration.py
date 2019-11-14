@@ -39,7 +39,7 @@ def get_cf_stack_status(session, stack_name):
         return res["Stacks"][0]["StackStatus"]
 
 
-def get_streaming_filters(session, function_name):
+def get_subscription_filters(session, function_name):
     """Returns all the log subscription filters for the function"""
     log_group_name = "/aws/lambda/%s" % function_name
     try:
@@ -97,7 +97,7 @@ def create_function(session, nr_license_key):
         client.get_waiter("stack_create_complete").wait(StackName=stack_name)
 
 
-def add_function_streaming_filter(session, function_name, destination_arn):
+def add_subscription_filter(session, function_name, destination_arn):
     return session.client("logs").put_subscription_filter(
         logGroupName="/aws/lambda/%s" % function_name,
         filterName="NewRelicLogStreaming",
@@ -106,7 +106,7 @@ def add_function_streaming_filter(session, function_name, destination_arn):
     )
 
 
-def remove_function_streaming_filter(session, function_name):
+def remove_subscription_filter(session, function_name):
     return session.client("logs").delete_subscription_filter(
         logGroupName="/aws/lambda/%s" % function_name, filterName="NewRelicLogStreaming"
     )
@@ -114,18 +114,44 @@ def remove_function_streaming_filter(session, function_name):
 
 def create_log_subscription(session, function_name):
     destination = get_function(session, "newrelic-log-ingestion")
+    if destination is None:
+        click.echo(
+            "Could not find 'newrelic-log-ingestion' function. Is the New Relic AWS "
+            "Integration installed? Run 'newrelic-layers integration status' to check."
+        )
+        return
     destination_arn = destination["Configuration"]["FunctionArn"]
-    streaming_filters = get_streaming_filters(session, function_name)
-    if not streaming_filters:
-        add_function_streaming_filter(session, function_name, destination_arn)
+    subscription_filters = [
+        filter
+        for filter in get_subscription_filters(session, function_name)
+        if filter["filterName"] == "NewRelicLogStreaming"
+    ]
+    if not subscription_filters:
+        click.echo("Adding New Relic log subscription to '%s'" % function_name)
+        add_subscription_filter(session, function_name, destination_arn)
     else:
-        filter = streaming_filters[0]
-        if (
-            filter["filterName"] == "NewRelicLogStreaming"
-            and filter["filterPattern"] == ""
-        ):
-            remove_function_streaming_filter(session, function_name)
-            add_function_streaming_filter(session, function_name, destination_arn)
+        click.echo(
+            "Found log subscription for '%s', verifying configuration" % function_name
+        )
+        subscription_filter = subscription_filters[0]
+        if subscription_filter["filterPattern"] == "":
+            remove_subscription_filter(session, function_name)
+            add_subscription_filter(session, function_name, destination_arn)
+
+
+def remove_log_subscription(session, function_name):
+    subscription_filters = [
+        filter
+        for filter in get_subscription_filters(session, function_name)
+        if filter["filterName"] == "NewRelicLogStreaming"
+    ]
+    if not subscription_filters:
+        click.echo(
+            "No New Relic subscription filters found for '%s', skipping" % function_name
+        )
+    else:
+        click.echo("Removing New Relic log subscription from '%s'" % function_name)
+        remove_subscription_filter(session, function_name)
 
 
 def create_integration_role(session, role_policy, nr_account_id):

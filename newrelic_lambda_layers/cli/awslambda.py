@@ -6,7 +6,7 @@ import boto3
 import click
 from tabulate import tabulate
 
-from .. import awslambda, permissions, utils
+from .. import awsintegration, awslambda, permissions, utils
 from .decorators import add_options, AWS_OPTIONS
 
 
@@ -63,19 +63,15 @@ def lambda_install(
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
     permissions.ensure_lambda_install_permissions(session)
 
-    try:
-        resp = awslambda.install(session, function, layer_arn, account_id, upgrade)
-    except awslambda.MultipleLayersException:
-        utils.error("Multiple layers found. Pass --layer-arn to specify layer ARN")
-    except awslambda.UpdateLambdaException as e:
-        utils.error(e)
-
-    if not resp:
+    res = awslambda.install(session, function, layer_arn, account_id, upgrade)
+    if not res:
         click.echo("\nInstallation failed.")
         return
 
     if ctx.obj["VERBOSE"]:
-        click.echo(json.dumps(resp, indent=2))
+        click.echo(json.dumps(res, indent=2))
+
+    awsintegration.create_log_subscription(session, function)
 
     click.echo("\nInstall complete.")
 
@@ -101,19 +97,15 @@ def lambda_uninstall(ctx, aws_profile, aws_region, function, layer_arn):
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
     permissions.ensure_lambda_uninstall_permissions(session)
 
-    try:
-        resp = awslambda.uninstall(session, function, layer_arn)
-    except awslambda.MultipleLayersException:
-        utils.error("Multiple layers found. Pass --layer-arn to specify layer ARN")
-    except awslambda.UpdateLambdaException as e:
-        utils.error(e)
-
-    if not resp:
-        click.echo("\nRemoval failed.")
+    res = awslambda.uninstall(session, function, layer_arn)
+    if not res:
+        click.echo("\nUninstall failed.")
         return
 
     if ctx.obj["VERBOSE"]:
-        click.echo(json.dumps(resp, indent=2))
+        click.echo(json.dumps(res, indent=2))
+
+    awsintegration.remove_log_subscription(session, function)
 
     click.echo("\nRemoval of New Relic layers and configuration complete.")
 

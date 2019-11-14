@@ -1,3 +1,5 @@
+import click
+
 from . import utils
 
 
@@ -40,19 +42,14 @@ def _add_new_relic(config, region, function_arn, layer_arn, account_id, allow_up
     orig_handler = info.get("Configuration", {}).get("Handler")
     runtime_handler = utils.RUNTIME_CONFIG.get(runtime, {}).get("Handler")
 
-    if not account_id:
-        raise (UpdateLambdaException("Account ID missing from parameters."))
-
     if not allow_upgrade and orig_handler == runtime_handler:
-        raise (
-            UpdateLambdaException(
-                "Already installed. Pass --upgrade (or -u) to allow upgrade or "
-                "reinstall to latest layer version."
-            )
+        raise click.UsageError(
+            "Already installed. Pass --upgrade (or -u) to allow upgrade or "
+            "reinstall to latest layer version."
         )
 
     if runtime not in utils.RUNTIME_CONFIG:
-        raise UpdateLambdaException("Unsupported Lambda runtime: %s" % (runtime,))
+        raise click.UsageError("Unsupported Lambda runtime: %s" % runtime)
 
     existing_layers = [
         layer.get("Arn")
@@ -66,10 +63,12 @@ def _add_new_relic(config, region, function_arn, layer_arn, account_id, allow_up
     else:
         # discover compatible layers...
         disco_layers = utils.get_layers(region, runtime)
+
+        # TODO: MAke this a layer selection screen
         if len(new_relic_layers) > 1:
-            print("Discovered layers for runtime (%s)" % (runtime,))
+            message = ["Discovered layers for runtime (%s)" % runtime]
             for layer in disco_layers:
-                print(
+                message.append(
                     "%s\t%s"
                     % (
                         layer.get("LatestMatchingVersion", {}).get(
@@ -78,7 +77,11 @@ def _add_new_relic(config, region, function_arn, layer_arn, account_id, allow_up
                         layer.get("Description", ""),
                     )
                 )
-            raise MultipleLayersException()
+            message.append(
+                "\nMultiple layers found. Pass --layer-arn to specify layer ARN"
+            )
+            raise click.UsageError("\n".join(message))
+
         new_relic_layers = [
             disco_layers[0].get("LatestMatchingVersion", {}).get("LayerVersionArn", "")
         ]
@@ -121,11 +124,11 @@ def _remove_new_relic(config, region, function_arn, layer_arn):
     orig_handler = info.get("Configuration", {}).get("Handler", "")
 
     if runtime not in utils.RUNTIME_CONFIG:
-        raise UpdateLambdaException("Unsupported Lambda runtime: %s" % (runtime,))
+        raise click.UsageError("Unsupported Lambda runtime: %s" % runtime)
 
     # Detect non-New Relic handler and error if necessary.
     if not utils.is_valid_handler(runtime, orig_handler):
-        raise UpdateLambdaException(
+        raise click.UsageError(
             "New Relic installation (via layers) not auto-detected for the specified "
             "function.\n"
             "Error: Unrecognized handler in deployed function."
@@ -139,7 +142,7 @@ def _remove_new_relic(config, region, function_arn, layer_arn):
     )
 
     if not env_handler:
-        raise UpdateLambdaException(
+        raise click.UsageError(
             "New Relic installation (via layers) not auto-detected for the specified "
             "function.\n"
             "Error: Environment variable NEW_RELIC_LAMBDA_HANDLER not "
