@@ -23,6 +23,35 @@ AWS_OPTIONS = [
     ),
 ]
 
+NR_OPTIONS = [
+    click.option(
+        "--nr-account-id",
+        "-a",
+        envvar="NEW_RELIC_ACCOUNT_ID",
+        help="New Relic Account ID",
+        metavar="<id>",
+        required=True,
+        type=click.INT,
+    ),
+    click.option(
+        "--nr-api-key",
+        "-k",
+        envvar="NEW_RELIC_API_KEY",
+        help="New Relic User API Key",
+        metavar="<key>",
+        required=True,
+    ),
+    click.option(
+        "--nr-region",
+        default="us",
+        envvar="NEW_RELIC_REGION",
+        help="New Relic Account Region",
+        metavar="<region>",
+        show_default=True,
+        type=click.Choice(["us", "eu"]),
+    ),
+]
+
 
 def add_options(options):
     """

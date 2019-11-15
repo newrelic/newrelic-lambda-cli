@@ -17,6 +17,9 @@ Example usage:
 from gql import Client, gql
 from gql.transport.requests import RequestsHTTPTransport
 
+import click
+import requests
+
 
 class NewRelicGQL(object):
     def __init__(self, account_id, api_key, region="us"):
@@ -101,7 +104,7 @@ class NewRelicGQL(object):
         accounts = self.get_linked_accounts()
         return next((a for a in accounts if a["name"] == account_name), None)
 
-    def create_linked_account(self, role_arn, account_name):
+    def link_account(self, role_arn, account_name):
         """
         create a linked account (cloud integrations account)
         in the New Relic account
@@ -125,9 +128,32 @@ class NewRelicGQL(object):
         )
         return res["cloudLinkAccount"]["linkedAccounts"][0]
 
-    def get_integration_by_service_slug(self, linked_account_id, service_slug):
+    def unlink_account(self, linked_account_id):
         """
-        return the integration that is associated with the specified service name.
+        Unlink a New Relic Cloud integrations account
+        """
+        return self.query(
+            """
+            mutation ($accountId: Int!, $accounts: CloudUnlinkCloudAccountsInput!) {
+              cloudUnLinkAccount (accountId: $accountId, accounts: $accounts) {
+                unlinkedAccounts {
+                  id
+                  name
+                }
+                errors {
+                  type
+                  message
+                }
+              }
+            }
+            """,
+            accountId=self.account_id,
+            accounts={"linkedAccountId": linked_account_id},
+        )
+
+    def get_integrations(self, linked_account_id):
+        """
+        returns the integrations for the linked account
         """
         res = self.query(
             """
@@ -153,9 +179,12 @@ class NewRelicGQL(object):
             }
             """,
             accountId=self.account_id,
-            linkedAccountId=linked_account_id,
+            linkedAccountId=int(linked_account_id),
         )
-        integrations = res["actor"]["account"]["cloud"]["linkedAccount"]["integrations"]
+        return res["actor"]["account"]["cloud"]["linkedAccount"]["integrations"]
+
+    def get_integration_by_service_slug(self, linked_account_id, service_slug):
+        integrations = self.get_integrations(linked_account_id)
         return next(
             (i for i in integrations if i["service"]["slug"] == service_slug), None
         )
@@ -172,7 +201,7 @@ class NewRelicGQL(object):
         """
         res = self.query(
             """
-            mutation ($accountId:Int!, $integrations: CloudIntegrationsInput!) {
+            mutation ($accountId: Int!, $integrations: CloudIntegrationsInput!) {
               cloudConfigureIntegration (
                 accountId: $accountId,
                 integrations: $integrations
@@ -198,3 +227,54 @@ class NewRelicGQL(object):
             },
         )
         return res["cloudConfigureIntegration"]["integrations"][0]
+
+    def disable_integration(self, linked_account_id, provider_slug, service_slug):
+        """
+        Disable monitoring of a Cloud provider service (integration)
+        """
+        return self.query(
+            """
+            mutation ($accountId: Int!, $integrations: CloudIntegrationsInput!) {
+              cloudDisableIntegration (
+                accountId: $accountId,
+                integrations: $integrations
+              ) {
+                disabledIntegrations {
+                  id
+                  accountId
+                  name
+                }
+                errors {
+                  type
+                  message
+                }
+              }
+            }
+            """,
+            accountId=self.account_id,
+            integrations={
+                provider_slug: {service_slug: [{"linkedAccountId": linked_account_id}]}
+            },
+        )
+
+
+def validate_gql_credentials(nr_account_id, nr_api_key, nr_region):
+    try:
+        return NewRelicGQL(nr_account_id, nr_api_key, nr_region)
+    except requests.exceptions.HTTPError:
+        raise click.BadParameterError(
+            "Could not authenticate with New Relic. Check that your New Relic API Key "
+            "is valid and try again.",
+            param="nr_api_key",
+        )
+
+
+def retrieve_license_key(gql):
+    try:
+        return gql.get_license_key()
+    except Exception:
+        raise click.BadParameterError(
+            "Could not retrieve license key from New Relic. Check that your New Relic "
+            "Account ID is valid and try again.",
+            param="nr_account_id",
+        )

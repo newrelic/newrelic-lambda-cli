@@ -13,7 +13,7 @@ def get_role(session, role_name):
     """Returns details about an IAM role"""
     try:
         return session.client("iam").get_role(RoleName=role_name)
-    except botocore.errorfactory.NoSuchEntityException:
+    except botocore.exceptions.ClientError:
         return None
 
 
@@ -21,7 +21,7 @@ def get_function(session, function_name):
     """Returns details about an AWS lambda function"""
     try:
         return session.client("lambda").get_function(FunctionName=function_name)
-    except botocore.errorfactory.ResourceNotFoundException:
+    except botocore.exceptions.ClientError:
         return None
 
 
@@ -46,12 +46,13 @@ def get_subscription_filters(session, function_name):
         res = session.client("logs").describe_subscription_filters(
             logGroupName=log_group_name
         )
-    except botocore.errorfactory.ResourceNotFoundException:
+    except botocore.exceptions.ClientError:
         return []
     else:
         return res.get("SubscriptionFilters", [])
 
 
+# TODO: Merge this with create_integration_role?
 def create_role(session, role_policy, nr_account_id):
     client = session.client("cloudformation")
     role_policy_name = "" if role_policy is None else role_policy
@@ -74,12 +75,14 @@ def create_role(session, role_policy, nr_account_id):
             ],
             Capabilities=["CAPABILITY_NAMED_IAM"],
         )
+        click.echo("Waiting for stack creation to complete...", nl=False)
         client.get_waiter("stack_create_complete").wait(StackName=stack_name)
+        click.echo("Done")
 
 
-def create_function(session, nr_license_key):
+def create_log_ingestion_function(session, nr_license_key):
     client = session.client("cloudformation")
-    stack_name = ("NewRelicLogIngestion",)
+    stack_name = "NewRelicLogIngestion"
     template_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         "templates",
@@ -90,14 +93,33 @@ def create_function(session, nr_license_key):
             StackName=stack_name,
             TemplateBody=template.read(),
             Parameters=[
-                {"ParameterKey": "NewRelicLicenseKey", "ParamterValue": nr_license_key}
+                {"ParameterKey": "NewRelicLicenseKey", "ParameterValue": nr_license_key}
             ],
             Capabilities=["CAPABILITY_NAMED_IAM", "CAPABILITY_AUTO_EXPAND"],
         )
+        click.echo("Waiting for stack creation to complete...", nl=False)
         client.get_waiter("stack_create_complete").wait(StackName=stack_name)
+        click.echo("Done")
 
 
-def add_subscription_filter(session, function_name, destination_arn):
+def remove_log_ingestion_function(session):
+    client = session.client("cloudformation")
+    stack_name = "NewRelicLogIngestion"
+    stack_status = check_for_ingest_stack(session)
+    if stack_status is None:
+        click.echo(
+            "No New Relic AWS Lambda log ingestion found in region %s, skipping"
+            % session.region_name
+        )
+        return
+    click.echo("Deleting New Relic log ingestion stack '%s'" % stack_name)
+    client.delete_stack(StackName=stack_name)
+    click.echo("Waiting for stack deletion to complete...", nl=False)
+    client.get_waiter("stack_delete_complete").wait(StackName=stack_name)
+    click.echo("Done")
+
+
+def create_subscription_filter(session, function_name, destination_arn):
     return session.client("logs").put_subscription_filter(
         logGroupName="/aws/lambda/%s" % function_name,
         filterName="NewRelicLogStreaming",
@@ -128,7 +150,7 @@ def create_log_subscription(session, function_name):
     ]
     if not subscription_filters:
         click.echo("Adding New Relic log subscription to '%s'" % function_name)
-        add_subscription_filter(session, function_name, destination_arn)
+        create_subscription_filter(session, function_name, destination_arn)
     else:
         click.echo(
             "Found log subscription for '%s', verifying configuration" % function_name
@@ -136,7 +158,7 @@ def create_log_subscription(session, function_name):
         subscription_filter = subscription_filters[0]
         if subscription_filter["filterPattern"] == "":
             remove_subscription_filter(session, function_name)
-            add_subscription_filter(session, function_name, destination_arn)
+            create_subscription_filter(session, function_name, destination_arn)
 
 
 def remove_log_subscription(session, function_name):
@@ -155,31 +177,62 @@ def remove_log_subscription(session, function_name):
 
 
 def create_integration_role(session, role_policy, nr_account_id):
+    """
+    Creates a AWS CloudFormation stack that adds the New Relic AWSLambda Integration
+    IAM role.
+   """
     role_name = "NewRelicLambdaIntegrationRole_%s" % nr_account_id
     stack_name = "NewRelicLambdaIntegrationRole-%s" % nr_account_id
     role = get_role(session, role_name)
-    if role is None:
-        stack_status = get_cf_stack_status(session, stack_name)
-        if stack_status is None:
-            create_role(session, role_policy, nr_account_id)
-            role = get_role(session, role_name)
-            click.echo(
-                "Created role [%s] with policy [%s] in AWS account."
-                % (role_name, role_policy)
-            )
-        else:
-            raise click.UsageError(
-                "Cannot create CloudFormation stack %s because it exists in state %s"
-                % (stack_name, stack_status)
-            )
-    return role
+
+    if role:
+        click.echo(
+            "New Relic AWS Lambda integration role '%s' already exists" % role_name
+        )
+        return role
+
+    stack_status = get_cf_stack_status(session, stack_name)
+    if stack_status is None:
+        create_role(session, role_policy, nr_account_id)
+        role = get_role(session, role_name)
+        click.echo(
+            "Created role [%s] with policy [%s] in AWS account."
+            % (role_name, role_policy)
+        )
+        return role
+
+    raise click.UsageError(
+        "Cannot create CloudFormation stack %s because it exists in state %s"
+        % (stack_name, stack_status)
+    )
+
+
+def remove_integration_role(session, nr_account_id):
+    """
+    Removes the AWS CloudFormation stack that includes the New Relic AWS Integration
+    IAM role.
+    """
+    client = session.client("cloudformation")
+    stack_name = "NewRelicLambdaIntegrationRole-%s" % nr_account_id
+    stack_status = get_cf_stack_status(session, stack_name)
+    if stack_status is None:
+        click.echo("No New Relic AWS Lambda Integration found, skipping")
+        return
+    click.echo("Deleting New Relic AWS Lambda Integration stack '%s'" % stack_name)
+    client.delete_stack(StackName=stack_name)
+    click.echo("Waiting for stack deletion to complete...", nl=False)
+    client.get_waiter("stack_delete_complete").wait(StackName=stack_name)
+    click.echo("Done")
 
 
 def create_integration_account(gql, nr_account_id, linked_account_name, role):
+    """
+    Creates a New Relic Cloud integration account for the specified AWS IAM role.
+    """
     role_arn = role["Role"]["Arn"]
     account = gql.get_linked_account_by_name(linked_account_name)
     if account is None:
-        account = gql.create_linked_account(role_arn, linked_account_name)
+        account = gql.link_account(role_arn, linked_account_name)
         click.echo(
             "Cloud integrations account [%s] was created in New Relic account [%s]"
             "with role [%s]." % (linked_account_name, nr_account_id, role_arn)
@@ -193,6 +246,9 @@ def create_integration_account(gql, nr_account_id, linked_account_name, role):
 
 
 def enable_lambda_integration(gql, nr_account_id, linked_account_name):
+    """
+    Enables AWS Lambda for the specified New Relic Cloud integrations account.
+    """
     account = gql.get_linked_account_by_name(linked_account_name)
     if account is None:
         raise click.UsageError(
@@ -207,17 +263,22 @@ def enable_lambda_integration(gql, nr_account_id, linked_account_name):
             % (linked_account_name, nr_account_id)
         )
     else:
-        integration = gql.enable_integration(account["id"], "aws", "lambda")
-        click.echo(
-            "Integration [id=%s, name=%s] has been enabled in Cloud "
-            "integrations account [%s] of New Relic account [%d]."
-            % (
-                integration["id"],
-                integration["name"],
-                linked_account_name,
-                nr_account_id,
+        try:
+            integration = gql.enable_integration(account["id"], "aws", "lambda")
+            click.echo(
+                "Integration [id=%s, name=%s] has been enabled in Cloud "
+                "integrations account [%s] of New Relic account [%d]."
+                % (
+                    integration["id"],
+                    integration["name"],
+                    linked_account_name,
+                    nr_account_id,
+                )
             )
-        )
+        except Exception as e:
+            click.echo(
+                "Could not enable New Relic AWS Lambda integration: %s" % e, err=True
+            )
 
 
 def validate_linked_account(session, gql, linked_account_name):
@@ -237,7 +298,10 @@ def validate_linked_account(session, gql, linked_account_name):
             )
 
 
-def setup_log_ingestion(session, nr_license_key):
+def install_log_ingestion(session, nr_license_key):
+    """
+    Installs the New Relic AWS Lambda log ingestion function and role.
+    """
     function = get_function(session, "newrelic-log-ingestion")
     if function is None:
         stack_status = check_for_ingest_stack(session)
@@ -247,7 +311,7 @@ def setup_log_ingestion(session, nr_license_key):
                 % session.region_name
             )
             try:
-                create_function(session, nr_license_key)
+                create_log_ingestion_function(session, nr_license_key)
             except Exception as e:
                 raise click.UsageError(
                     "Failed to create 'newrelic-log-ingestion' function: %s" % e
@@ -261,6 +325,6 @@ def setup_log_ingestion(session, nr_license_key):
             )
     else:
         click.echo(
-            "The 'newrelic-log-ingestion' function already exists in region %s"
-            % session.region_name
+            "The 'newrelic-log-ingestion' function already exists in region %s, "
+            "skipping" % session.region_name
         )

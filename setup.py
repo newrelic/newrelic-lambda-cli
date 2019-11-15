@@ -27,4 +27,5 @@ setup(
     entry_points={
         "console_scripts": ["newrelic-layers = newrelic_lambda_layers.cli:main"]
     },
+    include_package_data=True,
 )

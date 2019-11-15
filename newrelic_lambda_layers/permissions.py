@@ -59,8 +59,8 @@ def check_permissions(session, actions, resources=None, context=None):
 
 def ensure_integration_install_permissions(session):
     """
-    Ensures that the current AWS session has the necessary permissions to setup the
-    New Relic AWS integration.
+    Ensures that the current AWS session has the necessary permissions to install the
+    New Relic AWS Lambda Integration.
 
     :param session: A boto3 session
     """
@@ -87,14 +87,39 @@ def ensure_integration_install_permissions(session):
     if needed_permissions:
         message = [
             "The following AWS permissions are needed to install the New RElic AWS "
-            "integration:\n"
+            "Lambda integration:\n"
         ]
-
         for needed_permission in needed_permissions:
             message.append(" * %s" % needed_permission)
-
         message.append("\nEnsure your AWS user has these permissions and try again.")
+        raise click.UsageError("\n".join(message))
 
+
+def ensure_integration_uninstall_permissions(session):
+    """
+    Ensures that the current AWS session has the necessary permissions to uninstall the
+    New Relic AWS Lambda Integration.
+
+    :param session: A boto3 session
+    """
+    needed_permissions = check_permissions(
+        session,
+        actions=[
+            "cloudformation:DeleteStack",
+            "cloudformation:DescribeStacks",
+            "lambda:GetFunction",
+            "logs:DeleteSubscriptionFilter",
+        ],
+    )
+
+    if needed_permissions:
+        message = [
+            "The following AWS permissions are needed to uninstall the New RElic AWS "
+            "Lambda integration:\n"
+        ]
+        for needed_permission in needed_permissions:
+            message.append(" * %s" % needed_permission)
+        message.append("\nEnsure your AWS user has these permissions and try again.")
         raise click.UsageError("\n".join(message))
 
 
