@@ -1,12 +1,12 @@
-# newrelic-lambda-layers-cli
+# newrelic-lambda-cli
 
-A CLI to install the New Relic AWS integration and Lambda layers.
+A CLI to install the New Relic AWS Lambda integration and layers.
 
 ## Features
 
-* Install the New Relic AWS integration
-* Installs and configures a New Relic AWS Lambda layer onto your AWS Lambda function
-* Automatically selects the correct layer for your function's runtime and region
+* Installs the New Relic AWS integration
+* Installs and configures a New Relic AWS Lambda layer onto your AWS Lambda functions
+* Automatically selects the correct New Relic layer for your function's runtime and region
 * Wraps your function without requiring a code change
 * Supports Node.js and Python AWS LAmbda runtimes
 * Easily uninstall the layer with a single command
@@ -25,7 +25,7 @@ A CLI to install the New Relic AWS integration and Lambda layers.
 ## Installation
 
 ```bash
-pip install newrelic-lambda-layers-cli
+pip install newrelic-lambda-cli
 ```
 
 Or clone this repo and run:
@@ -36,10 +36,10 @@ python setup.py install
 
 ## Usage
 
-### Install Integration
+### Install AWS Lambda Integration
 
 ```bash
-newrelic-layers integration install \
+newrelic-lambda integration install \
     --nr-account-id <account id> \
     --nr-api-key <api key> \
     --linked-account-name <linked account name>
@@ -48,23 +48,52 @@ newrelic-layers integration install \
 ### Install Layer
 
 ```bash
-newrelic-layers lambda install --function <name or arn> --account-id <new relic account id>
+newrelic-lambda layer install --function <name or arn> --account-id <new relic account id>
+```
+
+### Uninstall Integration
+
+```bash
+newrelic-lambda integration uninstall
 ```
 
 ### Uninstall Layer
 
 ```bash
-newrelic-layers lambda uninstall --function <name or arn>
+newrelic-lambda layer uninstall --function <name or arn>
 ```
 
 ### List Functions
 
 ```bash
-newrelic-layers lambda list
+newrelic-lambda function list
 ```
 
 List functions with layer installed:
 
 ```bash
-newrelic-layers lambda list --filter installed
+newrelic-lambda function list --filter installed
+```
+
+## Contributing
+
+Contributions are welcome. We use the [black](https://github.com/ambv/black) code formatter.
+
+```bash
+pip install black
+```
+
+We recommend using it with [pre-commit](https://pre-commit.com/#install):
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+Using these together will auto format your git commits.
+
+## Running Tests
+
+```bash
+python setup.py test
 ```

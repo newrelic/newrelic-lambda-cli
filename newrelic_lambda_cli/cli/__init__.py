@@ -1,9 +1,8 @@
-import boto3
 import click
 
-from .. import utils
+from newrelic_lambda_cli import utils
 
-from . import awsintegration, awslambda
+from . import functions, integrations, layers
 
 
 @click.group()
@@ -15,8 +14,9 @@ def cli(ctx, verbose):
 
 
 def register_groups(group):
-    awsintegration.register(group)
-    awslambda.register(group)
+    functions.register(group)
+    integrations.register(group)
+    layers.register(group)
 
 
 @utils.catch_boto_errors

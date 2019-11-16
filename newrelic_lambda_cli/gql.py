@@ -8,7 +8,7 @@ the error handling boilerplate for schema related errors.
 
 Example usage:
 
-    >>> from newrelic_lambda_layers.gql import NewRelicGQL
+    >>> from newrelic_lambda_cli.gql import NewRelicGQL
     >>> gql = NewRelicGQL("api key here", "account id here")
     >>> gql.get_linked_accounts()
 

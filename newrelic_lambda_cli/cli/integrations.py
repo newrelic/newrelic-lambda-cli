@@ -1,20 +1,21 @@
 import boto3
 import click
 
-from .. import awsintegration, permissions, gql
+from .. import gql, integrations, permissions
 from .decorators import add_options, AWS_OPTIONS, NR_OPTIONS
+from .cliutils import done
 
 
-@click.group(name="integration")
-def integration_group():
+@click.group(name="integrations")
+def integrations_group():
     """Manage New Relic AWS Lambda Integrations"""
     pass
 
 
 def register(group):
-    group.add_command(integration_group)
-    integration_group.add_command(integration_install)
-    integration_group.add_command(integration_uninstall)
+    group.add_command(integrations_group)
+    integrations_group.add_command(install)
+    integrations_group.add_command(uninstall)
 
 
 @click.command(name="install")
@@ -32,7 +33,7 @@ def register(group):
     required=True,
 )
 @add_options(NR_OPTIONS)
-def integration_install(
+def install(
     aws_profile,
     aws_region,
     aws_role_policy,
@@ -52,30 +53,30 @@ def integration_install(
     nr_license_key = gql.retrieve_license_key(gql_client)
 
     click.echo("Checking for a pre-existing link between New Relic and AWS")
-    awsintegration.validate_linked_account(session, gql_client, linked_account_name)
+    integrations.validate_linked_account(session, gql_client, linked_account_name)
 
     click.echo("Creating the AWS role for the New Relic AWS Lambda Integration")
-    role = awsintegration.create_integration_role(
-        session, aws_role_policy, nr_account_id
-    )
+    role = integrations.create_integration_role(session, aws_role_policy, nr_account_id)
 
     click.echo("Linking New Relic account to AWS account")
-    awsintegration.create_integration_account(
+    integrations.create_integration_account(
         gql_client, nr_account_id, linked_account_name, role
     )
 
     click.echo("Enabling Lambda integration on the link between New Relic and AWS")
-    awsintegration.enable_lambda_integration(
+    integrations.enable_lambda_integration(
         gql_client, nr_account_id, linked_account_name
     )
 
     click.echo("Creating newrelic-log-ingestion Lambda function in AWS account")
-    awsintegration.install_log_ingestion(session, nr_license_key)
+    integrations.install_log_ingestion(session, nr_license_key)
+
+    done("Install Complete")
 
 
 @click.command(name="uninstall")
 @add_options(AWS_OPTIONS)
-def integration_uninstall(aws_profile, aws_region):
+def uninstall(aws_profile, aws_region):
     """Uninstall New Relic AWS Lambda Integration"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
     permissions.ensure_integration_uninstall_permissions(session)
@@ -86,4 +87,6 @@ def integration_uninstall(aws_profile, aws_region):
         abort=True,
         default=False,
     )
-    awsintegration.remove_log_ingestion_function(session)
+    integrations.remove_log_ingestion_function(session)
+
+    done("Uninstall Complete")

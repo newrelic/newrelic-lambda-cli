@@ -12,20 +12,20 @@ except (ImportError, OSError):
     README = open(os.path.join(os.path.dirname(__file__), "README.md"), "r").read()
 
 setup(
-    name="newrelic-lambda-layers",
+    name="newrelic-lambda-cli",
     version="0.1.0",
     python_requires=">=3.3",
-    description="cli utility for managing and instrumenting serverless applications",
+    description="A CLI to install the New Relic AWS Lambda integration and layers.",
     long_description=README,
-    author="IOpipe",
-    author_email="dev@iopipe.com",
-    url="https://github.com/iopipe/newrelic-lambda-layers-cli",
+    author="New Relic",
+    author_email="serverless@newrelic.com",
+    url="https://github.com/iopipe/newrelic-lambda-cli",
     packages=find_packages(exclude=("tests", "tests.*")),
-    install_requires=["boto3", "click", "gql", "requests", "tabulate"],
+    install_requires=["boto3", "click", "colorama", "gql", "requests", "tabulate"],
     setup_requires=["pytest-runner"],
-    tests_require=["coverage", "pytest", "pytest-cov", "requests"],
+    tests_require=["coverage", "pytest", "pytest-click", "pytest-cov", "requests"],
     entry_points={
-        "console_scripts": ["newrelic-layers = newrelic_lambda_layers.cli:main"]
+        "console_scripts": ["newrelic-lambda = newrelic_lambda_cli.cli:main"]
     },
     include_package_data=True,
 )
