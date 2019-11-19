@@ -453,7 +453,6 @@ def create_role(role_policy, nr_account_id):
         if exit_code > 0:
             raise Exception(response)
 
-
 def create_function(region, nr_license_key):
     cmd = ('aws --region {0} cloudformation create-stack '
            '--stack-name NewRelicLogIngestion '
@@ -659,6 +658,13 @@ def enable_lambda_monitoring(args):
         validate_linked_account(linked_account_name, api_client)
 
         # AWS
+        try:
+            print("Creating newrelic-log-ingestion Lambda function in your AWS account")
+            results = setup_log_ingestion(nr_license_key, regions)
+        except Exception as e:
+            print(str(e))
+
+        # AWS
         print("Creating the AWS role for the New Relic integration")
         role = create_integration_role(role_policy, nr_account_id)
 
@@ -671,10 +677,6 @@ def enable_lambda_monitoring(args):
         print("Enabling Lambda integration on the link between New Relic and AWS")
         enable_lamba_integration(
           nr_account_id, linked_account_name, api_client)
-
-        # AWS
-        print("Creating newrelic-log-ingestion Lambda function in your AWS account")
-        results = setup_log_ingestion(nr_license_key, regions)
 
         print("\nLambda integration is set up.\n\n"
               "Next, you'll need to instrument your Lambda functions, and use \n"
