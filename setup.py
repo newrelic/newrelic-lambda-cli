@@ -28,4 +28,5 @@ setup(
         "console_scripts": ["newrelic-lambda = newrelic_lambda_cli.cli:main"]
     },
     include_package_data=True,
+    zip_safe=False,
 )
