@@ -17,6 +17,7 @@ setup(
     python_requires=">=3.3",
     description="A CLI to install the New Relic AWS Lambda integration and layers.",
     long_description=README,
+    long_description_content_type="text/x-rst",
     author="New Relic",
     author_email="serverless@newrelic.com",
     url="https://github.com/iopipe/newrelic-lambda-cli",
