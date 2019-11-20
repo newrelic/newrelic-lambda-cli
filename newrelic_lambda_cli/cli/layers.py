@@ -3,7 +3,7 @@ import json
 import boto3
 import click
 
-from .. import awsintegration, layers, permissions
+from .. import integrations, layers, permissions
 from .cliutils import done
 from .decorators import add_options, AWS_OPTIONS
 
@@ -66,7 +66,7 @@ def install(ctx, account_id, aws_profile, aws_region, function, layer_arn, upgra
     if ctx.obj["VERBOSE"]:
         click.echo(json.dumps(res, indent=2))
 
-    awsintegration.create_log_subscription(session, function)
+    integrations.create_log_subscription(session, function)
 
     done("Install Complete")
 
@@ -94,6 +94,6 @@ def uninstall(ctx, aws_profile, aws_region, function):
     if ctx.obj["VERBOSE"]:
         click.echo(json.dumps(res, indent=2))
 
-    awsintegration.remove_log_subscription(session, function)
+    integrations.remove_log_subscription(session, function)
 
     done("Uninstall Complete")
