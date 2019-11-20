@@ -1,0 +1,6 @@
+boto3
+click
+colorama
+gql
+requests
+tabulate
