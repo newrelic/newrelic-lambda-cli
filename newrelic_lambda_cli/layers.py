@@ -12,25 +12,23 @@ def index(region, runtime):
     return layers_response.get("Layers", [])
 
 
-def _add_new_relic(config, region, function_arn, layer_arn, account_id, allow_upgrade):
-    info = config.copy()
-    runtime = info.get("Configuration", {}).get("Runtime", "")
-    orig_handler = info.get("Configuration", {}).get("Handler")
-    runtime_handler = utils.RUNTIME_CONFIG.get(runtime, {}).get("Handler")
+def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
+    runtime = config["Configuration"]["Runtime"]
+    if runtime not in utils.RUNTIME_CONFIG:
+        raise click.UsageError("Unsupported Lambda runtime: %s" % runtime)
 
-    if not allow_upgrade and orig_handler == runtime_handler:
+    handler = config["Configuration"]["Handler"]
+    runtime_handler = utils.RUNTIME_CONFIG.get(runtime, {}).get("Handler")
+    if not allow_upgrade and handler == runtime_handler:
         raise click.UsageError(
             "Already installed. Pass --upgrade (or -u) to allow upgrade or "
             "reinstall to latest layer version."
         )
 
-    if runtime not in utils.RUNTIME_CONFIG:
-        raise click.UsageError("Unsupported Lambda runtime: %s" % runtime)
-
     existing_layers = [
-        layer.get("Arn")
-        for layer in info.get("Configuration", {}).get("Layers", [])
-        if not layer.get("Arn").startswith(utils.get_arn_prefix(region))
+        layer["Arn"]
+        for layer in config["Configuration"]["Layers"]
+        if not layer["Arn"].startswith(utils.get_arn_prefix(region))
     ]
 
     new_relic_layers = []
@@ -38,18 +36,16 @@ def _add_new_relic(config, region, function_arn, layer_arn, account_id, allow_up
         new_relic_layers = [layer_arn]
     else:
         # discover compatible layers...
-        disco_layers = utils.get_layers(region, runtime)
+        available_layers = utils.get_layers(region, runtime)
 
         # TODO: MAke this a layer selection screen
-        if len(new_relic_layers) > 1:
+        if len(available_layers) > 1:
             message = ["Discovered layers for runtime (%s)" % runtime]
-            for layer in disco_layers:
+            for layer in available_layers:
                 message.append(
                     "%s\t%s"
                     % (
-                        layer.get("LatestMatchingVersion", {}).get(
-                            "LayerVersionArn", ""
-                        ),
+                        layer["LatestMatchingVersion"]["LayerVersionArn"],
                         layer.get("Description", ""),
                     )
                 )
@@ -59,16 +55,14 @@ def _add_new_relic(config, region, function_arn, layer_arn, account_id, allow_up
             raise click.UsageError("\n".join(message))
 
         new_relic_layers = [
-            disco_layers[0].get("LatestMatchingVersion", {}).get("LayerVersionArn", "")
+            available_layers[0]["LatestMatchingVersion"]["LayerVersionArn"]
         ]
 
     update_kwargs = {
-        "FunctionName": function_arn,
+        "FunctionName": config["Configuration"]["FunctionArn"],
         "Handler": runtime_handler,
         "Environment": {
-            "Variables": info.get("Configuration", {})
-            .get("Environment", {})
-            .get("Variables", {})
+            "Variables": config["Configuration"]["Environment"]["Variables"]
         },
         "Layers": new_relic_layers + existing_layers,
     }
@@ -77,44 +71,37 @@ def _add_new_relic(config, region, function_arn, layer_arn, account_id, allow_up
     update_kwargs["Environment"]["Variables"]["NEW_RELIC_ACCOUNT_ID"] = str(account_id)
 
     # Update the NEW_RELIC_LAMBDA_HANDLER envvars only when it's a new install.
-    if orig_handler != runtime_handler:
-        update_kwargs["Environment"]["Variables"][
-            "NEW_RELIC_LAMBDA_HANDLER"
-        ] = orig_handler
+    if handler != runtime_handler:
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_LAMBDA_HANDLER"] = handler
 
     return update_kwargs
 
 
 def install(session, function_arn, layer_arn, account_id, allow_upgrade):
     client = session.client("lambda")
-    info = client.get_function(FunctionName=function_arn)
-    update_kwargs = _add_new_relic(
-        info, session.region_name, function_arn, layer_arn, account_id, allow_upgrade
-    )
+    config = client.get_function(FunctionName=function_arn)
+    region = session.region_name
+    update_kwargs = _add_new_relic(config, region, layer_arn, account_id, allow_upgrade)
     return client.update_function_configuration(**update_kwargs)
 
 
-def _remove_new_relic(config, region, function_arn, layer_arn):
-    info = config.copy()
-    runtime = info.get("Configuration", {}).get("Runtime", "")
-    orig_handler = info.get("Configuration", {}).get("Handler", "")
-
+def _remove_new_relic(config, region):
+    runtime = config["Configuration"]["Runtime"]
     if runtime not in utils.RUNTIME_CONFIG:
         raise click.UsageError("Unsupported Lambda runtime: %s" % runtime)
 
+    handler = config["Configuration"]["Handler"]
+
     # Detect non-New Relic handler and error if necessary.
-    if not utils.is_valid_handler(runtime, orig_handler):
+    if not utils.is_valid_handler(runtime, handler):
         raise click.UsageError(
             "New Relic installation (via layers) not auto-detected for the specified "
             "function.\n"
             "Error: Unrecognized handler in deployed function."
         )
 
-    env_handler = (
-        info.get("Configuration", {})
-        .get("Environment", {})
-        .get("Variables", {})
-        .get("NEW_RELIC_LAMBDA_HANDLER")
+    env_handler = config["Configuration"]["Environment"]["Variables"].get(
+        "NEW_RELIC_LAMBDA_HANDLER"
     )
 
     if not env_handler:
@@ -126,33 +113,30 @@ def _remove_new_relic(config, region, function_arn, layer_arn):
         )
 
     # Delete New Relic env vars
-    info["Configuration"]["Environment"]["Variables"] = {
+    config["Configuration"]["Environment"]["Variables"] = {
         key: value
-        for key, value in info["Configuration"]["Environment"]
-        .get("Variables", {})
-        .items()
+        for key, value in config["Configuration"]["Environment"]["Variables"].items()
         if not key.startswith("NEW_RELIC")
     }
 
     # Remove New Relic layers
     layers = [
         layer["Arn"]
-        for layer in info["Configuration"].get("Layers", [])
+        for layer in config["Configuration"]["Layers"]
         if not layer["Arn"].startswith(utils.get_arn_prefix(region))
     ]
 
     return {
-        "FunctionName": function_arn,
+        "FunctionName": config["Configuration"]["FunctionArn"],
         "Handler": env_handler,
-        "Environment": info["Configuration"]["Environment"],
+        "Environment": config["Configuration"]["Environment"],
         "Layers": layers,
     }
 
 
-def uninstall(session, function_arn, layer_arn):
+def uninstall(session, function_arn):
     client = session.client("lambda")
-    info = client.get_function(FunctionName=function_arn)
-    update_kwargs = _remove_new_relic(
-        info, session.region_name, function_arn, layer_arn
-    )
+    config = client.get_function(FunctionName=function_arn)
+    region = session.region_name
+    update_kwargs = _remove_new_relic(config, region)
     return client.update_function_configuration(**update_kwargs)

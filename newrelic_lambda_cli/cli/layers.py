@@ -80,19 +80,13 @@ def install(ctx, account_id, aws_profile, aws_region, function, layer_arn, upgra
     metavar="<arn>",
     help="Lambda function name or ARN",
 )
-@click.option(
-    "--layer-arn",
-    "-l",
-    help="ARN for New Relic layer (default: auto-detect)",
-    metavar="<arn>",
-)
 @click.pass_context
-def uninstall(ctx, aws_profile, aws_region, function, layer_arn):
+def uninstall(ctx, aws_profile, aws_region, function):
     """Uninstall New Relic AWS Lambda Layer"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
     permissions.ensure_lambda_uninstall_permissions(session)
 
-    res = layers.uninstall(session, function, layer_arn)
+    res = layers.uninstall(session, function)
     if not res:
         click.echo("\nUninstall failed.")
         return

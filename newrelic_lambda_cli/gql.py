@@ -20,6 +20,8 @@ from gql.transport.requests import RequestsHTTPTransport
 import click
 import requests
 
+from .cli.cliutils import failure, success
+
 
 class NewRelicGQL(object):
     def __init__(self, account_id, api_key, region="us"):
@@ -277,4 +279,63 @@ def retrieve_license_key(gql):
             "Could not retrieve license key from New Relic. Check that your New Relic "
             "Account ID is valid and try again.",
             param="nr_account_id",
+        )
+
+
+def create_integration_account(gql, nr_account_id, linked_account_name, role):
+    """
+    Creates a New Relic Cloud integration account for the specified AWS IAM role.
+    """
+    role_arn = role["Role"]["Arn"]
+    account = gql.get_linked_account_by_name(linked_account_name)
+    if account is None:
+        account = gql.link_account(role_arn, linked_account_name)
+        success(
+            "Cloud integrations account [%s] was created in New Relic account [%s]"
+            "with role [%s]." % (linked_account_name, nr_account_id, role_arn)
+        )
+    else:
+        success(
+            "Cloud integrations account [%s] already exists "
+            "in New Relic account [%d]." % (account["name"], nr_account_id)
+        )
+    return account
+
+
+def enable_lambda_integration(gql, nr_account_id, linked_account_name):
+    """
+    Enables AWS Lambda for the specified New Relic Cloud integrations account.
+    """
+    account = gql.get_linked_account_by_name(linked_account_name)
+    if account is None:
+        failure(
+            "Could not find Cloud integrations account "
+            "[%s] in New Relic account [%d]." % (linked_account_name, nr_account_id)
+        )
+        return
+    is_lambda_enabled = gql.is_integration_enabled(account["id"], "lambda")
+    if is_lambda_enabled:
+        success(
+            "The AWS Lambda integration is already enabled in "
+            "Cloud integrations account [%s] of New Relic account [%d]."
+            % (linked_account_name, nr_account_id)
+        )
+        return
+    try:
+        integration = gql.enable_integration(account["id"], "aws", "lambda")
+    except Exception:
+        failure(
+            "Could not enable New Relic AWS Lambda integration. Make sure your New "
+            "Relic account is a Pro plan and try this command again."
+        )
+    else:
+        success(
+            "Integration [id=%s, name=%s] has been enabled in Cloud "
+            "integrations account [%s] of New Relic account [%d]."
+            % (
+                integration["id"],
+                integration["name"],
+                linked_account_name,
+                nr_account_id,
+            )
         )

@@ -19,7 +19,7 @@ setup(
     long_description=README,
     long_description_content_type="text/x-rst",
     author="New Relic",
-    author_email="serverless@newrelic.com",
+    author_email="serverless-dev@newrelic.com",
     url="https://github.com/iopipe/newrelic-lambda-cli",
     packages=find_packages(exclude=("tests", "tests.*")),
     install_requires=["boto3", "click", "colorama", "gql", "requests", "tabulate"],

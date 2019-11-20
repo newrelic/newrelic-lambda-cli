@@ -11,6 +11,7 @@ from . import layers
 NEW_RELIC_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:451483290750"
 RUNTIME_CONFIG = {
     "nodejs10.x": {"Handler": "newrelic-lambda-wrapper.handler"},
+    "nodejs12.x": {"Handler": "newrelic-lambda-wrapper.handler"},
     "python2.7": {"Handler": "newrelic_lambda_wrapper.handler"},
     "python3.6": {"Handler": "newrelic_lambda_wrapper.handler"},
     "python3.7": {"Handler": "newrelic_lambda_wrapper.handler"},
