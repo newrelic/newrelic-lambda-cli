@@ -77,7 +77,7 @@ newrelic-lambda integrations uninstall
 
 | Option | Required? | Description |
 |--------|-----------|-------------|
-| `--aws-profile, -p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Defaults to `default`. Can also use `AWS_PROFILE`. Defaults to `default`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
+| `--aws-profile, -p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Defaults to `default`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region, -r` | No | The AWS region for the integration. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS profile default. |
 
 ### AWS Lambda Layers
@@ -96,7 +96,7 @@ newrelic-lambda layers install \
 | `--nr-account-id, -a` | Yes | The [New Relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) this function should use. Can also use the `NEW_RELIC_ACCOUNT_ID` environment variable. |
 | `--layer-arn, -l` | No | Specify a specific layer version ARN to use. This is auto detected by default. |
 | `--upgrade, -u` | No | Permit upgrade to the latest layer version for this region and runtime. |
-| `--aws-profile, -p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Defaults to `default`. Can also use `AWS_PROFILE`. Defaults to `default`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
+| `--aws-profile, -p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Defaults to `default`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region, -r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS profile default. |
 
 #### Uninstall Layer
@@ -109,7 +109,7 @@ newrelic-lambda layers uninstall --function <name or arn>
 |--------|-----------|-------------|
 | `--function, -f` | Yes | The AWS Lambda function name or ARN in which to remove a layer. |
 | `--layer-arn, -l` | No | Specify a specific layer version ARN to remove. This is auto detected by default. |
-| `--aws-profile, -p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Defaults to `default`. Can also use `AWS_PROFILE`. Defaults to `default`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
+| `--aws-profile, -p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Defaults to `default`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region, -r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS profile default. |
 
 ### AWS Lambda Functions
@@ -129,7 +129,7 @@ newrelic-lambda functions list --filter installed
 | Option | Required? | Description |
 |--------|-----------|-------------|
 | `--filter, -f` | No | Filter to be applied to list of functions. Options are `all`, `installed` and `not-installed`. Defaults to `all`. |
-| `--aws-profile, -p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Defaults to `default`. Can also use `AWS_PROFILE`. Defaults to `default`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
+| `--aws-profile, -p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Defaults to `default`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region, -r` | No | The AWS region to use for htis command. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS profile default. |
 
 ## Contributing
