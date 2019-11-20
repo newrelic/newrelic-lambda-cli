@@ -134,7 +134,13 @@ newrelic-lambda functions list --filter installed
 
 ## Contributing
 
-Contributions are welcome. We use the [black](https://github.com/ambv/black) code formatter.
+We welcome code contributions (in the form of pull requests) from our user community. Before submitting a pull request please review [these guidelines](CONTRIBUTING.md).
+
+Following these helps us efficiently review and incorporate your contribution and avoid breaking your code with future changes to the agent.
+
+## Code style
+
+We use the [black](https://github.com/ambv/black) code formatter.
 
 ```bash
 pip install black
