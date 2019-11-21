@@ -51,7 +51,7 @@ def get_subscription_filters(session, function_name):
     except botocore.exceptions.ClientError:
         return []
     else:
-        return res.get("SubscriptionFilters", [])
+        return res.get("subscriptionFilters", [])
 
 
 # TODO: Merge this with create_integration_role?
