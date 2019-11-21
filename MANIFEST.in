@@ -1,0 +1,2 @@
+include *.md LICENSE
+recursive-include newrelic_lambda_cli *.py *.yaml
