@@ -53,12 +53,12 @@ def register(group):
     is_flag=True,
 )
 @click.pass_context
-def install(ctx, account_id, aws_profile, aws_region, function, layer_arn, upgrade):
+def install(ctx, nr_account_id, aws_profile, aws_region, function, layer_arn, upgrade):
     """Install New Relic AWS Lambda Layer"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
     permissions.ensure_lambda_install_permissions(session)
 
-    res = layers.install(session, function, layer_arn, account_id, upgrade)
+    res = layers.install(session, function, layer_arn, nr_account_id, upgrade)
     if not res:
         click.echo("\nInstallation failed.")
         return
