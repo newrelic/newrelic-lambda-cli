@@ -27,7 +27,7 @@ def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
 
     existing_layers = [
         layer["Arn"]
-        for layer in config["Configuration"]["Layers"]
+        for layer in config["Configuration"].get("Layers", [])
         if not layer["Arn"].startswith(utils.get_arn_prefix(region))
     ]
 
@@ -122,7 +122,7 @@ def _remove_new_relic(config, region):
     # Remove New Relic layers
     layers = [
         layer["Arn"]
-        for layer in config["Configuration"]["Layers"]
+        for layer in config["Configuration"].get("Layers")
         if not layer["Arn"].startswith(utils.get_arn_prefix(region))
     ]
 
