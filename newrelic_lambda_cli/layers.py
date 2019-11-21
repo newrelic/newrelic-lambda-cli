@@ -62,7 +62,9 @@ def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
         "FunctionName": config["Configuration"]["FunctionArn"],
         "Handler": runtime_handler,
         "Environment": {
-            "Variables": config["Configuration"]["Environment"]["Variables"]
+            "Variables": config["Configuration"]
+            .get("Environment", {})
+            .get("Variables", {})
         },
         "Layers": new_relic_layers + existing_layers,
     }
@@ -100,8 +102,11 @@ def _remove_new_relic(config, region):
             "Error: Unrecognized handler in deployed function."
         )
 
-    env_handler = config["Configuration"]["Environment"]["Variables"].get(
-        "NEW_RELIC_LAMBDA_HANDLER"
+    env_handler = (
+        config["Configuration"]
+        .get("Environment", {})
+        .get("Variables", {})
+        .get("NEW_RELIC_LAMBDA_HANDLER")
     )
 
     if not env_handler:
@@ -115,7 +120,10 @@ def _remove_new_relic(config, region):
     # Delete New Relic env vars
     config["Configuration"]["Environment"]["Variables"] = {
         key: value
-        for key, value in config["Configuration"]["Environment"]["Variables"].items()
+        for key, value in config["Configuration"]
+        .get("Environment", {})
+        .get("Variables", {})
+        .items()
         if not key.startswith("NEW_RELIC")
     }
 
