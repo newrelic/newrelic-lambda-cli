@@ -66,8 +66,6 @@ def install(ctx, nr_account_id, aws_profile, aws_region, function, layer_arn, up
     if ctx.obj["VERBOSE"]:
         click.echo(json.dumps(res, indent=2))
 
-    integrations.create_log_subscription(session, function)
-
     done("Install Complete")
 
 
@@ -93,7 +91,5 @@ def uninstall(ctx, aws_profile, aws_region, function):
 
     if ctx.obj["VERBOSE"]:
         click.echo(json.dumps(res, indent=2))
-
-    integrations.remove_log_subscription(session, function)
 
     done("Uninstall Complete")

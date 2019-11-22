@@ -132,6 +132,35 @@ newrelic-lambda functions list --filter installed
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Defaults to `default`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region to use for htis command. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS profile default. |
 
+
+### NewRelic Log Subscription
+
+#### Install Log Subscription
+
+```bash
+newrelic-lambda subscriptions install \
+    --function <name or arn>
+```
+
+| Option | Required? | Description |
+|--------|-----------|-------------|
+| `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to add a log subscription. |
+| `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Defaults to `default`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
+| `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS profile default. |
+
+#### Uninstall Log Subscription
+
+```bash
+newrelic-lambda subscriptions uninstall --function <name or arn>
+```
+
+| Option | Required? | Description |
+|--------|-----------|-------------|
+| `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to remove a log subscription. |
+| `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Defaults to `default`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
+| `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS profile default. |
+
+
 ## Contributing
 
 We welcome code contributions (in the form of pull requests) from our user community. Before submitting a pull request please review [these guidelines](CONTRIBUTING.md).
