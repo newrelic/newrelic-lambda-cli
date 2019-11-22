@@ -139,8 +139,7 @@ newrelic-lambda functions list --filter installed
 
 ```bash
 newrelic-lambda subscriptions install \
-    --function <name or arn> \
-    --nr-account-id <new relic account id>
+    --function <name or arn>
 ```
 
 | Option | Required? | Description |
