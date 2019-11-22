@@ -1,0 +1,64 @@
+version: 2
+jobs:
+  test:
+    docker:
+      - image: circleci/python:3.7
+    steps:
+      - checkout
+      - run:
+          name: Run tests
+          command: python setup.py test
+
+  code-style:
+    docker:
+      - image: circleci/python:3.7
+    steps:
+      - checkout
+      - run:
+          name: Check code style
+          command: |
+            sudo pip install -q black==19.10b0
+            black --check newrelic_lambda_cli tests
+
+  release:
+    docker:
+      - image: circleci/python:3.7
+    steps:
+      - checkout
+      - run:
+          name: Install release dependencies
+          command: |
+            sudo apt-get install -y pandoc
+            sudo pip install -q -U pyOpenSSL pypandoc setuptools twine
+      - run:
+          name: Release package
+          command: |
+            python setup.py sdist
+            twine check dist/*
+            twine upload dist/*
+
+workflows:
+  version: 2
+  all:
+    jobs:
+      - test:
+          filters:
+            branches:
+              only: /.*/
+            tags:
+              only: /.*/
+      - code-style:
+          filters:
+            branches:
+              only: /.*/
+            tags:
+              only: /.*/
+      - release:
+          requires:
+            - test
+            - code-style
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
