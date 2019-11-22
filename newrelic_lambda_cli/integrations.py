@@ -62,7 +62,7 @@ def create_role(session, role_policy, nr_account_id):
     template_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         "templates",
-        "nr-integration-role.yaml",
+        "nr-lambda-integration-role.yaml",
     )
     with open(template_path) as template:
         client.create_stack(
@@ -71,7 +71,7 @@ def create_role(session, role_policy, nr_account_id):
             Parameters=[
                 {
                     "ParameterKey": "NewRelicAccountNumber",
-                    "ParameterValue": nr_account_id,
+                    "ParameterValue": str(nr_account_id),
                 },
                 {"ParameterKey": "PolicyName", "ParameterValue": role_policy_name},
             ],
