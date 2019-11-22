@@ -1,5 +1,3 @@
-import json
-
 import boto3
 import click
 
@@ -10,7 +8,7 @@ from .decorators import add_options, AWS_OPTIONS
 
 @click.group(name="subscriptions")
 def subscriptions_group():
-    """Manage New Relic AWS Lambda Layers"""
+    """Manage New Relic AWS Lambda Log Subscriptions"""
     pass
 
 
@@ -20,16 +18,6 @@ def register(group):
     subscriptions_group.add_command(uninstall)
 
 
-@click.command(name="install")
-@click.option(
-    "--nr-account-id",
-    "-a",
-    envvar="NEW_RELIC_ACCOUNT_ID",
-    help="New Relic Account ID",
-    metavar="<account_id>",
-    required=True,
-    type=click.INT,
-)
 @add_options(AWS_OPTIONS)
 @click.option(
     "--function",
@@ -40,8 +28,8 @@ def register(group):
     type=click.STRING,
 )
 @click.pass_context
-def install(ctx, nr_account_id, aws_profile, aws_region, function):
-    """Install New Relic AWS Lambda Log Subsciption"""
+def install(ctx, aws_profile, aws_region, function):
+    """Install New Relic AWS Lambda Log Subscription"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
     permissions.ensure_lambda_install_permissions(session)
 
@@ -60,7 +48,7 @@ def install(ctx, nr_account_id, aws_profile, aws_region, function):
 )
 @click.pass_context
 def uninstall(ctx, aws_profile, aws_region, function):
-    """Uninstall New Relic AWS Lambda Layer"""
+    """Uninstall New Relic AWS Lambda Log Subscription"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
     permissions.ensure_lambda_uninstall_permissions(session)
 

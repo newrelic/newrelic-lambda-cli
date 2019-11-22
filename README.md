@@ -145,8 +145,7 @@ newrelic-lambda subscriptions install \
 
 | Option | Required? | Description |
 |--------|-----------|-------------|
-| `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to add a layer. |
-| `--nr-account-id` or `-a` | Yes | The [New Relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) this function should use. Can also use the `NEW_RELIC_ACCOUNT_ID` environment variable. |
+| `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to add a log subscription. |
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Defaults to `default`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS profile default. |
 
@@ -158,7 +157,7 @@ newrelic-lambda subscriptions uninstall --function <name or arn>
 
 | Option | Required? | Description |
 |--------|-----------|-------------|
-| `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to remove a layer. |
+| `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to remove a log subscription. |
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Defaults to `default`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS profile default. |
 
