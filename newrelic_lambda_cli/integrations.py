@@ -4,6 +4,7 @@ import botocore
 import click
 
 from .cli.cliutils import failure, success
+from .functions import get_function
 
 
 def list_all_regions(session):
@@ -15,14 +16,6 @@ def get_role(session, role_name):
     """Returns details about an IAM role"""
     try:
         return session.client("iam").get_role(RoleName=role_name)
-    except botocore.exceptions.ClientError:
-        return None
-
-
-def get_function(session, function_name):
-    """Returns details about an AWS lambda function"""
-    try:
-        return session.client("lambda").get_function(FunctionName=function_name)
     except botocore.exceptions.ClientError:
         return None
 
@@ -39,19 +32,6 @@ def get_cf_stack_status(session, stack_name):
         return None
     else:
         return res["Stacks"][0]["StackStatus"]
-
-
-def get_subscription_filters(session, function_name):
-    """Returns all the log subscription filters for the function"""
-    log_group_name = "/aws/lambda/%s" % function_name
-    try:
-        res = session.client("logs").describe_subscription_filters(
-            logGroupName=log_group_name
-        )
-    except botocore.exceptions.ClientError:
-        return []
-    else:
-        return res.get("subscriptionFilters", [])
 
 
 # TODO: Merge this with create_integration_role?
@@ -124,63 +104,6 @@ def remove_log_ingestion_function(session):
     )
     client.get_waiter("stack_delete_complete").wait(StackName=stack_name)
     success("Done")
-
-
-def create_subscription_filter(session, function_name, destination_arn):
-    return session.client("logs").put_subscription_filter(
-        logGroupName="/aws/lambda/%s" % function_name,
-        filterName="NewRelicLogStreaming",
-        filterPattern="NR_LAMBDA_MONITORING",
-        destinationArn=destination_arn,
-    )
-
-
-def remove_subscription_filter(session, function_name):
-    return session.client("logs").delete_subscription_filter(
-        logGroupName="/aws/lambda/%s" % function_name, filterName="NewRelicLogStreaming"
-    )
-
-
-def create_log_subscription(session, function_name):
-    destination = get_function(session, "newrelic-log-ingestion")
-    if destination is None:
-        failure(
-            "Could not find 'newrelic-log-ingestion' function. Is the New Relic AWS "
-            "integration installed?"
-        )
-        return
-    destination_arn = destination["Configuration"]["FunctionArn"]
-    subscription_filters = [
-        filter
-        for filter in get_subscription_filters(session, function_name)
-        if filter["filterName"] == "NewRelicLogStreaming"
-    ]
-    if not subscription_filters:
-        click.echo("Adding New Relic log subscription to '%s'" % function_name)
-        create_subscription_filter(session, function_name, destination_arn)
-    else:
-        click.echo(
-            "Found log subscription for '%s', verifying configuration" % function_name
-        )
-        subscription_filter = subscription_filters[0]
-        if subscription_filter["filterPattern"] == "":
-            remove_subscription_filter(session, function_name)
-            create_subscription_filter(session, function_name, destination_arn)
-
-
-def remove_log_subscription(session, function_name):
-    subscription_filters = [
-        filter
-        for filter in get_subscription_filters(session, function_name)
-        if filter["filterName"] == "NewRelicLogStreaming"
-    ]
-    if not subscription_filters:
-        click.echo(
-            "No New Relic subscription filters found for '%s', skipping" % function_name
-        )
-    else:
-        click.echo("Removing New Relic log subscription from '%s'" % function_name)
-        remove_subscription_filter(session, function_name)
 
 
 def create_integration_role(session, role_policy, nr_account_id):
