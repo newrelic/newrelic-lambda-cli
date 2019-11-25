@@ -139,8 +139,7 @@ newrelic-lambda functions list --filter installed
 #### Install Log Subscription
 
 ```bash
-newrelic-lambda subscriptions install \
-    --function <name or arn>
+newrelic-lambda subscriptions install \--function <name or arn>
 ```
 
 | Option | Required? | Description |
