@@ -18,6 +18,7 @@ A CLI to install the New Relic AWS Lambda integration and layers.
 * python2.7
 * python3.6
 * python3.7
+* python3.8
 
 ## Requirements
 

@@ -15,6 +15,7 @@ RUNTIME_CONFIG = {
     "python2.7": {"Handler": "newrelic_lambda_wrapper.handler"},
     "python3.6": {"Handler": "newrelic_lambda_wrapper.handler"},
     "python3.7": {"Handler": "newrelic_lambda_wrapper.handler"},
+    "python3.8": {"Handler": "newrelic_lambda_wrapper.handler"},
 }
 
 
