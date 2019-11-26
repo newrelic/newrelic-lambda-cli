@@ -56,8 +56,9 @@ def create_log_subscription(session, function_name):
             "Relic. This may prevent the New Relic log subscription filter from being "
             "installed. If you know you don't need this log subscription filter, you "
             "should first remove it and rerun this command. If your organization "
-            "requires this log subscription filter, please contact New Relic for "
-            "assistance with getting the AWS log subscription filter limit increased.",
+            "requires this log subscription filter, please contact New Relic at "
+            "serverless@newrelic.com for assistance with getting the AWS log "
+            "subscription filter limit increased.",
             color="blue",
         )
     if not newrelic_filters:
