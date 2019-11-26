@@ -40,6 +40,12 @@ Or clone this repo and run:
 python setup.py install
 ```
 
+To update the CLI, run:
+
+```
+pip install --upgrade newrelic-lambda-cli
+```
+
 ## Usage
 
 ### AWS Lambda Integration
