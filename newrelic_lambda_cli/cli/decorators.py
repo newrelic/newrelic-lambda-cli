@@ -21,6 +21,12 @@ AWS_OPTIONS = [
         metavar="<region>",
         type=click.Choice(utils.all_lambda_regions()),
     ),
+    click.option(
+        "--aws-permissions-check/--no-aws-permissions-check",
+        help="Perform AWS permissions checks",
+        default=True,
+        show_default=True,
+    ),
 ]
 
 NR_OPTIONS = [

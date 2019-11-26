@@ -28,11 +28,12 @@ def register(group):
     help="Apply a filter to the list.",
     type=click.Choice(["all", "installed", "not-installed"]),
 )
-def list(aws_profile, aws_region, filter):
+def list(aws_profile, aws_region, aws_permissions_check, filter):
     """List AWS Lambda Functions"""
     _, rows = shutil.get_terminal_size((80, 50))
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
-    permissions.ensure_lambda_list_permissions(session)
+    if aws_permissions_check:
+        permissions.ensure_lambda_list_permissions(session)
     funcs = functions.list_functions(session, filter)
 
     def _format(funcs, header=False):

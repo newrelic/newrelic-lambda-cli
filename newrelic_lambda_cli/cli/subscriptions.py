@@ -27,10 +27,12 @@ def register(group):
     metavar="<arn>",
     required=True,
 )
-def install(aws_profile, aws_region, function):
+def install(aws_profile, aws_region, aws_permissions_check, function):
     """Install New Relic AWS Lambda Log Subscription"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
-    permissions.ensure_subscription_install_permissions(session)
+
+    if aws_permissions_check:
+        permissions.ensure_subscription_install_permissions(session)
 
     subscriptions.create_log_subscription(session, function)
     done("Install Complete")
