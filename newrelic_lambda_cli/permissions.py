@@ -197,3 +197,56 @@ def ensure_lambda_list_permissions(session):
             message.append(" * %s" % needed_permission)
         message.append("\nEnsure your AWS user has these permissions and try again.")
         raise click.UsageError("\n".join(message))
+
+
+def ensure_subscription_install_permissions(session):
+    """
+    Ensures that the current AWS session has the necessary permissions to install the
+    New Relic log subscription filter.
+
+    :param session: A boto3 session
+    """
+    needed_permissions = check_permissions(
+        session,
+        actions=[
+            "lambda:GetFunction",
+            "logs:DeleteSubscriptionFilter",
+            "logs:DescribeSubscriptionFilters",
+            "logs:PutSubscriptionFilter",
+        ],
+    )
+    if needed_permissions:
+        message = [
+            "The following AWS permissions are needed to install the New RElic log "
+            "subscription filter:\n"
+        ]
+        for needed_permission in needed_permissions:
+            message.append(" * %s" % needed_permission)
+        message.append("\nEnsure your AWS user has these permissions and try again.")
+        raise click.UsageError("\n".join(message))
+
+
+def ensure_subscription_uninstall_permissions(session):
+    """
+    Ensures that the current AWS session has the necessary permissions to uninstall the
+    New Relic log subscription filter.
+
+    :param session: A boto3 session
+    """
+    needed_permissions = check_permissions(
+        session,
+        actions=[
+            "cloudformation:DeleteStack",
+            "logs:DeleteSubscriptionFilter",
+            "logs:DescribeSubscriptionFilters",
+        ],
+    )
+    if needed_permissions:
+        message = [
+            "The following AWS permissions are needed to uninstall the New RElic log "
+            "subscription filter:\n"
+        ]
+        for needed_permission in needed_permissions:
+            message.append(" * %s" % needed_permission)
+        message.append("\nEnsure your AWS user has these permissions and try again.")
+        raise click.UsageError("\n".join(message))

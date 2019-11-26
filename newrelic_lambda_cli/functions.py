@@ -24,3 +24,11 @@ def list_functions(session, filter_choice):
                 yield f
             elif filter_choice == "not_installed" and not f["x-new-relic-enabled"]:
                 yield f
+
+
+def get_function(session, function_name):
+    """Returns details about an AWS lambda function"""
+    try:
+        return session.client("lambda").get_function(FunctionName=function_name)
+    except botocore.exceptions.ClientError:
+        return None
