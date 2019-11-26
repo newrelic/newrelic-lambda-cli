@@ -22,6 +22,7 @@ A CLI to install the New Relic AWS Lambda integration and layers.
 
 ## Requirements
 
+* Python >= 3.3
 * Retrieve your [New relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) and [User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key)
 
 ## Recommendations
