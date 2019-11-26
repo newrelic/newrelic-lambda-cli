@@ -41,13 +41,18 @@ def check_permissions(session, actions, resources=None, context=None):
     caller_arn = caller["Arn"]
 
     # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/iam.html#IAM.Client.simulate_principal_policy
-    results = iam.simulate_principal_policy(
-        PolicySourceArn=caller_arn,
-        ActionNames=actions,
-        ResourceArns=resources,
-        ContextEntries=context_entries,
-    )["EvaluationResults"]
-
+    results = None
+    try:
+        results = iam.simulate_principal_policy(
+            PolicySourceArn=caller_arn,
+            ActionNames=actions,
+            ResourceArns=resources,
+            ContextEntries=context_entries,
+        )["EvaluationResults"]
+    except botocore.errorfactory.InvalidInputException:
+        raise click.UsageError(
+            "Error simulating IAM policies, try passing --no-aws-permissions-check to override."
+        )
     return sorted(
         [
             result["EvalActionName"]
