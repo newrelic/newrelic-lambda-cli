@@ -1,3 +1,5 @@
+import botocore
+
 from . import utils
 
 
