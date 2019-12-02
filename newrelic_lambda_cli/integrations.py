@@ -7,11 +7,6 @@ from .cli.cliutils import failure, success
 from .functions import get_function
 
 
-def list_all_regions(session):
-    """Returns all regions where Lambda is currently supported"""
-    return session.get_available_regions("lambda")
-
-
 def get_role(session, role_name):
     """Returns details about an IAM role"""
     try:

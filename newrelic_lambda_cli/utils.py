@@ -59,7 +59,11 @@ def get_lambda_client(session):
 
 @catch_boto_errors
 def all_lambda_regions():
-    return boto3.Session().get_available_regions("lambda")
+    return sorted(
+        boto3.Session().get_available_regions("lambda", "aws")
+        + boto3.Session().get_available_regions("lambda", "aws-cn")
+        + boto3.Session().get_available_regions("lambda", "aws-us-gov")
+    )
 
 
 def is_valid_handler(runtime, handler):
