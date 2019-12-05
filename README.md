@@ -2,13 +2,30 @@
 
 A CLI to install the New Relic AWS Lambda integration and layers.
 
+## Table of Contents
+- **[Features](#features)**
+- **[Runtimes Supported](#runtimes-supported)**
+- **[Requirements](#requirements)**
+- **[Recommendations](#recommendations)**
+- **[Installation](#installation)**
+- **[Usage](#usage)**
+    - [AWS Lambda Integration](#aws-lambda-integration)
+    - [AWS Lambda Layers](#aws-lambda-layers)
+    - [AWS Lambda Functions](#aws-lambda-functions)
+    - [NewRelic Log Subscription](#newRelic-log-subscription)
+- **[Contributing](#contributing)**
+- **[Code Style](#code-style)**
+- **[Running Tests](#running-tests)**
+- **[Troubleshooting](#troubleshooting)**
+
+
 ## Features
 
 * Installs the New Relic AWS Lambda integration onto your AWS account
 * Installs and configures a New Relic AWS Lambda layer onto your AWS Lambda functions
 * Automatically selects the correct New Relic layer for your function's runtime and region
 * Wraps your AWS Lambda functions without requiring a code change
-* Supports Node.js and Python AWS LAmbda runtimes
+* Supports Node.js and Python AWS Lambda runtimes
 * Easily uninstall the AWS Lambda layer with a single command
 
 ## Runtimes Supported
@@ -196,3 +213,38 @@ Using these together will auto format your git commits.
 ```bash
 python setup.py test
 ```
+
+## Troubleshooting
+
+**Upgrade the CLI**: A good first step, as we push updates frequently.
+
+```
+pip install --upgrade newrelic-lambda-cli
+```
+
+**UnrecognizedClientException**: 
+>`(UnrecognizedClientException) when calling the GetFunction operation: The security token included in the request is invalid.`
+
+If you see this error, it means that specifying the region is necessary, and you need to supply the `--aws-region` flag to your command.
+
+**Unable to locate credentials:**
+>`Function: None, Region: None, Error: Failed to set up lambda integration: 'Unable to locate credentials. You can configure credentials by running "aws configure".'`
+
+1. The AWS profile may not be properly configured; review documentation to [Configure your AWS Profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) (make sure the default region is set!).
+2. If there are multiple AWS profiles and the correct one is not specified, you can run `export AWS_DEFAULT_PROFILE=MY_OTHER_PROFILE` to set the environment variable to the proper profile.
+
+**SimulatePrincipalPolicy**:
+>`botocore.errorfactory.InvalidInputException: An error occurred (InvalidInput) when calling the SimulatePrincipalPolicy operation: Invalid Entity Arn: arn:aws:sts::123456789012:assumed-role/u-admin/botocore-session-0987654321 does not clearly define entity type and name.`
+
+Some AWS accounts can have permission to operate on resources without having access to SimulatePrincipalPolicy.
+If this is the case, supply the `--no-aws-permissions-check` flag to your command.
+
+**Error adding new region to integration**:
+>`Linking New Relic account to AWS account
+Traceback (most recent call last):
+  ...
+  File "/Users/USER/PYTHONPATH/lib/python3.8/site-packages/newrelic_lambda_cli/gql.py", line 131, in link_account
+    return res["cloudLinkAccount"]["linkedAccounts"][0]  
+IndexError: list index out of range`
+
+This error can happen if you have an existing AWS integration, and are running `newrelic-lambda integrations install` with a different `--linked-account-name` (for instance, to add a new region to the integration). The linked account name can be whatever you want it to be, but needs to be consistent with the previously linked AWS account.
