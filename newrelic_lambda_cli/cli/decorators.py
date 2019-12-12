@@ -7,7 +7,6 @@ AWS_OPTIONS = [
         "--aws-profile",
         "-p",
         callback=utils.validate_aws_profile,
-        default="default",
         envvar="AWS_PROFILE",
         help="AWS profile",
         metavar="<profile>",
