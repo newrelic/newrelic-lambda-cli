@@ -47,10 +47,12 @@ def install(aws_profile, aws_region, aws_permissions_check, function):
     metavar="<arn>",
     required=True,
 )
-def uninstall(aws_profile, aws_region, function):
+def uninstall(aws_profile, aws_region, aws_permissions_check, function):
     """Uninstall New Relic AWS Lambda Log Subscription"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
-    permissions.ensure_subscription_uninstall_permissions(session)
+
+    if aws_permissions_check:
+        permissions.ensure_subscription_uninstall_permissions(session)
 
     subscriptions.remove_log_subscription(session, function)
     done("Uninstall Complete")

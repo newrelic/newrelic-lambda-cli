@@ -16,8 +16,15 @@ def get_role(session, role_name):
     """Returns details about an IAM role"""
     try:
         return session.client("iam").get_role(RoleName=role_name)
-    except botocore.exceptions.ClientError:
-        return None
+    except botocore.exceptions.ClientError as e:
+        if (
+            e.response
+            and "ResponseMetadata" in e.response
+            and "HTTPStatusCode" in e.response["ResponseMetadata"]
+            and e.response["ResponseMetadata"]["HTTPStatusCode"] == 404
+        ):
+            return None
+        raise click.UsageError(str(e))
 
 
 def check_for_ingest_stack(session):
@@ -28,8 +35,15 @@ def get_cf_stack_status(session, stack_name):
     """Returns the status of the CloudFormation stack if it exists"""
     try:
         res = session.client("cloudformation").describe_stacks(StackName=stack_name)
-    except botocore.exceptions.ClientError:
-        return None
+    except botocore.exceptions.ClientError as e:
+        if (
+            e.response
+            and "ResponseMetadata" in e.response
+            and "HTTPStatusCode" in e.response["ResponseMetadata"]
+            and e.response["ResponseMetadata"]["HTTPStatusCode"] == 404
+        ):
+            return None
+        raise click.UsageError(str(e))
     else:
         return res["Stacks"][0]["StackStatus"]
 
