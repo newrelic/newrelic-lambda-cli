@@ -53,10 +53,21 @@ def register(group):
     is_flag=True,
 )
 @click.pass_context
-def install(ctx, nr_account_id, aws_profile, aws_region, function, layer_arn, upgrade):
+def install(
+    ctx,
+    nr_account_id,
+    aws_profile,
+    aws_region,
+    aws_permissions_check,
+    function,
+    layer_arn,
+    upgrade,
+):
     """Install New Relic AWS Lambda Layer"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
-    permissions.ensure_lambda_install_permissions(session)
+
+    if aws_permissions_check:
+        permissions.ensure_lambda_install_permissions(session)
 
     res = layers.install(session, function, layer_arn, nr_account_id, upgrade)
     if not res:
@@ -79,10 +90,12 @@ def install(ctx, nr_account_id, aws_profile, aws_region, function, layer_arn, up
     help="Lambda function name or ARN",
 )
 @click.pass_context
-def uninstall(ctx, aws_profile, aws_region, function):
+def uninstall(ctx, aws_profile, aws_region, aws_permissions_check, function):
     """Uninstall New Relic AWS Lambda Layer"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
-    permissions.ensure_lambda_uninstall_permissions(session)
+
+    if aws_permissions_check:
+        permissions.ensure_lambda_uninstall_permissions(session)
 
     res = layers.uninstall(session, function)
     if not res:

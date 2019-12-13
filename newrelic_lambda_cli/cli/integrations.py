@@ -36,6 +36,7 @@ def register(group):
 def install(
     aws_profile,
     aws_region,
+    aws_permissions_check,
     aws_role_policy,
     linked_account_name,
     nr_account_id,
@@ -44,7 +45,9 @@ def install(
 ):
     """Install New Relic AWS Lambda Integration"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
-    permissions.ensure_integration_install_permissions(session)
+
+    if aws_permissions_check:
+        permissions.ensure_integration_install_permissions(session)
 
     click.echo("Validating New Relic credentials")
     gql_client = gql.validate_gql_credentials(nr_account_id, nr_api_key, nr_region)
@@ -75,10 +78,12 @@ def install(
 
 @click.command(name="uninstall")
 @add_options(AWS_OPTIONS)
-def uninstall(aws_profile, aws_region):
+def uninstall(aws_profile, aws_region, aws_permissions_check):
     """Uninstall New Relic AWS Lambda Integration"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
-    permissions.ensure_integration_uninstall_permissions(session)
+
+    if aws_permissions_check:
+        permissions.ensure_integration_uninstall_permissions(session)
 
     click.confirm(
         "This will uninstall the New Relic AWS Lambda log ingestion. "
