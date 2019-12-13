@@ -3,7 +3,7 @@ import json
 import boto3
 import click
 
-from .. import integrations, layers, permissions
+from .. import layers, permissions
 from .cliutils import done
 from .decorators import add_options, AWS_OPTIONS
 
@@ -70,9 +70,6 @@ def install(
         permissions.ensure_lambda_install_permissions(session)
 
     res = layers.install(session, function, layer_arn, nr_account_id, upgrade)
-    if not res:
-        click.echo("\nInstallation failed.")
-        return
 
     if ctx.obj["VERBOSE"]:
         click.echo(json.dumps(res, indent=2))
@@ -98,9 +95,6 @@ def uninstall(ctx, aws_profile, aws_region, aws_permissions_check, function):
         permissions.ensure_lambda_uninstall_permissions(session)
 
     res = layers.uninstall(session, function)
-    if not res:
-        click.echo("\nUninstall failed.")
-        return
 
     if ctx.obj["VERBOSE"]:
         click.echo(json.dumps(res, indent=2))

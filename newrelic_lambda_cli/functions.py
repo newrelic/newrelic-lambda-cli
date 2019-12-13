@@ -35,7 +35,9 @@ def get_function(session, function_name):
         return session.client("lambda").get_function(FunctionName=function_name)
     except botocore.exceptions.ClientError as e:
         if (
-            hasattr(e, "response")
+            e.response
+            and "ResponseMetadata" in e.response
+            and "HTTPStatusCode" in e.response["ResponseMetadata"]
             and e.response["ResponseMetadata"]["HTTPStatusCode"] == 404
         ):
             return None

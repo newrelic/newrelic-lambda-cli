@@ -14,7 +14,9 @@ def get_subscription_filters(session, function_name):
         )
     except botocore.exceptions.ClientError as e:
         if (
-            hasattr(e, "response")
+            e.response
+            and "ResponseMetadata" in e.response
+            and "HTTPStatusCode" in e.response["ResponseMetadata"]
             and e.response["ResponseMetadata"]["HTTPStatusCode"] == 404
         ):
             return []
@@ -24,18 +26,25 @@ def get_subscription_filters(session, function_name):
 
 
 def create_subscription_filter(session, function_name, destination_arn):
-    return session.client("logs").put_subscription_filter(
-        logGroupName="/aws/lambda/%s" % function_name,
-        filterName="NewRelicLogStreaming",
-        filterPattern="NR_LAMBDA_MONITORING",
-        destinationArn=destination_arn,
-    )
+    try:
+        return session.client("logs").put_subscription_filter(
+            logGroupName="/aws/lambda/%s" % function_name,
+            filterName="NewRelicLogStreaming",
+            filterPattern="NR_LAMBDA_MONITORING",
+            destinationArn=destination_arn,
+        )
+    except botocore.exceptions.ClientError as e:
+        raise click.UsageError(str(e))
 
 
 def remove_subscription_filter(session, function_name):
-    return session.client("logs").delete_subscription_filter(
-        logGroupName="/aws/lambda/%s" % function_name, filterName="NewRelicLogStreaming"
-    )
+    try:
+        return session.client("logs").delete_subscription_filter(
+            logGroupName="/aws/lambda/%s" % function_name,
+            filterName="NewRelicLogStreaming",
+        )
+    except botocore.exceptions.ClientError as e:
+        raise click.UsageError(str(e))
 
 
 def create_log_subscription(session, function_name):
@@ -89,6 +98,6 @@ def remove_log_subscription(session, function_name):
         click.echo(
             "No New Relic subscription filters found for '%s', skipping" % function_name
         )
-    else:
-        click.echo("Removing New Relic log subscription from '%s'" % function_name)
-        remove_subscription_filter(session, function_name)
+        return
+    click.echo("Removing New Relic log subscription from '%s'" % function_name)
+    remove_subscription_filter(session, function_name)

@@ -18,7 +18,9 @@ def get_role(session, role_name):
         return session.client("iam").get_role(RoleName=role_name)
     except botocore.exceptions.ClientError as e:
         if (
-            hasattr(e, "response")
+            e.response
+            and "ResponseMetadata" in e.response
+            and "HTTPStatusCode" in e.response["ResponseMetadata"]
             and e.response["ResponseMetadata"]["HTTPStatusCode"] == 404
         ):
             return None
@@ -35,7 +37,9 @@ def get_cf_stack_status(session, stack_name):
         res = session.client("cloudformation").describe_stacks(StackName=stack_name)
     except botocore.exceptions.ClientError as e:
         if (
-            hasattr(e, "response")
+            e.response
+            and "ResponseMetadata" in e.response
+            and "HTTPStatusCode" in e.response["ResponseMetadata"]
             and e.response["ResponseMetadata"]["HTTPStatusCode"] == 404
         ):
             return None
