@@ -1,4 +1,5 @@
 import botocore
+import click
 
 from . import utils
 
@@ -32,5 +33,10 @@ def get_function(session, function_name):
     """Returns details about an AWS lambda function"""
     try:
         return session.client("lambda").get_function(FunctionName=function_name)
-    except botocore.exceptions.ClientError:
-        return None
+    except botocore.exceptions.ClientError as e:
+        if (
+            hasattr(e, "response")
+            and e.response["ResponseMetadata"]["HTTPStatusCode"] == 404
+        ):
+            return None
+        raise click.UsageError(str(e))

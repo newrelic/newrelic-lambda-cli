@@ -12,8 +12,13 @@ def get_subscription_filters(session, function_name):
         res = session.client("logs").describe_subscription_filters(
             logGroupName=log_group_name
         )
-    except botocore.exceptions.ClientError:
-        return []
+    except botocore.exceptions.ClientError as e:
+        if (
+            hasattr(e, "response")
+            and e.response["ResponseMetadata"]["HTTPStatusCode"] == 404
+        ):
+            return []
+        raise click.UsageError(str(e))
     else:
         return res.get("subscriptionFilters", [])
 
