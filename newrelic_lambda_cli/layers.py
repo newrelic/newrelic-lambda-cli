@@ -1,10 +1,8 @@
 import botocore
 import click
 import requests
-import sys
 
 from . import utils
-from .cli.cliutils import failure
 from .functions import get_function
 
 
@@ -87,8 +85,8 @@ def install(session, function_arn, layer_arn, account_id, allow_upgrade):
     client = session.client("lambda")
     config = get_function(session, function_arn)
     if not config:
-        failure("Could not find function: %s" % function_arn)
-        sys.exit(1)
+        raise click.UsageError("Could not find function: %s" % function_arn)
+        return
     region = session.region_name
     update_kwargs = _add_new_relic(config, region, layer_arn, account_id, allow_upgrade)
     try:
@@ -156,8 +154,7 @@ def uninstall(session, function_arn):
     client = session.client("lambda")
     config = get_function(session, function_arn)
     if not config:
-        failure("Could not find function: %s" % function_arn)
-        sys.exit(1)
+        raise click.UsageError("Could not find function: %s" % function_arn)
     region = session.region_name
     update_kwargs = _remove_new_relic(config, region)
     try:
