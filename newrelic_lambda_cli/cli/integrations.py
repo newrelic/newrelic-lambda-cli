@@ -3,7 +3,7 @@ import click
 
 from .. import gql, integrations, permissions
 from .decorators import add_options, AWS_OPTIONS, NR_OPTIONS
-from .cliutils import done
+from .cliutils import done, failure
 
 
 @click.group(name="integrations")
@@ -61,6 +61,7 @@ def install(
     click.echo("Creating the AWS role for the New Relic AWS Lambda Integration")
     role = integrations.create_integration_role(session, aws_role_policy, nr_account_id)
 
+    install_success = False
     if role:
         click.echo("Linking New Relic account to AWS account")
         gql.create_integration_account(
@@ -68,12 +69,19 @@ def install(
         )
 
         click.echo("Enabling Lambda integration on the link between New Relic and AWS")
-        gql.enable_lambda_integration(gql_client, nr_account_id, linked_account_name)
+        install_success = gql.enable_lambda_integration(
+            gql_client, nr_account_id, linked_account_name
+        )
 
     click.echo("Creating newrelic-log-ingestion Lambda function in AWS account")
-    integrations.install_log_ingestion(session, nr_license_key)
+    install_success = install_success and integrations.install_log_ingestion(
+        session, nr_license_key
+    )
 
-    done("Install Complete")
+    if install_success:
+        done("Install Complete")
+    else:
+        failure("Install Incomplete. See messages above for details.")
 
 
 @click.command(name="uninstall")

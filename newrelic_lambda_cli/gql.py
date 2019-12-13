@@ -305,6 +305,8 @@ def create_integration_account(gql, nr_account_id, linked_account_name, role):
 def enable_lambda_integration(gql, nr_account_id, linked_account_name):
     """
     Enables AWS Lambda for the specified New Relic Cloud integrations account.
+
+    Returns True for success and False for failure.
     """
     account = gql.get_linked_account_by_name(linked_account_name)
     if account is None:
@@ -312,7 +314,7 @@ def enable_lambda_integration(gql, nr_account_id, linked_account_name):
             "Could not find Cloud integrations account "
             "[%s] in New Relic account [%d]." % (linked_account_name, nr_account_id)
         )
-        return
+        return False
     is_lambda_enabled = gql.is_integration_enabled(account["id"], "lambda")
     if is_lambda_enabled:
         success(
@@ -320,7 +322,7 @@ def enable_lambda_integration(gql, nr_account_id, linked_account_name):
             "Cloud integrations account [%s] of New Relic account [%d]."
             % (linked_account_name, nr_account_id)
         )
-        return
+        return True
     try:
         integration = gql.enable_integration(account["id"], "aws", "lambda")
     except Exception:
@@ -328,6 +330,7 @@ def enable_lambda_integration(gql, nr_account_id, linked_account_name):
             "Could not enable New Relic AWS Lambda integration. Make sure your New "
             "Relic account is a Pro plan and try this command again."
         )
+        return False
     else:
         success(
             "Integration [id=%s, name=%s] has been enabled in Cloud "
@@ -339,3 +342,4 @@ def enable_lambda_integration(gql, nr_account_id, linked_account_name):
                 nr_account_id,
             )
         )
+        return True
