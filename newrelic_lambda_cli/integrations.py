@@ -175,7 +175,6 @@ def install_log_ingestion(session, nr_license_key):
 
     Returns True for success and False for failure.
     """
-    creation_success = True
     function = get_function(session, "newrelic-log-ingestion")
     if function is None:
         stack_status = check_for_ingest_stack(session)
@@ -188,7 +187,7 @@ def install_log_ingestion(session, nr_license_key):
                 create_log_ingestion_function(session, nr_license_key)
             except Exception as e:
                 failure("Failed to create 'newrelic-log-ingestion' function: %s" % e)
-                creation_success = False
+                return False
         else:
             failure(
                 "CloudFormation Stack NewRelicLogIngestion exists (status: %s), but "
@@ -196,10 +195,10 @@ def install_log_ingestion(session, nr_license_key):
                 "Please manually delete the stack and re-run this command."
                 % stack_status
             )
-            creation_success = False
+            return False
     else:
         success(
             "The 'newrelic-log-ingestion' function already exists in region %s, "
             "skipping" % session.region_name
         )
-    return creation_success
+    return True
