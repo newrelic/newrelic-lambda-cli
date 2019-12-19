@@ -42,7 +42,10 @@ class NewRelicGQL(object):
         transport = RequestsHTTPTransport(url=self.url, use_json=True)
         transport.headers = {"api-key": self.api_key}
 
-        self.client = Client(transport=transport, fetch_schema_from_transport=True)
+        try:
+            self.client = Client(transport=transport, fetch_schema_from_transport=True)
+        except Exception:
+            self.client = Client(transport=transport, fetch_schema_from_transport=False)
 
     def query(self, query, timeout=None, **variable_values):
         return self.client.execute(
