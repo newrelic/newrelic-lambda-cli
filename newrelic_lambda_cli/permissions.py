@@ -1,4 +1,5 @@
 import click
+import botocore
 
 
 def check_permissions(session, actions, resources=None, context=None):
