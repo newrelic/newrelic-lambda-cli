@@ -20,15 +20,7 @@ setup(
     author_email="serverless-dev@newrelic.com",
     url="https://github.com/newrelic/newrelic-lambda-cli",
     packages=find_packages(exclude=("tests", "tests.*")),
-    install_requires=[
-        "boto3",
-        "click",
-        "colorama",
-        "gql",
-        "graphql-core<3.0.0",
-        "requests",
-        "tabulate",
-    ],
+    install_requires=["boto3", "click", "colorama", "gql", "requests", "tabulate"],
     setup_requires=["pytest-runner"],
     tests_require=["coverage", "pytest", "pytest-click", "pytest-cov", "requests"],
     entry_points={
