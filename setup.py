@@ -22,7 +22,14 @@ setup(
     packages=find_packages(exclude=("tests", "tests.*")),
     install_requires=["boto3", "click", "colorama", "gql", "requests", "tabulate"],
     setup_requires=["pytest-runner"],
-    tests_require=["coverage", "pytest", "pytest-click", "pytest-cov", "requests"],
+    tests_require=[
+        "coverage",
+        "moto",
+        "pytest",
+        "pytest-click",
+        "pytest-cov",
+        "requests",
+    ],
     entry_points={
         "console_scripts": ["newrelic-lambda = newrelic_lambda_cli.cli:main"]
     },
