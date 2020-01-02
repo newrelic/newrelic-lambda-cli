@@ -20,7 +20,7 @@ from gql.transport.requests import RequestsHTTPTransport
 import click
 import requests
 
-from .cli.cliutils import failure, success
+from .cliutils import failure, success
 
 
 class NewRelicGQL(object):

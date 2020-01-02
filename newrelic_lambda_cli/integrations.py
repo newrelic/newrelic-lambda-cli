@@ -3,7 +3,7 @@ import os
 import botocore
 import click
 
-from .cli.cliutils import failure, success
+from .cliutils import failure, success
 from .functions import get_function
 
 
