@@ -37,6 +37,15 @@ A CLI to install the New Relic AWS Lambda integration and layers.
 * python3.7
 * python3.8
 
+## Docker 
+
+Now, you can run newrelic-lambda-cli as container.
+
+```bash
+docker build -t newrelic-lambda-cli .
+docker run -e AWS_PROFILE=your_profile -v $HOME/.aws:/home/newrelic-cli/.aws newrelic-lambda-cli functions list 
+```
+
 ## Requirements
 
 * Python >= 3.3
