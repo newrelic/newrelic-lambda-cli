@@ -3,7 +3,7 @@ import os
 import botocore
 import click
 
-from .cli.cliutils import failure, success
+from .cliutils import failure, success
 from .functions import get_function
 
 
@@ -40,7 +40,7 @@ def get_cf_stack_status(session, stack_name):
             e.response
             and "ResponseMetadata" in e.response
             and "HTTPStatusCode" in e.response["ResponseMetadata"]
-            and e.response["ResponseMetadata"]["HTTPStatusCode"] == 404
+            and e.response["ResponseMetadata"]["HTTPStatusCode"] in (400, 404)
         ):
             return None
         raise click.UsageError(str(e))

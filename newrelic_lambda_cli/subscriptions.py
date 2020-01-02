@@ -1,7 +1,7 @@
 import botocore
 import click
 
-from .cli.cliutils import failure
+from .cliutils import failure
 from .functions import get_function
 
 

@@ -3,7 +3,7 @@ import click
 
 from .. import gql, integrations, permissions
 from .decorators import add_options, AWS_OPTIONS, NR_OPTIONS
-from .cliutils import done, failure
+from ..cliutils import done, failure
 
 
 @click.group(name="integrations")

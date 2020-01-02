@@ -6,7 +6,6 @@ import boto3
 import botocore
 import click
 
-from . import layers
 
 NEW_RELIC_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:451483290750"
 RUNTIME_CONFIG = {
@@ -46,10 +45,6 @@ def get_region(region):
         boto_kwargs["region_name"] = region
     session = boto3.session.Session(**boto_kwargs)
     return session.region_name
-
-
-def get_layers(region, runtime):
-    return layers.index(region, runtime)
 
 
 @catch_boto_errors

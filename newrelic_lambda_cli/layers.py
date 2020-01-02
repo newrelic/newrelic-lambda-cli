@@ -38,7 +38,7 @@ def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
         new_relic_layers = [layer_arn]
     else:
         # discover compatible layers...
-        available_layers = utils.get_layers(region, runtime)
+        available_layers = index(region, runtime)
 
         # TODO: MAke this a layer selection screen
         if len(available_layers) > 1:
