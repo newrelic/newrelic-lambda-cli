@@ -2,8 +2,8 @@ import botocore
 import click
 import requests
 
-from . import utils
-from .functions import get_function
+from newrelic_lambda_cli import utils
+from newrelic_lambda_cli.functions import get_function
 
 
 def index(region, runtime):

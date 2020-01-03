@@ -3,9 +3,9 @@ import json
 import boto3
 import click
 
-from .. import layers, permissions
-from ..cliutils import done
-from .decorators import add_options, AWS_OPTIONS
+from newrelic_lambda_cli import layers, permissions
+from newrelic_lambda_cli.cliutils import done
+from newrelic_lambda_cli.cli.decorators import add_options, AWS_OPTIONS
 
 
 @click.group(name="layers")

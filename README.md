@@ -37,15 +37,6 @@ A CLI to install the New Relic AWS Lambda integration and layers.
 * python3.7
 * python3.8
 
-## Docker 
-
-Now, you can run newrelic-lambda-cli as container.
-
-```bash
-docker build -t newrelic-lambda-cli .
-docker run -e AWS_PROFILE=your_profile -v $HOME/.aws:/home/newrelic-cli/.aws newrelic-lambda-cli functions list 
-```
-
 ## Requirements
 
 * Python >= 3.3
@@ -113,6 +104,7 @@ newrelic-lambda integrations uninstall
 |--------|-----------|-------------|
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region for the integration. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
+| `--force` or `-f` | No | Forces uninstall non-interactively |
 
 ### AWS Lambda Layers
 
@@ -193,6 +185,14 @@ newrelic-lambda subscriptions uninstall --function <name or arn>
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 
+## Docker 
+
+Now, you can run newrelic-lambda-cli as a container.
+
+```bash
+docker build -t newrelic-lambda-cli .
+docker run -e AWS_PROFILE=your_profile -v $HOME/.aws:/home/newrelic-lambda-cli/.aws newrelic-lambda-cli functions list
+```
 
 ## Contributing
 

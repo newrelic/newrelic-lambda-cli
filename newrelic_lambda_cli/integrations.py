@@ -3,8 +3,8 @@ import os
 import botocore
 import click
 
-from .cliutils import failure, success
-from .functions import get_function
+from newrelic_lambda_cli.cliutils import failure, success
+from newrelic_lambda_cli.functions import get_function
 
 
 def list_all_regions(session):

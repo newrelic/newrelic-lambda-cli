@@ -7,7 +7,9 @@ jobs:
       - checkout
       - run:
           name: Run tests
-          command: python setup.py test
+          command: |
+            sudo pip install -q -r dev-requirements.txt
+            py.test tests
 
   code-style:
     docker:

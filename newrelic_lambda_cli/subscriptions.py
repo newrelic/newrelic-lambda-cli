@@ -1,8 +1,8 @@
 import botocore
 import click
 
-from .cliutils import failure
-from .functions import get_function
+from newrelic_lambda_cli.cliutils import failure
+from newrelic_lambda_cli.functions import get_function
 
 
 def get_subscription_filters(session, function_name):

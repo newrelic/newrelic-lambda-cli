@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import boto3
 from moto import mock_cloudformation
 

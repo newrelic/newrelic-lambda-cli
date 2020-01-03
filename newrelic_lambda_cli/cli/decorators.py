@@ -1,6 +1,6 @@
 import click
 
-from .. import utils
+from newrelic_lambda_cli import utils
 
 AWS_OPTIONS = [
     click.option(

@@ -1,7 +1,7 @@
 import botocore
 import click
 
-from . import utils
+from newrelic_lambda_cli import utils
 
 
 def list_functions(session, filter_choice):
