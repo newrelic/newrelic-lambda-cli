@@ -1,8 +1,7 @@
 import click
 
 from newrelic_lambda_cli import utils
-
-from . import functions, integrations, layers, subscriptions
+from newrelic_lambda_cli.cli import functions, integrations, layers, subscriptions
 
 
 @click.group()

@@ -5,8 +5,8 @@ import boto3
 import click
 from tabulate import tabulate
 
-from .. import functions, permissions
-from .decorators import add_options, AWS_OPTIONS
+from newrelic_lambda_cli import functions, permissions
+from newrelic_lambda_cli.cli.decorators import add_options, AWS_OPTIONS
 
 
 @click.group(name="functions")
