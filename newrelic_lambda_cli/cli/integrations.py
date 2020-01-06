@@ -86,18 +86,37 @@ def install(
 
 @click.command(name="uninstall")
 @add_options(AWS_OPTIONS)
+@click.option(
+    "--nr-account-id",
+    "-a",
+    envvar="NEW_RELIC_ACCOUNT_ID",
+    help="New Relic Account ID",
+    metavar="<id>",
+    required=False,
+    type=click.INT,
+)
 @click.option("--force", "-f", help="Force uninstall non-interactively", is_flag=True)
-def uninstall(aws_profile, aws_region, aws_permissions_check, force):
+def uninstall(aws_profile, aws_region, aws_permissions_check, nr_account_id, force):
     """Uninstall New Relic AWS Lambda Integration"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
 
     if aws_permissions_check:
         permissions.ensure_integration_uninstall_permissions(session)
+    uninstall_integration = True
+
+    if not force and nr_account_id:
+        uninstall_integration = click.confirm(
+            "This will uninstall the New Relic AWS Lambda integration role. "
+            "Are you sure you want to proceed?"
+        )
+
+    if uninstall_integration and nr_account_id:
+        integrations.remove_integration_role(session, nr_account_id)
 
     if not force:
         click.confirm(
-            "This will uninstall the New Relic AWS Lambda log ingestion. "
-            "Are you sure you want to proceed?",
+            "This will uninstall the New Relic AWS Lambda log ingestion function and "
+            "role. Are you sure you want to proceed?",
             abort=True,
             default=False,
         )
