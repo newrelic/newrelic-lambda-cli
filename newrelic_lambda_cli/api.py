@@ -137,13 +137,18 @@ class NewRelicGQL(object):
         try:
             return res["cloudLinkAccount"]["linkedAccounts"][0]
         except (IndexError, KeyError):
+            if "errors" in res:
+                failure(
+                    "Error while linking account with New Relic:\n%s"
+                    % "\n".join([e["message"] for e in res["errors"] if "message" in e])
+                )
             return None
 
     def unlink_account(self, linked_account_id):
         """
         Unlink a New Relic Cloud integrations account
         """
-        return self.query(
+        res = self.query(
             """
             mutation ($accountId: Int!, $accounts: CloudUnlinkCloudAccountsInput!) {
               cloudUnLinkAccount (accountId: $accountId, accounts: $accounts) {
@@ -161,6 +166,12 @@ class NewRelicGQL(object):
             accountId=self.account_id,
             accounts={"linkedAccountId": linked_account_id},
         )
+        if "errors" in res:
+            failure(
+                "Error while unlinking account with New Relic:\n%s"
+                % "\n".join([e["message"] for e in res["errors"] if "message" in e])
+            )
+        return res
 
     def get_integrations(self, linked_account_id):
         """
@@ -249,13 +260,18 @@ class NewRelicGQL(object):
         try:
             return res["cloudConfigureIntegration"]["integrations"][0]
         except (IndexError, KeyError):
+            if "errors" in res:
+                failure(
+                    "Error while enabling integration with New Relic:\n%s"
+                    % "\n".join([e["message"] for e in res["errors"] if "message" in e])
+                )
             return None
 
     def disable_integration(self, linked_account_id, provider_slug, service_slug):
         """
         Disable monitoring of a Cloud provider service (integration)
         """
-        return self.query(
+        res = self.query(
             """
             mutation ($accountId: Int!, $integrations: CloudIntegrationsInput!) {
               cloudDisableIntegration (
@@ -279,6 +295,12 @@ class NewRelicGQL(object):
                 provider_slug: {service_slug: [{"linkedAccountId": linked_account_id}]}
             },
         )
+        if "errors" in res:
+            failure(
+                "Error while disabling integration with New Relic:\n%s"
+                % "\n".join([e["message"] for e in res["errors"] if "message" in e])
+            )
+        return res
 
 
 def validate_gql_credentials(nr_account_id, nr_api_key, nr_region):
