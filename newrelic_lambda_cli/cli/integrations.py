@@ -1,5 +1,6 @@
 import boto3
 import click
+import sys
 
 from newrelic_lambda_cli import api, integrations, permissions
 from newrelic_lambda_cli.cli.decorators import add_options, AWS_OPTIONS, NR_OPTIONS
@@ -82,6 +83,7 @@ def install(
         done("Install Complete")
     else:
         failure("Install Incomplete. See messages above for details.")
+        sys.exit(1)
 
 
 @click.command(name="uninstall")

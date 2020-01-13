@@ -1,14 +1,8 @@
 """
 
-This client is adapted from:
-https://github.com/newrelic/nr-lambda-onboarding/blob/master/newrelic-cloud#L56
-
-However this client uses a GQL client that supports schema introspection to eliminate
-the error handling boilerplate for schema related errors.
-
 Example usage:
 
-    >>> from newrelic_lambda_cli.gql import NewRelicGQL
+    >>> from newrelic_lambda_cli.api import NewRelicGQL
     >>> gql = NewRelicGQL("api key here", "account id here")
     >>> gql.get_linked_accounts()
 
@@ -77,7 +71,10 @@ class NewRelicGQL(object):
             """,
             accountId=self.account_id,
         )
-        return res["actor"]["account"]["cloud"]["linkedAccounts"]
+        try:
+            return res["actor"]["account"]["cloud"]["linkedAccounts"]
+        except KeyError:
+            return []
 
     def get_license_key(self):
         """
@@ -100,14 +97,20 @@ class NewRelicGQL(object):
             """,
             accountId=self.account_id,
         )
-        return res["actor"]["account"]["licenseKey"]
+        try:
+            return res["actor"]["account"]["licenseKey"]
+        except KeyError:
+            return None
 
     def get_linked_account_by_name(self, account_name):
         """
         return a specific linked account of the New Relic account
         """
         accounts = self.get_linked_accounts()
-        return next((a for a in accounts if a["name"] == account_name), None)
+        try:
+            return next((a for a in accounts if a["name"] == account_name), None)
+        except KeyError:
+            return None
 
     def link_account(self, role_arn, account_name):
         """
@@ -131,7 +134,10 @@ class NewRelicGQL(object):
             accountId=self.account_id,
             accounts={"aws": {"arn": role_arn, "name": account_name}},
         )
-        return res["cloudLinkAccount"]["linkedAccounts"][0]
+        try:
+            return res["cloudLinkAccount"]["linkedAccounts"][0]
+        except (IndexError, KeyError):
+            return None
 
     def unlink_account(self, linked_account_id):
         """
@@ -186,19 +192,28 @@ class NewRelicGQL(object):
             accountId=self.account_id,
             linkedAccountId=int(linked_account_id),
         )
-        return res["actor"]["account"]["cloud"]["linkedAccount"]["integrations"]
+        try:
+            return res["actor"]["account"]["cloud"]["linkedAccount"]["integrations"]
+        except KeyError:
+            return []
 
     def get_integration_by_service_slug(self, linked_account_id, service_slug):
         integrations = self.get_integrations(linked_account_id)
-        return next(
-            (i for i in integrations if i["service"]["slug"] == service_slug), None
-        )
+        try:
+            return next(
+                (i for i in integrations if i["service"]["slug"] == service_slug), None
+            )
+        except KeyError:
+            return None
 
     def is_integration_enabled(self, linked_account_id, service_slug):
         integration = self.get_integration_by_service_slug(
             linked_account_id, service_slug
         )
-        return integration and integration["service"]["isEnabled"]
+        try:
+            return integration and integration["service"]["isEnabled"]
+        except KeyError:
+            return False
 
     def enable_integration(self, linked_account_id, provider_slug, service_slug):
         """
@@ -231,7 +246,10 @@ class NewRelicGQL(object):
                 provider_slug: {service_slug: [{"linkedAccountId": linked_account_id}]}
             },
         )
-        return res["cloudConfigureIntegration"]["integrations"][0]
+        try:
+            return res["cloudConfigureIntegration"]["integrations"][0]
+        except (IndexError, KeyError):
+            return None
 
     def disable_integration(self, linked_account_id, provider_slug, service_slug):
         """
@@ -291,18 +309,25 @@ def create_integration_account(gql, nr_account_id, linked_account_name, role):
     """
     role_arn = role["Role"]["Arn"]
     account = gql.get_linked_account_by_name(linked_account_name)
-    if account is None:
-        account = gql.link_account(role_arn, linked_account_name)
-        success(
-            "Cloud integrations account [%s] was created in New Relic account [%s]"
-            "with role [%s]." % (linked_account_name, nr_account_id, role_arn)
-        )
-    else:
+    if account:
         success(
             "Cloud integrations account [%s] already exists "
             "in New Relic account [%d]." % (account["name"], nr_account_id)
         )
-    return account
+        return account
+    account = account = gql.link_account(role_arn, linked_account_name)
+    if account:
+        success(
+            "Cloud integrations account [%s] was created in New Relic account [%s] "
+            "with role [%s]." % (linked_account_name, nr_account_id, role_arn)
+        )
+        return account
+    failure(
+        "Could not create Cloud integrations account [%s] in New Relic account [%s] "
+        "with role [%s]. This may be due to a previously installed integration. "
+        "Please contact New Relic support for assistance."
+        % (linked_account_name, nr_account_id, role_arn)
+    )
 
 
 def enable_lambda_integration(gql, nr_account_id, linked_account_name):
@@ -334,7 +359,7 @@ def enable_lambda_integration(gql, nr_account_id, linked_account_name):
             "Relic account is a Pro plan and try this command again."
         )
         return False
-    else:
+    if integration:
         success(
             "Integration [id=%s, name=%s] has been enabled in Cloud "
             "integrations account [%s] of New Relic account [%d]."
@@ -346,3 +371,8 @@ def enable_lambda_integration(gql, nr_account_id, linked_account_name):
             )
         )
         return True
+    failure(
+        "Something went wrong while enabling the New Relic AWS Lambda integration. "
+        "Please contact New Relic support for further assistance."
+    )
+    return False
