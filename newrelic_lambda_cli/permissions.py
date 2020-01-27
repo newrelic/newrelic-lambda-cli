@@ -50,9 +50,10 @@ def check_permissions(session, actions, resources=None, context=None):
             ResourceArns=resources,
             ContextEntries=context_entries,
         )["EvaluationResults"]
-    except botocore.errorfactory.InvalidInputException:
+    except botocore.exceptions.ClientError:
         raise click.UsageError(
-            "Error simulating IAM policies, try passing --no-aws-permissions-check to override."
+            "Error simulating IAM policies, try passing --no-aws-permissions-check to "
+            "override."
         )
     return sorted(
         [
