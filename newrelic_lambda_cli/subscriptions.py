@@ -4,6 +4,8 @@ import click
 from newrelic_lambda_cli.cliutils import failure
 from newrelic_lambda_cli.functions import get_function
 
+DEFAULT_FILTER_PATTERN = '?REPORT ?NR_LAMBDA_MONITORING ?"Task timed out"'
+
 
 def get_subscription_filters(session, function_name):
     """Returns all the log subscription filters for the function"""
@@ -30,7 +32,7 @@ def create_subscription_filter(session, function_name, destination_arn):
         return session.client("logs").put_subscription_filter(
             logGroupName="/aws/lambda/%s" % function_name,
             filterName="NewRelicLogStreaming",
-            filterPattern="NR_LAMBDA_MONITORING",
+            filterPattern=DEFAULT_FILTER_PATTERN,
             destinationArn=destination_arn,
         )
     except botocore.exceptions.ClientError as e:
