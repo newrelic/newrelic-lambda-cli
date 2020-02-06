@@ -3,6 +3,7 @@ import click
 import requests
 
 from newrelic_lambda_cli import utils
+from newrelic_lambda_cli.cliutils import failure
 from newrelic_lambda_cli.functions import get_function
 
 
@@ -17,15 +18,20 @@ def index(region, runtime):
 def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
     runtime = config["Configuration"]["Runtime"]
     if runtime not in utils.RUNTIME_CONFIG:
-        raise click.UsageError("Unsupported Lambda runtime: %s" % runtime)
+        failure(
+            "Unsupported Lambda runtime for '%s': %s"
+            % (config["Configuration"]["FunctionArn"], runtime)
+        )
 
     handler = config["Configuration"]["Handler"]
     runtime_handler = utils.RUNTIME_CONFIG.get(runtime, {}).get("Handler")
     if not allow_upgrade and handler == runtime_handler:
-        raise click.UsageError(
-            "Already installed. Pass --upgrade (or -u) to allow upgrade or "
-            "reinstall to latest layer version."
+        failure(
+            "Already installed on function '%s'. Pass --upgrade (or -u) to allow "
+            "upgrade or reinstall to latest layer version."
+            % config["Configuration"]["FunctionArn"]
         )
+        return
 
     existing_layers = [
         layer["Arn"]
@@ -85,30 +91,39 @@ def install(session, function_arn, layer_arn, account_id, allow_upgrade):
     client = session.client("lambda")
     config = get_function(session, function_arn)
     if not config:
-        raise click.UsageError("Could not find function: %s" % function_arn)
+        failure("Could not find function: %s" % function_arn)
         return
     region = session.region_name
     update_kwargs = _add_new_relic(config, region, layer_arn, account_id, allow_upgrade)
     try:
         return client.update_function_configuration(**update_kwargs)
     except botocore.exceptions.ClientError as e:
-        raise click.UsageError(str(e))
+        failure(
+            "Failed to update configuration for '%s': %s"
+            % (config["Configuration"]["FunctionArn"], e)
+        )
+        return
 
 
 def _remove_new_relic(config, region):
     runtime = config["Configuration"]["Runtime"]
     if runtime not in utils.RUNTIME_CONFIG:
-        raise click.UsageError("Unsupported Lambda runtime: %s" % runtime)
+        failure(
+            "Unsupported Lambda runtime for '%s': %s"
+            % (config["Configuration"]["FunctionArn"], runtime)
+        )
+        return
 
     handler = config["Configuration"]["Handler"]
 
     # Detect non-New Relic handler and error if necessary.
     if not utils.is_valid_handler(runtime, handler):
-        raise click.UsageError(
+        failure(
             "New Relic installation (via layers) not auto-detected for the specified "
-            "function.\n"
-            "Error: Unrecognized handler in deployed function."
+            "function '%s'. Unrecognized handler in deployed function."
+            % config["Configuration"]["FunctionArn"]
         )
+        return
 
     env_handler = (
         config["Configuration"]
@@ -118,12 +133,12 @@ def _remove_new_relic(config, region):
     )
 
     if not env_handler:
-        raise click.UsageError(
+        failure(
             "New Relic installation (via layers) not auto-detected for the specified "
-            "function.\n"
-            "Error: Environment variable NEW_RELIC_LAMBDA_HANDLER not "
-            "found."
+            "function '%s'. Environment variable NEW_RELIC_LAMBDA_HANDLER not found."
+            % config["Configuration"]["FunctionArn"]
         )
+        return
 
     # Delete New Relic env vars
     config["Configuration"]["Environment"]["Variables"] = {
@@ -152,12 +167,19 @@ def _remove_new_relic(config, region):
 
 def uninstall(session, function_arn):
     client = session.client("lambda")
+
     config = get_function(session, function_arn)
     if not config:
-        raise click.UsageError("Could not find function: %s" % function_arn)
+        failure("Could not find function: %s" % function_arn)
+        return
+
     region = session.region_name
     update_kwargs = _remove_new_relic(config, region)
+
     try:
         return client.update_function_configuration(**update_kwargs)
     except botocore.exceptions.ClientError as e:
-        raise click.UsageError(str(e))
+        failure(
+            "Failed to update configuration for '%s': %s"
+            % (config["Configuration"]["FunctionArn"], e)
+        )

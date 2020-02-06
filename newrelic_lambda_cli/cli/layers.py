@@ -4,7 +4,7 @@ import boto3
 import click
 
 from newrelic_lambda_cli import layers, permissions
-from newrelic_lambda_cli.cliutils import done
+from newrelic_lambda_cli.cliutils import done, failure
 from newrelic_lambda_cli.cli.decorators import add_options, AWS_OPTIONS
 
 
@@ -32,10 +32,12 @@ def register(group):
 )
 @add_options(AWS_OPTIONS)
 @click.option(
+    "functions",
     "--function",
     "-f",
     help="AWS Lambda function name or ARN",
     metavar="<arn>",
+    multiple=True,
     required=True,
     type=click.STRING,
 )
@@ -59,7 +61,7 @@ def install(
     aws_profile,
     aws_region,
     aws_permissions_check,
-    function,
+    functions,
     layer_arn,
     upgrade,
 ):
@@ -69,34 +71,49 @@ def install(
     if aws_permissions_check:
         permissions.ensure_lambda_install_permissions(session)
 
-    res = layers.install(session, function, layer_arn, nr_account_id, upgrade)
+    install_success = True
 
-    if ctx.obj["VERBOSE"]:
-        click.echo(json.dumps(res, indent=2))
+    for function in functions:
+        res = layers.install(session, function, layer_arn, nr_account_id, upgrade)
+        install_success = res and install_success
+        if res and ctx.obj["VERBOSE"]:
+            click.echo(json.dumps(res, indent=2))
 
-    done("Install Complete")
+    if install_success:
+        done("Install Complete")
+    else:
+        failure("Install Incomplete. See messages above for details.", exit=True)
 
 
 @click.command(name="uninstall")
 @add_options(AWS_OPTIONS)
 @click.option(
+    "functions",
     "--function",
     "-f",
-    required=True,
-    metavar="<arn>",
     help="Lambda function name or ARN",
+    metavar="<arn>",
+    multiple=True,
+    required=True,
+    type=click.STRING,
 )
 @click.pass_context
-def uninstall(ctx, aws_profile, aws_region, aws_permissions_check, function):
+def uninstall(ctx, aws_profile, aws_region, aws_permissions_check, functions):
     """Uninstall New Relic AWS Lambda Layer"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
 
     if aws_permissions_check:
         permissions.ensure_lambda_uninstall_permissions(session)
 
-    res = layers.uninstall(session, function)
+    uninstall_success = True
 
-    if ctx.obj["VERBOSE"]:
-        click.echo(json.dumps(res, indent=2))
+    for function in functions:
+        res = layers.uninstall(session, function)
+        uninstall_success = res and uninstall_success
+        if res and ctx.obj["VERBOSE"]:
+            click.echo(json.dumps(res, indent=2))
 
-    done("Uninstall Complete")
+    if uninstall_success:
+        done("Uninstall Complete")
+    else:
+        failure("Uninstall Incomplete. See messages above for details.", exit=True)

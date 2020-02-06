@@ -119,7 +119,7 @@ newrelic-lambda layers install \
 
 | Option | Required? | Description |
 |--------|-----------|-------------|
-| `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to add a layer. |
+| `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to add a layer. Can provide multiple `--function` arguments. |
 | `--nr-account-id` or `-a` | Yes | The [New Relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) this function should use. Can also use the `NEW_RELIC_ACCOUNT_ID` environment variable. |
 | `--layer-arn` or `-l` | No | Specify a specific layer version ARN to use. This is auto detected by default. |
 | `--upgrade` or `-u` | No | Permit upgrade to the latest layer version for this region and runtime. |
@@ -134,7 +134,7 @@ newrelic-lambda layers uninstall --function <name or arn>
 
 | Option | Required? | Description |
 |--------|-----------|-------------|
-| `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to remove a layer. |
+| `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to remove a layer. Can provide multiple `--function` arguments. |
 | `--layer-arn` or `-l` | No | Specify a specific layer version ARN to remove. This is auto detected by default. |
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |

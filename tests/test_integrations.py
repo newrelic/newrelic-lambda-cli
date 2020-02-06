@@ -12,7 +12,7 @@ from newrelic_lambda_cli.integrations import (
 
 
 @mock_cloudformation
-def test_check_for_ingest_stack():
+def test_check_for_ingest_stack(aws_credentials):
     """
     Asserts that check_for_ingestion_stack returns the ingestion stack if present;
     None if not.
@@ -28,6 +28,6 @@ def test_check_for_ingest_stack():
 
 
 @mock_cloudformation
-def test_get_cf_stack_status():
+def test_get_cf_stack_status(aws_credentials):
     session = boto3.Session(region_name="us-east-1")
     assert get_cf_stack_status(session, "foo-bar-baz") is None
