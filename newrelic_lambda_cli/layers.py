@@ -94,7 +94,11 @@ def install(session, function_arn, layer_arn, account_id, allow_upgrade):
         failure("Could not find function: %s" % function_arn)
         return
     region = session.region_name
+
     update_kwargs = _add_new_relic(config, region, layer_arn, account_id, allow_upgrade)
+    if not update_kwargs:
+        return
+
     try:
         return client.update_function_configuration(**update_kwargs)
     except botocore.exceptions.ClientError as e:
@@ -174,7 +178,10 @@ def uninstall(session, function_arn):
         return
 
     region = session.region_name
+
     update_kwargs = _remove_new_relic(config, region)
+    if not update_kwargs:
+        return
 
     try:
         return client.update_function_configuration(**update_kwargs)

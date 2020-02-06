@@ -4,7 +4,7 @@ import boto3
 import click
 
 from newrelic_lambda_cli import layers, permissions
-from newrelic_lambda_cli.cliutils import done, failure
+from newrelic_lambda_cli.cliutils import done, failure, success
 from newrelic_lambda_cli.cli.decorators import add_options, AWS_OPTIONS
 
 
@@ -76,8 +76,10 @@ def install(
     for function in functions:
         res = layers.install(session, function, layer_arn, nr_account_id, upgrade)
         install_success = res and install_success
-        if res and ctx.obj["VERBOSE"]:
-            click.echo(json.dumps(res, indent=2))
+        if res:
+            success("Successfully installed layer on %s" % res["FunctionArn"])
+            if ctx.obj["VERBOSE"]:
+                click.echo(json.dumps(res, indent=2))
 
     if install_success:
         done("Install Complete")
@@ -110,8 +112,10 @@ def uninstall(ctx, aws_profile, aws_region, aws_permissions_check, functions):
     for function in functions:
         res = layers.uninstall(session, function)
         uninstall_success = res and uninstall_success
-        if res and ctx.obj["VERBOSE"]:
-            click.echo(json.dumps(res, indent=2))
+        if res:
+            success("Successfully uninstalled layer on %s" % res["FunctionArn"])
+            if ctx.obj["VERBOSE"]:
+                click.echo(json.dumps(res, indent=2))
 
     if uninstall_success:
         done("Uninstall Complete")
