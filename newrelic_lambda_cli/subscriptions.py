@@ -22,31 +22,44 @@ def get_subscription_filters(session, function_name):
             and e.response["ResponseMetadata"]["HTTPStatusCode"] == 404
         ):
             return []
-        raise click.UsageError(str(e))
+        failure(
+            "Error retrieving log subscription filters for '%s': %s"
+            % (function_name, e)
+        )
     else:
         return res.get("subscriptionFilters", [])
 
 
 def create_subscription_filter(session, function_name, destination_arn):
     try:
-        return session.client("logs").put_subscription_filter(
+        session.client("logs").put_subscription_filter(
             logGroupName="/aws/lambda/%s" % function_name,
             filterName="NewRelicLogStreaming",
             filterPattern=DEFAULT_FILTER_PATTERN,
             destinationArn=destination_arn,
         )
     except botocore.exceptions.ClientError as e:
-        raise click.UsageError(str(e))
+        failure(
+            "Error creating log subscription filter for '%s': %s" % (function_name, e)
+        )
+        return False
+    else:
+        return True
 
 
 def remove_subscription_filter(session, function_name):
     try:
-        return session.client("logs").delete_subscription_filter(
+        session.client("logs").delete_subscription_filter(
             logGroupName="/aws/lambda/%s" % function_name,
             filterName="NewRelicLogStreaming",
         )
     except botocore.exceptions.ClientError as e:
-        raise click.UsageError(str(e))
+        failure(
+            "Error removing log subscription filter for '%s': %s" % (function_name, e)
+        )
+        return False
+    else:
+        return True
 
 
 def create_log_subscription(session, function_name):
@@ -56,11 +69,11 @@ def create_log_subscription(session, function_name):
             "Could not find 'newrelic-log-ingestion' function. Is the New Relic AWS "
             "integration installed?"
         )
-        return
+        return False
     destination_arn = destination["Configuration"]["FunctionArn"]
-    subscription_filters = [
-        filter for filter in get_subscription_filters(session, function_name)
-    ]
+    subscription_filters = get_subscription_filters(session, function_name)
+    if subscription_filters is None:
+        return False
     newrelic_filters = [
         filter
         for filter in subscription_filters
@@ -79,27 +92,31 @@ def create_log_subscription(session, function_name):
         )
     if not newrelic_filters:
         click.echo("Adding New Relic log subscription to '%s'" % function_name)
-        create_subscription_filter(session, function_name, destination_arn)
+        return create_subscription_filter(session, function_name, destination_arn)
     else:
         click.echo(
             "Found log subscription for '%s', verifying configuration" % function_name
         )
         newrelic_filter = newrelic_filters[0]
-        if newrelic_filter["filterPattern"] == "":
-            remove_subscription_filter(session, function_name)
-            create_subscription_filter(session, function_name, destination_arn)
+        if newrelic_filter["filterPattern"] != DEFAULT_FILTER_PATTERN:
+            return remove_subscription_filter(
+                session, function_name
+            ) and create_subscription_filter(session, function_name, destination_arn)
 
 
 def remove_log_subscription(session, function_name):
-    subscription_filters = [
+    subscription_filters = get_subscription_filters(session, function_name)
+    if subscription_filters is None:
+        return False
+    newrelic_filters = [
         filter
-        for filter in get_subscription_filters(session, function_name)
+        for filter in subscription_filters
         if filter["filterName"] == "NewRelicLogStreaming"
     ]
-    if not subscription_filters:
+    if not newrelic_filters:
         click.echo(
             "No New Relic subscription filters found for '%s', skipping" % function_name
         )
-        return
+        return False
     click.echo("Removing New Relic log subscription from '%s'" % function_name)
-    remove_subscription_filter(session, function_name)
+    return remove_subscription_filter(session, function_name)
