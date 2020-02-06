@@ -10,7 +10,7 @@ from newrelic_lambda_cli.integrations import (
 
 @mock_cloudformation
 @mock_iam
-def test_integrations_uninstall(cli_runner):
+def test_integrations_uninstall(aws_credentials, cli_runner):
     """
     Assert that 'newrelic-lambda integrations uninstall' uninstall the log ingestion
     function/role if present
