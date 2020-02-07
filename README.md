@@ -170,7 +170,7 @@ newrelic-lambda subscriptions install \--function <name or arn>
 
 | Option | Required? | Description |
 |--------|-----------|-------------|
-| `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to add a log subscription. |
+| `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to add a log subscription. Can provide multiple `--function` arguments. |
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 
@@ -182,7 +182,7 @@ newrelic-lambda subscriptions uninstall --function <name or arn>
 
 | Option | Required? | Description |
 |--------|-----------|-------------|
-| `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to remove a log subscription. |
+| `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to remove a log subscription. Can provide multiple `--function` arguments. |
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 

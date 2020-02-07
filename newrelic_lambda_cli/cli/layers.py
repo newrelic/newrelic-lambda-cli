@@ -39,14 +39,12 @@ def register(group):
     metavar="<arn>",
     multiple=True,
     required=True,
-    type=click.STRING,
 )
 @click.option(
     "--layer-arn",
     "-l",
     help="ARN for New Relic layer (default: auto-detect)",
     metavar="<arn>",
-    type=click.STRING,
 )
 @click.option(
     "--upgrade",
@@ -65,7 +63,7 @@ def install(
     layer_arn,
     upgrade,
 ):
-    """Install New Relic AWS Lambda Layer"""
+    """Install New Relic AWS Lambda Layers"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
 
     if aws_permissions_check:
@@ -77,7 +75,7 @@ def install(
         res = layers.install(session, function, layer_arn, nr_account_id, upgrade)
         install_success = res and install_success
         if res:
-            success("Successfully installed layer on %s" % res["FunctionArn"])
+            success("Successfully installed layer on %s" % function)
             if ctx.obj["VERBOSE"]:
                 click.echo(json.dumps(res, indent=2))
 
@@ -97,11 +95,10 @@ def install(
     metavar="<arn>",
     multiple=True,
     required=True,
-    type=click.STRING,
 )
 @click.pass_context
 def uninstall(ctx, aws_profile, aws_region, aws_permissions_check, functions):
-    """Uninstall New Relic AWS Lambda Layer"""
+    """Uninstall New Relic AWS Lambda Layers"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
 
     if aws_permissions_check:
@@ -113,7 +110,7 @@ def uninstall(ctx, aws_profile, aws_region, aws_permissions_check, functions):
         res = layers.uninstall(session, function)
         uninstall_success = res and uninstall_success
         if res:
-            success("Successfully uninstalled layer on %s" % res["FunctionArn"])
+            success("Successfully uninstalled layer on %s" % function)
             if ctx.obj["VERBOSE"]:
                 click.echo(json.dumps(res, indent=2))
 
