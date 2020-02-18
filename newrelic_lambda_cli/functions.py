@@ -62,7 +62,7 @@ def get_aliased_functions(session, functions, excludes):
     ]
 
     if not aliases:
-        return functions
+        return utils.unique(functions)
 
     for alias in set(aliases):
         for function in list_functions(session, alias):
@@ -73,4 +73,4 @@ def get_aliased_functions(session, functions, excludes):
             ):
                 functions.append(function["FunctionName"])
 
-    return set(functions)
+    return utils.unique(functions)
