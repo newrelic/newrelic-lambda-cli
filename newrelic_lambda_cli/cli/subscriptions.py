@@ -4,6 +4,7 @@ import click
 from newrelic_lambda_cli import permissions, subscriptions
 from newrelic_lambda_cli.cliutils import done, failure, success
 from newrelic_lambda_cli.cli.decorators import add_options, AWS_OPTIONS
+from newrelic_lambda_cli.functions import get_aliased_functions
 
 
 @click.group(name="subscriptions")
@@ -29,12 +30,22 @@ def register(group):
     multiple=True,
     required=True,
 )
-def install(aws_profile, aws_region, aws_permissions_check, functions):
+@click.option(
+    "excludes",
+    "--exclude",
+    "-e",
+    help="Functions to exclude (if using 'all, 'installed', 'not-installed aliases)",
+    metavar="<name>",
+    multiple=True,
+)
+def install(aws_profile, aws_region, aws_permissions_check, functions, excludes):
     """Install New Relic AWS Lambda Log Subscriptions"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
 
     if aws_permissions_check:
         permissions.ensure_subscription_install_permissions(session)
+
+    functions = get_aliased_functions(session, functions, excludes)
 
     install_success = True
 
@@ -61,12 +72,22 @@ def install(aws_profile, aws_region, aws_permissions_check, functions):
     multiple=True,
     required=True,
 )
-def uninstall(aws_profile, aws_region, aws_permissions_check, functions):
+@click.option(
+    "excludes",
+    "--exclude",
+    "-e",
+    help="Functions to exclude (if using 'all, 'installed', 'not-installed aliases)",
+    metavar="<name>",
+    multiple=True,
+)
+def uninstall(aws_profile, aws_region, aws_permissions_check, functions, excludes):
     """Uninstall New Relic AWS Lambda Log Subscriptions"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
 
     if aws_permissions_check:
         permissions.ensure_subscription_uninstall_permissions(session)
+
+    functions = get_aliased_functions(session, functions, excludes)
 
     uninstall_success = True
 

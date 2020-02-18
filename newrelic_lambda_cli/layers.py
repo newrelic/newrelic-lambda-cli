@@ -3,7 +3,7 @@ import click
 import requests
 
 from newrelic_lambda_cli import utils
-from newrelic_lambda_cli.cliutils import failure
+from newrelic_lambda_cli.cliutils import failure, success
 from newrelic_lambda_cli.functions import get_function
 
 
@@ -22,11 +22,12 @@ def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
             "Unsupported Lambda runtime for '%s': %s"
             % (config["Configuration"]["FunctionArn"], runtime)
         )
+        return
 
     handler = config["Configuration"]["Handler"]
     runtime_handler = utils.RUNTIME_CONFIG.get(runtime, {}).get("Handler")
     if not allow_upgrade and handler == runtime_handler:
-        failure(
+        success(
             "Already installed on function '%s'. Pass --upgrade (or -u) to allow "
             "upgrade or reinstall to latest layer version."
             % config["Configuration"]["FunctionArn"]
@@ -45,6 +46,13 @@ def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
     else:
         # discover compatible layers...
         available_layers = index(region, runtime)
+
+        if not available_layers:
+            failure(
+                "No Lambda layers published for '%s' runtime: %s"
+                % (config["Configuration"]["FunctionArn"], runtime)
+            )
+            return
 
         # TODO: MAke this a layer selection screen
         if len(available_layers) > 1:
