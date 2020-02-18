@@ -82,3 +82,13 @@ def validate_aws_profile(ctx, param, value):
         raise click.BadParameter(e.fmt)
     else:
         return value
+
+
+def unique(seq):
+    """Returns unique values in a sequence while preserving order"""
+    seen = set()
+    # Why assign seen.add to seen_add instead of just calling seen.add?
+    # Python is a dynamic language, and resolving seen.add each iteration is more costly
+    # than resolving a local variable.
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]

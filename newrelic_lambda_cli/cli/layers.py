@@ -6,6 +6,7 @@ import click
 from newrelic_lambda_cli import layers, permissions
 from newrelic_lambda_cli.cliutils import done, failure, success
 from newrelic_lambda_cli.cli.decorators import add_options, AWS_OPTIONS
+from newrelic_lambda_cli.functions import get_aliased_functions
 
 
 @click.group(name="layers")
@@ -41,6 +42,14 @@ def register(group):
     required=True,
 )
 @click.option(
+    "excludes",
+    "--exclude",
+    "-e",
+    help="Functions to exclude (if using 'all, 'installed', 'not-installed aliases)",
+    metavar="<name>",
+    multiple=True,
+)
+@click.option(
     "--layer-arn",
     "-l",
     help="ARN for New Relic layer (default: auto-detect)",
@@ -60,6 +69,7 @@ def install(
     aws_region,
     aws_permissions_check,
     functions,
+    excludes,
     layer_arn,
     upgrade,
 ):
@@ -68,6 +78,8 @@ def install(
 
     if aws_permissions_check:
         permissions.ensure_lambda_install_permissions(session)
+
+    functions = get_aliased_functions(session, functions, excludes)
 
     install_success = True
 
@@ -96,13 +108,23 @@ def install(
     multiple=True,
     required=True,
 )
+@click.option(
+    "excludes",
+    "--exclude",
+    "-e",
+    help="Functions to exclude (if using 'all, 'installed', 'not-installed aliases)",
+    metavar="<name>",
+    multiple=True,
+)
 @click.pass_context
-def uninstall(ctx, aws_profile, aws_region, aws_permissions_check, functions):
+def uninstall(ctx, aws_profile, aws_region, aws_permissions_check, functions, excludes):
     """Uninstall New Relic AWS Lambda Layers"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
 
     if aws_permissions_check:
         permissions.ensure_lambda_uninstall_permissions(session)
+
+    functions = get_aliased_functions(session, functions, excludes)
 
     uninstall_success = True
 

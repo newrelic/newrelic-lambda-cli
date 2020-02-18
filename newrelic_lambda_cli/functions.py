@@ -4,29 +4,27 @@ import click
 from newrelic_lambda_cli import utils
 
 
-def list_functions(session, filter_choice):
+def list_functions(session, filter=None):
     client = session.client("lambda")
 
-    # set all if the filter_choice is "all" or there is no filter_choice active.
-    all = filter_choice == "all" or not filter_choice
+    all = filter == "all" or not filter
 
     pager = client.get_paginator("list_functions")
-    for func_resp in pager.paginate():
-        funcs = func_resp.get("Functions", [])
-
-        for f in funcs:
-            f.setdefault("x-new-relic-enabled", False)
-            for layer in f.get("Layers", []):
+    for res in pager.paginate():
+        funcs = res.get("Functions", [])
+        for func in funcs:
+            func.setdefault("x-new-relic-enabled", False)
+            for layer in func.get("Layers", []):
                 if layer.get("Arn", "").startswith(
                     utils.get_arn_prefix(session.region_name)
                 ):
-                    f["x-new-relic-enabled"] = True
+                    func["x-new-relic-enabled"] = True
             if all:
-                yield f
-            elif filter_choice == "installed" and f["x-new-relic-enabled"]:
-                yield f
-            elif filter_choice == "not_installed" and not f["x-new-relic-enabled"]:
-                yield f
+                yield func
+            elif filter == "installed" and func["x-new-relic-enabled"]:
+                yield func
+            elif filter == "not-installed" and not func["x-new-relic-enabled"]:
+                yield func
 
 
 def get_function(session, function_name):
@@ -42,3 +40,37 @@ def get_function(session, function_name):
         ):
             return None
         raise click.UsageError(str(e))
+
+
+def get_aliased_functions(session, functions, excludes):
+    """
+    Retrieves functions for 'all, 'installed' and 'not-installed' aliases and appends
+    them to existing list of functions.
+    """
+    aliases = [
+        function.lower()
+        for function in functions
+        if function.lower() in ("all", "installed", "not-installed")
+    ]
+
+    functions = [
+        function
+        for function in functions
+        if function.lower()
+        not in ("all", "installed", "not-installed", "newrelic-log-ingestion")
+        and function not in excludes
+    ]
+
+    if not aliases:
+        return utils.unique(functions)
+
+    for alias in set(aliases):
+        for function in list_functions(session, alias):
+            if (
+                "FunctionName" in function
+                and "newrelic-log-ingestion" not in function["FunctionName"]
+                and function["FunctionName"] not in excludes
+            ):
+                functions.append(function["FunctionName"])
+
+    return utils.unique(functions)
