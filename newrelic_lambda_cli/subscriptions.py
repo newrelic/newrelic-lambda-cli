@@ -30,12 +30,14 @@ def get_subscription_filters(session, function_name):
         return res.get("subscriptionFilters", [])
 
 
-def create_subscription_filter(session, function_name, destination_arn):
+def create_subscription_filter(
+    session, function_name, destination_arn, filter_pattern=DEFAULT_FILTER_PATTERN
+):
     try:
         session.client("logs").put_subscription_filter(
             logGroupName="/aws/lambda/%s" % function_name,
             filterName="NewRelicLogStreaming",
-            filterPattern=DEFAULT_FILTER_PATTERN,
+            filterPattern=filter_pattern,
             destinationArn=destination_arn,
         )
     except botocore.exceptions.ClientError as e:
@@ -62,7 +64,9 @@ def remove_subscription_filter(session, function_name):
         return True
 
 
-def create_log_subscription(session, function_name):
+def create_log_subscription(
+    session, function_name, filter_pattern=DEFAULT_FILTER_PATTERN
+):
     destination = get_function(session, "newrelic-log-ingestion")
     if destination is None:
         failure(
@@ -92,7 +96,9 @@ def create_log_subscription(session, function_name):
         )
     if not newrelic_filters:
         click.echo("Adding New Relic log subscription to '%s'" % function_name)
-        return create_subscription_filter(session, function_name, destination_arn)
+        return create_subscription_filter(
+            session, function_name, destination_arn, filter_pattern
+        )
     else:
         click.echo(
             "Found log subscription for '%s', verifying configuration" % function_name

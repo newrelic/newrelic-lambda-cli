@@ -38,7 +38,16 @@ def register(group):
     metavar="<name>",
     multiple=True,
 )
-def install(aws_profile, aws_region, aws_permissions_check, functions, excludes):
+@click.option(
+    "filter_pattern",
+    "--filter-pattern",
+    default=subscriptions.DEFAULT_FILTER_PATTERN,
+    help="Custom log subscription filter pattern",
+    metavar="<pattern>",
+)
+def install(
+    aws_profile, aws_region, aws_permissions_check, functions, excludes, filter_pattern
+):
     """Install New Relic AWS Lambda Log Subscriptions"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
 
@@ -50,7 +59,9 @@ def install(aws_profile, aws_region, aws_permissions_check, functions, excludes)
     install_success = True
 
     for function in functions:
-        result = subscriptions.create_log_subscription(session, function)
+        result = subscriptions.create_log_subscription(
+            session, function, filter_pattern
+        )
         install_success = result and install_success
         if result:
             success("Successfully installed log subscription on %s" % function)
