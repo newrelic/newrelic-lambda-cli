@@ -26,6 +26,11 @@ def register(group):
     metavar="<arn>",
 )
 @click.option(
+    "--enable-logs",
+    help="Determines if logs are forwarded to New Relic Logging",
+    is_flag=True,
+)
+@click.option(
     "--linked-account-name",
     "-n",
     help="New Relic Linked Account Label",
@@ -38,6 +43,7 @@ def install(
     aws_region,
     aws_permissions_check,
     aws_role_policy,
+    enable_logs,
     linked_account_name,
     nr_account_id,
     nr_api_key,
@@ -61,22 +67,24 @@ def install(
     click.echo("Creating the AWS role for the New Relic AWS Lambda Integration")
     role = integrations.create_integration_role(session, aws_role_policy, nr_account_id)
 
-    install_success = False
+    install_success = True
+
     if role:
         click.echo("Linking New Relic account to AWS account")
-        api.create_integration_account(
+        res = api.create_integration_account(
             gql_client, nr_account_id, linked_account_name, role
         )
+        install_success = res and install_success
 
         click.echo("Enabling Lambda integration on the link between New Relic and AWS")
-        install_success = api.enable_lambda_integration(
+        res = api.enable_lambda_integration(
             gql_client, nr_account_id, linked_account_name
         )
+        install_success = res and install_success
 
     click.echo("Creating newrelic-log-ingestion Lambda function in AWS account")
-    install_success = install_success and integrations.install_log_ingestion(
-        session, nr_license_key
-    )
+    res = integrations.install_log_ingestion(session, nr_license_key, enable_logs)
+    install_success = res and install_success
 
     if install_success:
         done("Install Complete")
@@ -102,6 +110,7 @@ def uninstall(aws_profile, aws_region, aws_permissions_check, nr_account_id, for
 
     if aws_permissions_check:
         permissions.ensure_integration_uninstall_permissions(session)
+
     uninstall_integration = True
 
     if not force and nr_account_id:

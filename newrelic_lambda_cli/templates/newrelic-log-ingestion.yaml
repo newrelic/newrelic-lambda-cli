@@ -4,7 +4,11 @@ Parameters:
   NewRelicLicenseKey:
     Type: String
     Description: The New Relic account license key
-    Default: 'YOUR_LICENSE_KEY'
+    Default: "YOUR_LICENSE_KEY"
+  NewRelicLoggingEnabled:
+    Type: String
+    Description: Determines if logs are forwarded to New Relic Logging
+    Default: "False"
 
 Resources:
   NewRelicLogIngestion:
@@ -15,3 +19,4 @@ Resources:
         SemanticVersion: 2.1.2
       Parameters:
         NRLicenseKey: !Ref NewRelicLicenseKey
+        NRLoggingEnabled: !Ref NewRelicLoggingEnabled
