@@ -76,7 +76,7 @@ def create_role(session, role_policy, nr_account_id):
         click.echo("Done")
 
 
-def create_log_ingestion_function(session, nr_license_key):
+def create_log_ingestion_function(session, nr_license_key, enable_logs=False):
     client = session.client("cloudformation")
     stack_name = "NewRelicLogIngestion"
     template_path = os.path.join(
@@ -89,7 +89,14 @@ def create_log_ingestion_function(session, nr_license_key):
             StackName=stack_name,
             TemplateBody=template.read(),
             Parameters=[
-                {"ParameterKey": "NewRelicLicenseKey", "ParameterValue": nr_license_key}
+                {
+                    "ParameterKey": "NewRelicLicenseKey",
+                    "ParameterValue": nr_license_key,
+                },
+                {
+                    "ParameterKey": "NewRelicLoggingEnabled",
+                    "ParameterValue": "True" if enable_logs else "False",
+                },
             ],
             Capabilities=["CAPABILITY_NAMED_IAM", "CAPABILITY_AUTO_EXPAND"],
         )
@@ -183,7 +190,7 @@ def validate_linked_account(session, gql, linked_account_name):
             )
 
 
-def install_log_ingestion(session, nr_license_key):
+def install_log_ingestion(session, nr_license_key, enable_logs=False):
     """
     Installs the New Relic AWS Lambda log ingestion function and role.
 
@@ -198,7 +205,7 @@ def install_log_ingestion(session, nr_license_key):
                 % session.region_name
             )
             try:
-                create_log_ingestion_function(session, nr_license_key)
+                create_log_ingestion_function(session, nr_license_key, enable_logs)
             except Exception as e:
                 failure("Failed to create 'newrelic-log-ingestion' function: %s" % e)
                 return False
