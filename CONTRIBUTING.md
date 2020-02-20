@@ -23,7 +23,7 @@ Before submitting an Issue, please search for similar ones in the
 Keep in mind that when you submit your Pull Request, you'll need to sign the CLA via the click-through using CLA-Assistant. If you'd like to execute our corporate CLA, or if you have any questions, please drop us an email at opensource@newrelic.com.
 
 For more information about CLAs, please check out Alex Russell’s excellent post,
-[“Why Do I Need to Sign This?”](https://infrequently.org/2008/06/why-do-i-need-to-sign-this/).
+["Why Do I Need to Sign This?"](https://infrequently.org/2008/06/why-do-i-need-to-sign-this/).
 
 ## Slack
 
