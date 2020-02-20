@@ -11,7 +11,7 @@ except (ImportError, OSError):
 
 setup(
     name="newrelic-lambda-cli",
-    version="0.1.16",
+    version="0.1.17",
     python_requires=">=3.3",
     description="A CLI to install the New Relic AWS Lambda integration and layers.",
     long_description=README,
