@@ -89,7 +89,7 @@ newrelic-lambda integrations install \
 | `--nr-account-id` or `-a` | Yes | The [New Relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) for this integration. Can also use the `NEW_RELIC_ACCOUNT_ID` environment variable. |
 | `--nr-api-key` or `-k` | Yes | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Can also use the `NEW_RELIC_API_KEY` environment variable. |
 | `--linked-account-name` or `-l` | Yes | A label for the New Relic Linked ACcount. This is how this integration will appear in New Relic. |
-| `--enable-logs` | No | Enables forwarding logs to New Relic Logging. This is disabled by default. Make sure you run `newrelic-lambda subscriptions install --function ... --filter-pattern ""` afterwards. |
+| `--enable\-logs` | No | Enables forwarding logs to New Relic Logging. This is disabled by default. Make sure you run `newrelic-lambda subscriptions install --function ... --filter-pattern ""` afterwards. |
 | `--nr-region` | No | The New Relic region to use for the integration. Can use the `NEW_RELIC_REGION` environment variable. Defaults to `us`. |
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region for the integration. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
