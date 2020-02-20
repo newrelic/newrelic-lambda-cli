@@ -27,6 +27,7 @@ def register(group):
 )
 @click.option(
     "--enable-logs",
+    "-e",
     help="Determines if logs are forwarded to New Relic Logging",
     is_flag=True,
 )
