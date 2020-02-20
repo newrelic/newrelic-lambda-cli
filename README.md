@@ -3,21 +3,21 @@
 A CLI to install the New Relic AWS Lambda integration and layers.
 
 ## Table of Contents
-- **[Features](#features)**
-- **[Runtimes Supported](#runtimes-supported)**
-- **[Requirements](#requirements)**
-- **[Recommendations](#recommendations)**
-- **[Installation](#installation)**
-- **[Usage](#usage)**
-    - [AWS Lambda Integration](#aws-lambda-integration)
-    - [AWS Lambda Layers](#aws-lambda-layers)
-    - [AWS Lambda Functions](#aws-lambda-functions)
-    - [NewRelic Log Subscription](#newRelic-log-subscription)
-- **[Contributing](#contributing)**
-- **[Code Style](#code-style)**
-- **[Running Tests](#running-tests)**
-- **[Troubleshooting](#troubleshooting)**
 
+* **[Features](#features)**
+* **[Runtimes Supported](#runtimes-supported)**
+* **[Requirements](#requirements)**
+* **[Recommendations](#recommendations)**
+* **[Installation](#installation)**
+* **[Usage](#usage)**
+    * [AWS Lambda Integration](#aws-lambda-integration)
+    * [AWS Lambda Layers](#aws-lambda-layers)
+    * [AWS Lambda Functions](#aws-lambda-functions)
+    * [NewRelic Log Subscription](#newRelic-log-subscription)
+* **[Contributing](#contributing)**
+* **[Code Style](#code-style)**
+* **[Running Tests](#running-tests)**
+* **[Troubleshooting](#troubleshooting)**
 
 ## Features
 
@@ -162,7 +162,6 @@ newrelic-lambda functions list --filter installed
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region to use for this command. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 
-
 ### NewRelic Log Subscription
 
 #### Install Log Subscription
@@ -192,7 +191,7 @@ newrelic-lambda subscriptions uninstall --function <name or arn>
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 
-## Docker 
+## Docker
 
 Now, you can run newrelic-lambda-cli as a container.
 
@@ -238,7 +237,7 @@ python setup.py test
 pip install --upgrade newrelic-lambda-cli
 ```
 
-**UnrecognizedClientException**: 
+**UnrecognizedClientException**:
 >`(UnrecognizedClientException) when calling the GetFunction operation: The security token included in the request is invalid.`
 
 If you see this error, it means that specifying the region is necessary, and you need to supply the `--aws-region` flag to your command.
