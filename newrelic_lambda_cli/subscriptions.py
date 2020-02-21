@@ -104,7 +104,7 @@ def create_log_subscription(
             "Found log subscription for '%s', verifying configuration" % function_name
         )
         newrelic_filter = newrelic_filters[0]
-        if newrelic_filter["filterPattern"] != DEFAULT_FILTER_PATTERN:
+        if newrelic_filter["filterPattern"] != filter_pattern:
             return remove_subscription_filter(
                 session, function_name
             ) and create_subscription_filter(session, function_name, destination_arn)
