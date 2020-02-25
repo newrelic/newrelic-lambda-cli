@@ -307,7 +307,7 @@ def validate_gql_credentials(nr_account_id, nr_api_key, nr_region):
     try:
         return NewRelicGQL(nr_account_id, nr_api_key, nr_region)
     except requests.exceptions.HTTPError:
-        raise click.BadParameterError(
+        raise click.BadParameter(
             "Could not authenticate with New Relic. Check that your New Relic API Key "
             "is valid and try again.",
             param="nr_api_key",
