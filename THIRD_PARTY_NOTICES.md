@@ -4,15 +4,15 @@ The newrelic-lambda-cli uses source code from third party libraries which carry 
 
  the event that a required notice is missing or incorrect, please notify us by e-mailing open-source@newrelic.com.
 
-r any licenses that require the disclosure of source code, the source code can be found at https://github.com/newrelic/newrelic-lambda-cli.
+r any licenses that require the disclosure of source code, the source code can be found at [newrelic-lambda-cli](https://github.com/newrelic/newrelic-lambda-cli).
 
-# Content
+## Content
 
 **[dependencies](#dependencies)**
 
 **[devDependencies](#devdependencies)**
 
-# Dependencies
+## Dependencies
 
 | Name            | Version   | License                                                      |
 |-----------------|-----------|--------------------------------------------------------------|
@@ -36,7 +36,7 @@ r any licenses that require the disclosure of source code, the source code can b
 | tabulate        | 0.8.6     | MIT                                                          |
 | urllib3         | 1.25.7    | MIT                                                          |
 
-# DevDependencies
+## DevDependencies
 
 | Name            | Version   | License                                                      |
 |-----------------|-----------|--------------------------------------------------------------|
