@@ -28,7 +28,15 @@ def register(group):
     help="Apply a filter to the list.",
     type=click.Choice(["all", "installed", "not-installed"]),
 )
-def list(aws_profile, aws_region, aws_permissions_check, filter):
+@click.option(
+    "--output",
+    "-o",
+    default="table",
+    help="Formet output",
+    show_default=True,
+    type=click.Choice(["table", "text"]),
+)
+def list(aws_profile, aws_region, aws_permissions_check, filter, output):
     """List AWS Lambda Functions"""
     _, rows = shutil.get_terminal_size((80, 50))
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
@@ -38,7 +46,7 @@ def list(aws_profile, aws_region, aws_permissions_check, filter):
 
     funcs = functions.list_functions(session, filter)
 
-    def _format(funcs, header=False):
+    def format_table(funcs, header=False):
         table = []
         for func in funcs:
             table.append(
@@ -51,6 +59,27 @@ def list(aws_profile, aws_region, aws_permissions_check, filter):
         return tabulate(
             table, headers=["Function Name", "Runtime", "Installed"] if header else []
         ).rstrip()
+
+    def format_text(funcs, header=False):
+        text = []
+        if header:
+            text.append("\t".join(["Function Name", "Runtime", "Installed"]))
+        for func in funcs:
+            text.append(
+                "\t".join(
+                    [
+                        func.get("FunctionName"),
+                        func.get("Runtime"),
+                        "Yes" if func.get("x-new-relic-enabled", False) else "No",
+                    ]
+                )
+            )
+        return "\n".join(text)
+
+    _format = format_table
+
+    if output == "text":
+        _format = format_text
 
     buffer = []
     for i, func in enumerate(funcs):
