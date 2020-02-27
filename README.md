@@ -159,6 +159,7 @@ newrelic-lambda functions list --filter installed
 | Option | Required? | Description |
 |--------|-----------|-------------|
 | `--filter` or `-f` | No | Filter to be applied to list of functions. Options are `all`, `installed` and `not-installed`. Defaults to `all`. |
+| `--output` or `-o` | No | Specify the desired output format. Supports `table` and `text`. Defaults to `table`. |
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region to use for this command. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 
