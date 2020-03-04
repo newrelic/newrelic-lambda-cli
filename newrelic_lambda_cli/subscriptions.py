@@ -4,7 +4,7 @@ import click
 from newrelic_lambda_cli.cliutils import failure
 from newrelic_lambda_cli.functions import get_function
 
-DEFAULT_FILTER_PATTERN = '?REPORT ?NR_LAMBDA_MONITORING ?"Task timed out"'
+DEFAULT_FILTER_PATTERN = '?REPORT ?NR_LAMBDA_MONITORING ?"Task timed out" ?RequestId'
 
 
 def get_subscription_filters(session, function_name):
