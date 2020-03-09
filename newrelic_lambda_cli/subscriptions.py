@@ -7,9 +7,18 @@ from newrelic_lambda_cli.functions import get_function
 DEFAULT_FILTER_PATTERN = '?REPORT ?NR_LAMBDA_MONITORING ?"Task timed out" ?RequestId'
 
 
+def get_log_group_name(function_name):
+    """Builds a log group name path; handling ARNs if provided"""
+    if ":" in function_name:
+        parts = function_name.split(":")
+        if len(parts) >= 7:
+            return "/aws/lambda/%s" % parts[6]
+    return "/aws/lambda/%s" % function_name
+
+
 def get_subscription_filters(session, function_name):
     """Returns all the log subscription filters for the function"""
-    log_group_name = "/aws/lambda/%s" % function_name
+    log_group_name = get_log_group_name(function_name)
     try:
         res = session.client("logs").describe_subscription_filters(
             logGroupName=log_group_name
@@ -35,7 +44,7 @@ def create_subscription_filter(
 ):
     try:
         session.client("logs").put_subscription_filter(
-            logGroupName="/aws/lambda/%s" % function_name,
+            logGroupName=get_log_group_name(function_name),
             filterName="NewRelicLogStreaming",
             filterPattern=filter_pattern,
             destinationArn=destination_arn,
@@ -52,7 +61,7 @@ def create_subscription_filter(
 def remove_subscription_filter(session, function_name):
     try:
         session.client("logs").delete_subscription_filter(
-            logGroupName="/aws/lambda/%s" % function_name,
+            logGroupName=get_log_group_name(function_name),
             filterName="NewRelicLogStreaming",
         )
     except botocore.exceptions.ClientError as e:
