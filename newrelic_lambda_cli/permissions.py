@@ -77,6 +77,7 @@ def ensure_integration_install_permissions(session):
             "cloudformation:CreateChangeSet",
             "cloudformation:CreateStack",
             "cloudformation:DescribeStacks",
+            "cloudformation:ExecuteChangeSet",
             "iam:AttachRolePolicy",
             "iam:CreateRole",
             "iam:GetRole",
@@ -84,10 +85,8 @@ def ensure_integration_install_permissions(session):
             "lambda:AddPermission",
             "lambda:CreateFunction",
             "lambda:GetFunction",
-            "logs:DeleteSubscriptionFilter",
-            "logs:DescribeSubscriptionFilters",
-            "logs:PutSubscriptionFilter",
             "s3:GetObject",
+            "serverlessrepo:CreateCloudFormationChangeSet",
         ],
     )
 
@@ -115,7 +114,6 @@ def ensure_integration_uninstall_permissions(session):
             "cloudformation:DeleteStack",
             "cloudformation:DescribeStacks",
             "lambda:GetFunction",
-            "logs:DeleteSubscriptionFilter",
         ],
     )
 
@@ -138,14 +136,7 @@ def ensure_lambda_install_permissions(session):
     :param session: A boto3 session
     """
     needed_permissions = check_permissions(
-        session,
-        actions=[
-            "lambda:GetFunction",
-            "lambda:UpdateFunctionConfiguration",
-            "logs:DeleteSubscriptionFilter",
-            "logs:DescribeSubscriptionFilters",
-            "logs:PutSubscriptionFilter",
-        ],
+        session, actions=["lambda:GetFunction", "lambda:UpdateFunctionConfiguration"]
     )
 
     if needed_permissions:
@@ -169,13 +160,7 @@ def ensure_lambda_uninstall_permissions(session):
     :param session: A boto3 session
     """
     needed_permissions = check_permissions(
-        session,
-        actions=[
-            "lambda:GetFunction",
-            "lambda:UpdateFunctionConfiguration",
-            "logs:DeleteSubscriptionFilter",
-            "logs:DescribeSubscriptionFilters",
-        ],
+        session, actions=["lambda:GetFunction", "lambda:UpdateFunctionConfiguration"]
     )
 
     if needed_permissions:
@@ -197,7 +182,6 @@ def ensure_lambda_list_permissions(session):
     :param session: A boto3 session
     """
     needed_permissions = check_permissions(session, actions=["lambda:ListFunctions"])
-
     if needed_permissions:
         message = ["The following AWS permissions are needed to list functions:\n"]
         for needed_permission in needed_permissions:
@@ -242,11 +226,7 @@ def ensure_subscription_uninstall_permissions(session):
     """
     needed_permissions = check_permissions(
         session,
-        actions=[
-            "cloudformation:DeleteStack",
-            "logs:DeleteSubscriptionFilter",
-            "logs:DescribeSubscriptionFilters",
-        ],
+        actions=["logs:DeleteSubscriptionFilter", "logs:DescribeSubscriptionFilters"],
     )
     if needed_permissions:
         message = [
