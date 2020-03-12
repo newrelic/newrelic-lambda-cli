@@ -1,6 +1,10 @@
 AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
 Parameters:
+  MemorySize:
+    Type: Number
+    Description: Memory size for the New Relic Log Ingestion Lambda function
+    Default: 128
   NewRelicLicenseKey:
     Type: String
     Description: The New Relic account license key
@@ -9,6 +13,13 @@ Parameters:
     Type: String
     Description: Determines if logs are forwarded to New Relic Logging
     Default: "False"
+    AllowedValues:
+      - "True"
+      - "False"
+  Timeout:
+    Type: Number
+    Description: Timeout for the New Relic Log Ingestion Lambda function
+    Default: 30
 
 Resources:
   NewRelicLogIngestion:
@@ -18,5 +29,7 @@ Resources:
         ApplicationId: arn:aws:serverlessrepo:us-east-1:463657938898:applications/NewRelic-log-ingestion
         SemanticVersion: 2.2.1
       Parameters:
+        MemorySize: !Ref MemorySize
         NRLicenseKey: !Ref NewRelicLicenseKey
         NRLoggingEnabled: !Ref NewRelicLoggingEnabled
+        Timeout: !Ref Timeout

@@ -16,6 +16,7 @@ def register(group):
     group.add_command(integrations_group)
     integrations_group.add_command(install)
     integrations_group.add_command(uninstall)
+    integrations_group.add_command(update)
 
 
 @click.command(name="install")
@@ -32,6 +33,15 @@ def register(group):
     is_flag=True,
 )
 @click.option(
+    "--memory-size",
+    "-m",
+    default=128,
+    help="Memory size (in MiB) for the log ingestion function",
+    metavar="<size>",
+    show_default=True,
+    type=click.INT,
+)
+@click.option(
     "--linked-account-name",
     "-n",
     help="New Relic Linked Account Label",
@@ -39,16 +49,27 @@ def register(group):
     required=True,
 )
 @add_options(NR_OPTIONS)
+@click.option(
+    "--timeout",
+    "-t",
+    default=30,
+    help="Timeout (in seconds) for the New Relic log ingestion function",
+    metavar="<secs>",
+    show_default=True,
+    type=click.INT,
+)
 def install(
     aws_profile,
     aws_region,
     aws_permissions_check,
     aws_role_policy,
     enable_logs,
+    memory_size,
     linked_account_name,
     nr_account_id,
     nr_api_key,
     nr_region,
+    timeout,
 ):
     """Install New Relic AWS Lambda Integration"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
@@ -84,7 +105,9 @@ def install(
         install_success = res and install_success
 
     click.echo("Creating newrelic-log-ingestion Lambda function in AWS account")
-    res = integrations.install_log_ingestion(session, nr_license_key, enable_logs)
+    res = integrations.install_log_ingestion(
+        session, nr_license_key, enable_logs, memory_size, timeout
+    )
     install_success = res and install_success
 
     if install_success:
@@ -134,3 +157,67 @@ def uninstall(aws_profile, aws_region, aws_permissions_check, nr_account_id, for
     integrations.remove_log_ingestion_function(session)
 
     done("Uninstall Complete")
+
+
+@click.command(name="update")
+@add_options(AWS_OPTIONS)
+@click.option(
+    "--enable-logs/--disable-logs",
+    default=False,
+    help="Determines if logs are forwarded to New Relic Logging",
+    show_default=True,
+)
+@click.option(
+    "--memory-size",
+    "-m",
+    default=128,
+    help="Memory size (in MiB) for the log ingestion function",
+    metavar="<size>",
+    show_default=True,
+    type=click.INT,
+)
+@add_options(NR_OPTIONS)
+@click.option(
+    "--timeout",
+    "-t",
+    default=30,
+    help="Timeout (in seconds) for the New Relic log ingestion function",
+    metavar="<secs>",
+    show_default=True,
+    type=click.INT,
+)
+def update(
+    aws_profile,
+    aws_region,
+    aws_permissions_check,
+    enable_logs,
+    memory_size,
+    nr_account_id,
+    nr_api_key,
+    nr_region,
+    timeout,
+):
+    """UpdateNew Relic AWS Lambda Integration"""
+    session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
+
+    if aws_permissions_check:
+        permissions.ensure_integration_install_permissions(session)
+
+    click.echo("Validating New Relic credentials")
+    gql_client = api.validate_gql_credentials(nr_account_id, nr_api_key, nr_region)
+
+    click.echo("Retrieving integration license key")
+    nr_license_key = api.retrieve_license_key(gql_client)
+
+    update_success = True
+
+    click.echo("Updating newrelic-log-ingestion Lambda function in AWS account")
+    res = integrations.update_log_ingestion(
+        session, nr_license_key, enable_logs, memory_size, timeout
+    )
+    update_success = res and update_success
+
+    if update_success:
+        done("Update Complete")
+    else:
+        failure("Update Incomplete. See messages above for details.", exit=True)

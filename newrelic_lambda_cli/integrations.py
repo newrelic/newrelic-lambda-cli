@@ -76,7 +76,9 @@ def create_role(session, role_policy, nr_account_id):
         click.echo("Done")
 
 
-def create_log_ingestion_function(session, nr_license_key, enable_logs=False):
+def create_log_ingestion_function(
+    session, nr_license_key, enable_logs=False, memory_size=128, timeout=30
+):
     client = session.client("cloudformation")
     stack_name = "NewRelicLogIngestion"
     template_path = os.path.join(
@@ -89,6 +91,7 @@ def create_log_ingestion_function(session, nr_license_key, enable_logs=False):
             StackName=stack_name,
             TemplateBody=template.read(),
             Parameters=[
+                {"ParameterKey": "MemorySize", "ParameterValue": str(memory_size)},
                 {
                     "ParameterKey": "NewRelicLicenseKey",
                     "ParameterValue": nr_license_key,
@@ -97,6 +100,7 @@ def create_log_ingestion_function(session, nr_license_key, enable_logs=False):
                     "ParameterKey": "NewRelicLoggingEnabled",
                     "ParameterValue": "True" if enable_logs else "False",
                 },
+                {"ParameterKey": "Timeout", "ParameterValue": str(timeout)},
             ],
             Capabilities=["CAPABILITY_NAMED_IAM", "CAPABILITY_AUTO_EXPAND"],
         )
@@ -105,6 +109,41 @@ def create_log_ingestion_function(session, nr_license_key, enable_logs=False):
             nl=False,
         )
         client.get_waiter("stack_create_complete").wait(StackName=stack_name)
+        success("Done")
+
+
+def update_log_ingestion_function(
+    session, nr_license_key, enable_logs=False, memory_size=128, timeout=30
+):
+    client = session.client("cloudformation")
+    stack_name = "NewRelicLogIngestion"
+    template_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "templates",
+        "newrelic-log-ingestion.yaml",
+    )
+    with open(template_path) as template:
+        client.update_stack(
+            StackName=stack_name,
+            TemplateBody=template.read(),
+            Parameters=[
+                {"ParameterKey": "MemorySize", "ParameterValue": str(memory_size)},
+                {
+                    "ParameterKey": "NewRelicLicenseKey",
+                    "ParameterValue": nr_license_key,
+                },
+                {
+                    "ParameterKey": "NewRelicLoggingEnabled",
+                    "ParameterValue": "True" if enable_logs else "False",
+                },
+                {"ParameterKey": "Timeout", "ParameterValue": str(timeout)},
+            ],
+            Capabilities=["CAPABILITY_NAMED_IAM", "CAPABILITY_AUTO_EXPAND"],
+        )
+        click.echo(
+            "Waiting for stack update to complete, this may take a minute... ", nl=False
+        )
+        client.get_waiter("stack_update_complete").wait(StackName=stack_name)
         success("Done")
 
 
@@ -190,7 +229,9 @@ def validate_linked_account(session, gql, linked_account_name):
             )
 
 
-def install_log_ingestion(session, nr_license_key, enable_logs=False):
+def install_log_ingestion(
+    session, nr_license_key, enable_logs=False, memory_size=128, timeout=30
+):
     """
     Installs the New Relic AWS Lambda log ingestion function and role.
 
@@ -205,7 +246,9 @@ def install_log_ingestion(session, nr_license_key, enable_logs=False):
                 % session.region_name
             )
             try:
-                create_log_ingestion_function(session, nr_license_key, enable_logs)
+                create_log_ingestion_function(
+                    session, nr_license_key, enable_logs, memory_size, timeout
+                )
             except Exception as e:
                 failure("Failed to create 'newrelic-log-ingestion' function: %s" % e)
                 return False
@@ -223,3 +266,39 @@ def install_log_ingestion(session, nr_license_key, enable_logs=False):
             "skipping" % session.region_name
         )
     return True
+
+
+def update_log_ingestion(
+    session, nr_license_key, enable_logs=False, memory_size=128, timeout=30
+):
+    """
+    Updates the New Relic AWS Lambda log ingestion function and role.
+
+    Returns True for success and False for failure.
+    """
+    function = get_function(session, "newrelic-log-ingestion")
+    if function is None:
+        failure(
+            "No 'newrelic-log-ingestion' function in region '%s'. "
+            "Run 'newrelic-lambda integrations install' to install it."
+            % session.region_name
+        )
+        return False
+    stack_status = check_for_ingest_stack(session)
+    if stack_status is None:
+        failure(
+            "No 'NewRelicLogIngestion' stack in region '%s'. "
+            "This likely means the New Relic log ingestion function was installed manually. "
+            "In order to install via the CLI, please delete this function and run 'newrelic-lambda integrations install'."
+            % session.region_name
+        )
+        return False
+    try:
+        update_log_ingestion_function(
+            session, nr_license_key, enable_logs, memory_size, timeout
+        )
+    except Exception as e:
+        failure("Failed to update 'newrelic-log-ingestion' function: %s" % e)
+        return False
+    else:
+        return True
