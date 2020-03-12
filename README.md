@@ -64,6 +64,8 @@ To update the CLI, run:
 pip install --upgrade newrelic-lambda-cli
 ```
 
+**Note:** You may need to use `python3` and/or `pip3` in the commands above if you have Python 2.7 installed.
+
 ## Usage
 
 ### AWS Lambda Integration
