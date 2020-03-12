@@ -14,6 +14,7 @@ A CLI to install the New Relic AWS Lambda integration and layers.
     * [AWS Lambda Layers](#aws-lambda-layers)
     * [AWS Lambda Functions](#aws-lambda-functions)
     * [NewRelic Log Subscription](#newRelic-log-subscription)
+* **[Docker](#docker)**
 * **[Contributing](#contributing)**
 * **[Code Style](#code-style)**
 * **[Running Tests](#running-tests)**
