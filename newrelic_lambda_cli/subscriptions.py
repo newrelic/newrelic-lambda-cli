@@ -117,6 +117,7 @@ def create_log_subscription(
             return remove_subscription_filter(
                 session, function_name
             ) and create_subscription_filter(session, function_name, destination_arn)
+        return True
 
 
 def remove_log_subscription(session, function_name):
