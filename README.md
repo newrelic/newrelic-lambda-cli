@@ -96,6 +96,7 @@ newrelic-lambda integrations install \
 | `--memory-size` or `-m` | No | Memory size (in MiB) for the New Relic log ingestion function. Default to 128MB. |
 | `--nr-region` | No | The New Relic region to use for the integration. Can use the `NEW_RELIC_REGION` environment variable. Can be either `eu` or `us`. Defaults to `us`. |
 | `--timeout` or `-t` | No | Timeout (in seconds) for the New Relic log ingestion function. Defaults to 30 seconds. |
+| `--role-name` | No | Role name for the ingestion function. If you prefer to create and manage an IAM role for the function to assume out of band, do so and specify that role's name here. This avoids needing CAPABILITY_IAM. |
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region for the integration. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 | `--aws-role-policy` | No | Specify an alternative IAM role policy ARN for this integration. |
@@ -115,23 +116,23 @@ newrelic-lambda integrations uninstall
 
 #### Update Integration
 
-Updates the New Relic log ingestion function to the latest version.
+Updates the New Relic log ingestion function to the latest version. Existing ingestion function parameters will 
+retain their values, unless you specify different values on the command line.
 
 ```bash
-newrelic-lambda integrations update \
-    --nr-account-id <account id> \
-    --nr-api-key <api key>
+newrelic-lambda integrations update 
 ```
 
 | Option | Required? | Description |
 |--------|-----------|-------------|
-| `--nr-account-id` or `-a` | Yes | The [New Relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) for the integration. Only required if also uninstalling the New Relic AWS Lambda integration. Can also use the `NEW_RELIC_ACCOUNT_ID` environment variable. |
-| `--nr-api-key` or `-k` | Yes | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Can also use the `NEW_RELIC_API_KEY` environment variable. |
-| `--disable-logs` or `-d` | No | Disables forwarding logs to New Relic Logging. This is disabled by default. Make sure you run `newrelic-lambda subscriptions install --function ...` afterwards. |
-| `--enable-logs` or `-e` | No | Enables forwarding logs to New Relic Logging. This is disabled by default. Make sure you run `newrelic-lambda subscriptions install --function ... --filter-pattern ""` afterwards. |
-| `--memory-size` or `-m` | No | Memory size (in MiB) for the New Relic log ingestion function. Default to 128MB. |
+| `--nr-account-id` or `-a` | No | The [New Relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) for the integration. Only required if changing the account to which the logs are sent. Can also use the `NEW_RELIC_ACCOUNT_ID` environment variable. |
+| `--nr-api-key` or `-k` | No | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Can also use the `NEW_RELIC_API_KEY` environment variable. Only required if changing the account to which the logs are sent. |
+| `--disable-logs` or `-d` | No | Disables forwarding logs to New Relic Logging. Make sure you run `newrelic-lambda subscriptions install --function ...` afterwards. |
+| `--enable-logs` or `-e` | No | Enables forwarding logs to New Relic Logging. Make sure you run `newrelic-lambda subscriptions install --function ... --filter-pattern ""` afterwards. |
+| `--memory-size` or `-m` | No | Memory size (in MiB) for the New Relic log ingestion function. |
 | `--nr-region` | No | The New Relic region to use for the integration. Can use the `NEW_RELIC_REGION` environment variable. Can be either `eu` or `us`. Defaults to `us`. |
-| `--timeout` or `-t` | No | Timeout (in seconds) for the New Relic log ingestion function. Defaults to 30 seconds. |
+| `--timeout` or `-t` | No | Timeout (in seconds) for the New Relic log ingestion function. |
+| `--role-name` | No | Role name for the ingestion function. If you prefer to create and manage an IAM role for the function to assume out of band, do so and specify that role's name here. This avoids needing CAPABILITY_IAM. |
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region for the integration. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 

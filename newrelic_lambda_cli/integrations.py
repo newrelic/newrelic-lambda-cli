@@ -2,9 +2,12 @@ import os
 
 import botocore
 import click
+import json
 
 from newrelic_lambda_cli.cliutils import failure, success
 from newrelic_lambda_cli.functions import get_function
+
+INGEST_STACK_NAME = "NewRelicLogIngestion"
 
 
 def list_all_regions(session):
@@ -28,7 +31,7 @@ def get_role(session, role_name):
 
 
 def check_for_ingest_stack(session):
-    return get_cf_stack_status(session, "NewRelicLogIngestion")
+    return get_cf_stack_status(session, INGEST_STACK_NAME)
 
 
 def get_cf_stack_status(session, stack_name):
@@ -76,80 +79,243 @@ def create_role(session, role_policy, nr_account_id):
         click.echo("Done")
 
 
-def create_log_ingestion_function(
-    session, nr_license_key, enable_logs=False, memory_size=128, timeout=30
+def get_sar_template_url(session):
+    sar_client = session.client("serverlessrepo")
+    sar_app_id = "arn:aws:serverlessrepo:us-east-1:463657938898:applications/NewRelic-log-ingestion"
+    template_details = sar_client.create_cloud_formation_template(
+        ApplicationId=sar_app_id
+    )
+    return template_details["TemplateUrl"]
+
+
+def create_parameters(
+    nr_license_key, enable_logs, memory_size, timeout, role_name, mode="CREATE",
 ):
-    client = session.client("cloudformation")
-    stack_name = "NewRelicLogIngestion"
+    update_mode = mode == "UPDATE"
+    parameters = []
+    if memory_size is not None:
+        parameters.append(
+            {"ParameterKey": "MemorySize", "ParameterValue": str(memory_size)}
+        )
+    elif update_mode:
+        parameters.append({"ParameterKey": "MemorySize", "UsePreviousValue": True})
+
+    if nr_license_key is not None:
+        parameters.append(
+            {"ParameterKey": "NRLicenseKey", "ParameterValue": nr_license_key}
+        )
+    elif update_mode:
+        parameters.append({"ParameterKey": "NRLicenseKey", "UsePreviousValue": True})
+
+    if enable_logs is not None:
+        parameters.append(
+            {
+                "ParameterKey": "NRLoggingEnabled",
+                "ParameterValue": "True" if enable_logs else "False",
+            }
+        )
+    elif update_mode:
+        parameters.append(
+            {"ParameterKey": "NRLoggingEnabled", "UsePreviousValue": True}
+        )
+
+    if timeout is not None:
+        parameters.append({"ParameterKey": "Timeout", "ParameterValue": str(timeout)})
+    elif update_mode:
+        parameters.append({"ParameterKey": "Timeout", "UsePreviousValue": True})
+
+    capabilities = ["CAPABILITY_IAM"]
+    if role_name is not None:
+        parameters.append({"ParameterKey": "FunctionRole", "ParameterValue": role_name})
+        capabilities = []
+    elif mode != "CREATE":
+        parameters.append({"ParameterKey": "FunctionRole", "UsePreviousValue": True})
+        capabilities = []
+
+    return parameters, capabilities
+
+
+def import_log_ingestion_function(
+    session, nr_license_key, enable_logs, memory_size, timeout, role_name,
+):
+    parameters, capabilities = create_parameters(
+        nr_license_key, enable_logs, memory_size, timeout, role_name, "IMPORT"
+    )
+    cf_client = session.client("cloudformation")
+
+    click.echo(f"Fetching new CloudFormation template url")
+
     template_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        "templates",
-        "newrelic-log-ingestion.yaml",
+        os.path.dirname(os.path.abspath(__file__)), "templates", "import-template.yaml",
     )
     with open(template_path) as template:
-        client.create_stack(
-            StackName=stack_name,
+        change_set_name = f"{INGEST_STACK_NAME}-IMPORT"
+        click.echo(f"Creating change set {change_set_name}")
+
+        change_set = cf_client.create_change_set(
+            StackName=INGEST_STACK_NAME,
             TemplateBody=template.read(),
-            Parameters=[
-                {"ParameterKey": "MemorySize", "ParameterValue": str(memory_size)},
+            Parameters=parameters,
+            Capabilities=capabilities,
+            ChangeSetType="IMPORT",
+            ChangeSetName=change_set_name,
+            ResourcesToImport=[
                 {
-                    "ParameterKey": "NewRelicLicenseKey",
-                    "ParameterValue": nr_license_key,
+                    "ResourceType": "AWS::Lambda::Function",
+                    "LogicalResourceId": "NewRelicLogIngestionFunctionNoCap",
+                    "ResourceIdentifier": {"FunctionName": "newrelic-log-ingestion"},
                 },
-                {
-                    "ParameterKey": "NewRelicLoggingEnabled",
-                    "ParameterValue": "True" if enable_logs else "False",
-                },
-                {"ParameterKey": "Timeout", "ParameterValue": str(timeout)},
             ],
-            Capabilities=["CAPABILITY_NAMED_IAM", "CAPABILITY_AUTO_EXPAND"],
         )
-        click.echo(
-            "Waiting for stack creation to complete, this may take a minute... ",
-            nl=False,
-        )
-        client.get_waiter("stack_create_complete").wait(StackName=stack_name)
-        success("Done")
+
+        exec_change_set(cf_client, change_set, "IMPORT")
+
+
+def create_log_ingestion_function(
+    session,
+    nr_license_key,
+    enable_logs,
+    memory_size,
+    timeout,
+    role_name,
+    mode="CREATE",
+):
+    parameters, capabilities = create_parameters(
+        nr_license_key, enable_logs, memory_size, timeout, role_name, mode
+    )
+
+    cf_client = session.client("cloudformation")
+
+    click.echo(f"Fetching new CloudFormation template url")
+
+    template_url = get_sar_template_url(session)
+
+    change_set_name = f"{INGEST_STACK_NAME}-{mode}"
+    click.echo(f"Creating change set {change_set_name}")
+
+    change_set = cf_client.create_change_set(
+        StackName=INGEST_STACK_NAME,
+        TemplateURL=template_url,
+        Parameters=parameters,
+        Capabilities=capabilities,
+        ChangeSetType=mode,
+        ChangeSetName=change_set_name,
+    )
+
+    exec_change_set(cf_client, change_set, mode)
+
+
+def exec_change_set(cf_client, change_set, mode):
+    click.echo(
+        "Waiting for change set creation to complete, this may take a minute... "
+    )
+    cf_client.get_waiter("change_set_create_complete").wait(
+        ChangeSetName=change_set["Id"], WaiterConfig={"Delay": 10},
+    )
+    cf_client.execute_change_set(ChangeSetName=change_set["Id"])
+    click.echo(
+        "Waiting for change set to finish execution. This may take a minute... ",
+        nl=False,
+    )
+    exec_waiter_type = f"stack_{mode.lower()}_complete"
+    cf_client.get_waiter(exec_waiter_type).wait(
+        StackName=INGEST_STACK_NAME, WaiterConfig={"Delay": 15},
+    )
+    success("Done")
 
 
 def update_log_ingestion_function(
-    session, nr_license_key, enable_logs=False, memory_size=128, timeout=30
+    session, nr_license_key, enable_logs, memory_size, timeout, role_name=None,
 ):
+    # Detect an old-style nested install and unwrap it
     client = session.client("cloudformation")
-    stack_name = "NewRelicLogIngestion"
-    template_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        "templates",
-        "newrelic-log-ingestion.yaml",
+
+    resources = client.describe_stack_resources(
+        StackName=INGEST_STACK_NAME, LogicalResourceId="NewRelicLogIngestion"
     )
-    with open(template_path) as template:
+    stack_resources = resources["StackResources"]
+    # The nested installs had a single Application resource
+    if (
+        len(stack_resources) > 0
+        and stack_resources[0]["ResourceType"] == "AWS::CloudFormation::Stack"
+    ):
+        click.echo("Unwrapping nested stack")
+
+        # Set the ingest function itself to disallow deletes
+        nested_stack = stack_resources[0]
+        template_response = client.get_template(
+            StackName=nested_stack["PhysicalResourceId"], TemplateStage="Processed"
+        )
+        template_body = template_response["TemplateBody"]
+        template_body["Resources"]["NewRelicLogIngestionFunction"][
+            "DeletionPolicy"
+        ] = "Retain"
+        template_body["Resources"]["NewRelicLogIngestionFunctionRole"][
+            "DeletionPolicy"
+        ] = "Retain"
+
+        # We can't change props during import, so let's set them to their current values
+        lambda_client = session.client("lambda")
+        old_props = lambda_client.get_function_configuration(
+            FunctionName="newrelic-log-ingestion"
+        )
+        old_role_name = old_props["Role"].split(":role/")[-1]
+        old_nr_license_key = old_props["Environment"]["Variables"]["LICENSE_KEY"]
+        old_enable_logs = False
+        if (
+            "LOGGING_ENABLED" in old_props["Environment"]["Variables"]
+            and old_props["Environment"]["Variables"]["LOGGING_ENABLED"].lower()
+            == "true"
+        ):
+            old_enable_logs = True
+        old_memory_size = old_props["MemorySize"]
+        old_timeout = old_props["Timeout"]
+
+        # Prepare to orphan the ingest function
+        params = [
+            {"ParameterKey": name, "UsePreviousValue": True}
+            for name in template_body["Parameters"]
+        ]
         client.update_stack(
-            StackName=stack_name,
-            TemplateBody=template.read(),
-            Parameters=[
-                {"ParameterKey": "MemorySize", "ParameterValue": str(memory_size)},
-                {
-                    "ParameterKey": "NewRelicLicenseKey",
-                    "ParameterValue": nr_license_key,
-                },
-                {
-                    "ParameterKey": "NewRelicLoggingEnabled",
-                    "ParameterValue": "True" if enable_logs else "False",
-                },
-                {"ParameterKey": "Timeout", "ParameterValue": str(timeout)},
-            ],
-            Capabilities=["CAPABILITY_NAMED_IAM", "CAPABILITY_AUTO_EXPAND"],
+            StackName=nested_stack["PhysicalResourceId"],
+            TemplateBody=json.dumps(template_body),
+            Parameters=params,
+            Capabilities=["CAPABILITY_IAM"],
         )
-        click.echo(
-            "Waiting for stack update to complete, this may take a minute... ", nl=False
+        client.get_waiter("stack_update_complete").wait(
+            StackName=nested_stack["PhysicalResourceId"]
         )
-        client.get_waiter("stack_update_complete").wait(StackName=stack_name)
-        success("Done")
+
+        click.echo("Removing outer stack")
+        # Delete the parent stack, which will delete its child and orphan the ingest function
+        client.delete_stack(StackName=INGEST_STACK_NAME)
+        client.get_waiter("stack_delete_complete").wait(StackName=INGEST_STACK_NAME)
+
+        click.echo("Starting import")
+        import_log_ingestion_function(
+            session,
+            old_nr_license_key,
+            old_enable_logs,
+            old_memory_size,
+            old_timeout,
+            role_name=old_role_name,
+        )
+        # Now that we've unnested, do the actual update
+
+    # Not a nested install; just update
+    create_log_ingestion_function(
+        session,
+        nr_license_key,
+        enable_logs,
+        memory_size,
+        timeout,
+        role_name,
+        mode="UPDATE",
+    )
 
 
 def remove_log_ingestion_function(session):
     client = session.client("cloudformation")
-    stack_name = "NewRelicLogIngestion"
     stack_status = check_for_ingest_stack(session)
     if stack_status is None:
         click.echo(
@@ -157,12 +323,12 @@ def remove_log_ingestion_function(session):
             % session.region_name
         )
         return
-    click.echo("Deleting New Relic log ingestion stack '%s'" % stack_name)
-    client.delete_stack(StackName=stack_name)
+    click.echo("Deleting New Relic log ingestion stack '%s'" % INGEST_STACK_NAME)
+    client.delete_stack(StackName=INGEST_STACK_NAME)
     click.echo(
         "Waiting for stack deletion to complete, this may take a minute... ", nl=False
     )
-    client.get_waiter("stack_delete_complete").wait(StackName=stack_name)
+    client.get_waiter("stack_delete_complete").wait(StackName=INGEST_STACK_NAME)
     success("Done")
 
 
@@ -230,7 +396,12 @@ def validate_linked_account(session, gql, linked_account_name):
 
 
 def install_log_ingestion(
-    session, nr_license_key, enable_logs=False, memory_size=128, timeout=30
+    session,
+    nr_license_key,
+    enable_logs=False,
+    memory_size=128,
+    timeout=30,
+    role_name=None,
 ):
     """
     Installs the New Relic AWS Lambda log ingestion function and role.
@@ -247,7 +418,12 @@ def install_log_ingestion(
             )
             try:
                 create_log_ingestion_function(
-                    session, nr_license_key, enable_logs, memory_size, timeout
+                    session,
+                    nr_license_key,
+                    enable_logs,
+                    memory_size,
+                    timeout,
+                    role_name,
                 )
             except Exception as e:
                 failure("Failed to create 'newrelic-log-ingestion' function: %s" % e)
@@ -269,7 +445,12 @@ def install_log_ingestion(
 
 
 def update_log_ingestion(
-    session, nr_license_key, enable_logs=False, memory_size=128, timeout=30
+    session,
+    nr_license_key=None,
+    enable_logs=None,
+    memory_size=None,
+    timeout=None,
+    role_name=None,
 ):
     """
     Updates the New Relic AWS Lambda log ingestion function and role.
@@ -295,7 +476,7 @@ def update_log_ingestion(
         return False
     try:
         update_log_ingestion_function(
-            session, nr_license_key, enable_logs, memory_size, timeout
+            session, nr_license_key, enable_logs, memory_size, timeout, role_name
         )
     except Exception as e:
         failure("Failed to update 'newrelic-log-ingestion' function: %s" % e)

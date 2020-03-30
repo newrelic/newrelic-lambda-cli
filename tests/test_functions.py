@@ -1,5 +1,5 @@
 import boto3
-import mock
+from unittest import mock
 from moto import mock_lambda
 from newrelic_lambda_cli.functions import get_aliased_functions
 

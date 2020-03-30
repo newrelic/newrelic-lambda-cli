@@ -1,16 +1,64 @@
-import boto3
-from moto import mock_cloudformation, mock_iam
+from unittest.mock import patch, call, ANY
 
 from newrelic_lambda_cli.cli import cli, register_groups
-from newrelic_lambda_cli.integrations import (
-    create_integration_role,
-    create_log_ingestion_function,
-)
 
 
-@mock_cloudformation
-@mock_iam
-def test_integrations_uninstall(aws_credentials, cli_runner):
+@patch("newrelic_lambda_cli.cli.integrations.boto3")
+@patch("newrelic_lambda_cli.cli.integrations.integrations")
+@patch("newrelic_lambda_cli.cli.integrations.permissions")
+@patch("newrelic_lambda_cli.cli.integrations.api")
+def test_integrations_install(
+    api_mock, permissions_mock, integrations_mock, boto3_mock, cli_runner
+):
+    register_groups(cli)
+    result = cli_runner.invoke(
+        cli,
+        [
+            "integrations",
+            "install",
+            "--nr-account-id",
+            "12345678",
+            "--nr-api-key",
+            "test_key",
+            "--linked-account-name",
+            "test_linked_account",
+        ],
+        env={"AWS_DEFAULT_REGION": "us-east-1"},
+    )
+
+    assert result.exit_code == 0, result.stderr
+
+    boto3_mock.assert_has_calls(
+        [call.Session(profile_name=None, region_name="us-east-1")]
+    )
+    permissions_mock.assert_has_calls(
+        [call.ensure_integration_install_permissions(ANY)]
+    )
+    api_mock.assert_has_calls(
+        [
+            call.validate_gql_credentials(12345678, "test_key", "us"),
+            call.retrieve_license_key(ANY),
+            call.create_integration_account(ANY, 12345678, "test_linked_account", ANY),
+            call.enable_lambda_integration(ANY, 12345678, "test_linked_account"),
+        ],
+        any_order=True,
+    )
+    integrations_mock.assert_has_calls(
+        [
+            call.validate_linked_account(ANY, ANY, "test_linked_account"),
+            call.create_integration_role(ANY, None, 12345678),
+            call.install_log_ingestion(ANY, ANY, False, 128, 30, None),
+        ],
+        any_order=True,
+    )
+
+
+@patch("newrelic_lambda_cli.cli.integrations.boto3")
+@patch("newrelic_lambda_cli.cli.integrations.integrations")
+@patch("newrelic_lambda_cli.cli.integrations.permissions")
+def test_integrations_uninstall(
+    permissions_mock, integrations_mock, boto3_mock, cli_runner
+):
     """
     Assert that 'newrelic-lambda integrations uninstall' uninstall the log ingestion
     function/role if present
@@ -29,94 +77,75 @@ def test_integrations_uninstall(aws_credentials, cli_runner):
         input="y\ny",
     )
 
-    assert result.exit_code == 0
-    assert result.stdout == (
-        "This will uninstall the New Relic AWS Lambda integration role. Are you sure you want to proceed? [y/N]: y\n"  # noqa
-        "No New Relic AWS Lambda Integration found, skipping\n"
-        "This will uninstall the New Relic AWS Lambda log ingestion function and role. Are you sure you want to proceed? [y/N]: y\n"  # noqa
-        "No New Relic AWS Lambda log ingestion found in region us-east-1, skipping\n"
-        "✨ Uninstall Complete ✨\n"
+    assert result.exit_code == 0, result.stderr
+
+    boto3_mock.assert_has_calls(
+        [call.Session(profile_name=None, region_name="us-east-1")]
     )
-
-    session = boto3.Session(region_name="us-east-1")
-    create_integration_role(session, None, 12345678)
-    create_log_ingestion_function(session, "mock-nr-license-key")
-
-    result2 = cli_runner.invoke(
-        cli,
+    permissions_mock.assert_not_called()
+    integrations_mock.assert_has_calls(
         [
-            "integrations",
-            "uninstall",
-            "--no-aws-permissions-check",
-            "--nr-account-id",
-            "12345678",
-        ],
-        env={"AWS_DEFAULT_REGION": "us-east-1"},
-        input="y\ny",
-    )
-
-    assert result2.exit_code == 0
-    assert result2.stdout == (
-        "This will uninstall the New Relic AWS Lambda integration role. Are you sure you want to proceed? [y/N]: y\n"  # noqa
-        "Deleting New Relic AWS Lambda Integration stack 'NewRelicLambdaIntegrationRole-12345678'\n"  # noqa
-        "Waiting for stack deletion to complete, this may take a minute... ✔️ Done\n"
-        "This will uninstall the New Relic AWS Lambda log ingestion function and role. Are you sure you want to proceed? [y/N]: y\n"  # noqa
-        "Deleting New Relic log ingestion stack 'NewRelicLogIngestion'\n"
-        "Waiting for stack deletion to complete, this may take a minute... ✔️ Done\n"
-        "✨ Uninstall Complete ✨\n"
+            call.remove_integration_role(ANY, 12345678),
+            call.remove_log_ingestion_function(ANY),
+        ]
     )
 
 
-@mock_cloudformation
-@mock_iam
-def test_integrations_uninstall_force(cli_runner):
+@patch("newrelic_lambda_cli.cli.integrations.boto3")
+@patch("newrelic_lambda_cli.cli.integrations.integrations")
+@patch("newrelic_lambda_cli.cli.integrations.permissions")
+def test_integrations_uninstall_force(
+    permissions_mock, integrations_mock, boto3_mock, cli_runner
+):
     """
-    Assert that 'newrelic-lambda integrations uninstall --force' uninstalls the log
-    ingestion function/role without prompting if present
+    Test that the --force option bypasses the prompts by not providing input to the CLI runner
     """
     register_groups(cli)
     result = cli_runner.invoke(
         cli,
-        [
-            "integrations",
-            "uninstall",
-            "--no-aws-permissions-check",
-            "--nr-account-id",
-            "12345678",
-            "--force",
-        ],
+        ["integrations", "uninstall", "--nr-account-id", "12345678", "--force",],
         env={"AWS_DEFAULT_REGION": "us-east-1"},
     )
 
-    assert result.exit_code == 0
-    assert result.stdout == (
-        "No New Relic AWS Lambda Integration found, skipping\n"
-        "No New Relic AWS Lambda log ingestion found in region us-east-1, skipping\n"
-        "✨ Uninstall Complete ✨\n"
+    assert result.exit_code == 0, result.stderr
+
+    boto3_mock.assert_has_calls(
+        [call.Session(profile_name=None, region_name="us-east-1")]
     )
-
-    session = boto3.Session(region_name="us-east-1")
-    create_integration_role(session, None, 12345678)
-    create_log_ingestion_function(session, "mock-nr-license-key")
-
-    result2 = cli_runner.invoke(
-        cli,
+    permissions_mock.assert_has_calls(
+        [call.ensure_integration_uninstall_permissions(ANY)]
+    )
+    integrations_mock.assert_has_calls(
         [
-            "integrations",
-            "uninstall",
-            "--no-aws-permissions-check",
-            "--nr-account-id",
-            "12345678",
-            "--force",
-        ],
-        env={"AWS_DEFAULT_REGION": "us-east-1"},
+            call.remove_integration_role(ANY, 12345678),
+            call.remove_log_ingestion_function(ANY),
+        ]
     )
 
-    assert result2.exit_code == 0
-    assert result2.stdout == (
-        "Deleting New Relic AWS Lambda Integration stack 'NewRelicLambdaIntegrationRole-12345678'\n"  # noqa
-        "Waiting for stack deletion to complete, this may take a minute... ✔️ Done\n"
-        "Deleting New Relic log ingestion stack 'NewRelicLogIngestion'\n"
-        "Waiting for stack deletion to complete, this may take a minute... ✔️ Done\n"
-        "✨ Uninstall Complete ✨\n"
+
+@patch("newrelic_lambda_cli.cli.integrations.boto3")
+@patch("newrelic_lambda_cli.cli.integrations.integrations")
+@patch("newrelic_lambda_cli.cli.integrations.permissions")
+@patch("newrelic_lambda_cli.cli.integrations.api")
+def test_integrations_update(
+    api_mock, permissions_mock, integrations_mock, boto3_mock, cli_runner
+):
+    """
+    Test that the --force option bypasses the prompts by not providing input to the CLI runner
+    """
+    register_groups(cli)
+    result = cli_runner.invoke(
+        cli, ["integrations", "update",], env={"AWS_DEFAULT_REGION": "us-east-1"},
+    )
+
+    assert result.exit_code == 0, result.stderr
+
+    boto3_mock.assert_has_calls(
+        [call.Session(profile_name=None, region_name="us-east-1")]
+    )
+    permissions_mock.assert_has_calls(
+        [call.ensure_integration_install_permissions(ANY)]
+    )
+    integrations_mock.assert_has_calls(
+        [call.update_log_ingestion(ANY, None, None, None, None, None,),]
     )
