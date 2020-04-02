@@ -9,7 +9,8 @@ from newrelic_lambda_cli.functions import get_function
 
 def index(region, runtime):
     req = requests.get(
-        f"https://{region}.nr-layers.iopipe.com/get-layers?CompatibleRuntime={runtime}"
+        "https://%s.nr-layers.iopipe.com/get-layers?CompatibleRuntime=%s"
+        % (region, runtime)
     )
     layers_response = req.json()
     return layers_response.get("Layers", [])

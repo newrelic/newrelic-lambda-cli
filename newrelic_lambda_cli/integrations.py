@@ -127,10 +127,8 @@ def create_parameters(
     capabilities = ["CAPABILITY_IAM"]
     if role_name is not None:
         parameters.append({"ParameterKey": "FunctionRole", "ParameterValue": role_name})
-        capabilities = []
     elif mode != "CREATE":
         parameters.append({"ParameterKey": "FunctionRole", "UsePreviousValue": True})
-        capabilities = []
 
     return parameters, capabilities
 
@@ -143,14 +141,14 @@ def import_log_ingestion_function(
     )
     cf_client = session.client("cloudformation")
 
-    click.echo(f"Fetching new CloudFormation template url")
+    click.echo("Fetching new CloudFormation template url")
 
     template_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "templates", "import-template.yaml"
     )
     with open(template_path) as template:
-        change_set_name = f"{INGEST_STACK_NAME}-IMPORT"
-        click.echo(f"Creating change set {change_set_name}")
+        change_set_name = "%s-IMPORT" % INGEST_STACK_NAME
+        click.echo("Creating change set: %s" % change_set_name)
 
         change_set = cf_client.create_change_set(
             StackName=INGEST_STACK_NAME,
@@ -180,12 +178,12 @@ def create_log_ingestion_function(
 
     cf_client = session.client("cloudformation")
 
-    click.echo(f"Fetching new CloudFormation template url")
+    click.echo("Fetching new CloudFormation template url")
 
     template_url = get_sar_template_url(session)
 
-    change_set_name = f"{INGEST_STACK_NAME}-{mode}"
-    click.echo(f"Creating change set {change_set_name}")
+    change_set_name = "%s-%s" % (INGEST_STACK_NAME, mode)
+    click.echo("Creating change set: %s" % change_set_name)
 
     change_set = cf_client.create_change_set(
         StackName=INGEST_STACK_NAME,
@@ -225,7 +223,7 @@ def exec_change_set(cf_client, change_set, mode):
         "Waiting for change set to finish execution. This may take a minute... ",
         nl=False,
     )
-    exec_waiter_type = f"stack_{mode.lower()}_complete"
+    exec_waiter_type = "stack_%s_complete" % mode.lower()
     cf_client.get_waiter(exec_waiter_type).wait(
         StackName=INGEST_STACK_NAME, WaiterConfig={"Delay": 15}
     )
