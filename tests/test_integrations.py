@@ -63,7 +63,7 @@ def test_create_log_ingestion_function_defaults(success_mock):
                     ],
                     Capabilities=["CAPABILITY_IAM"],
                     ChangeSetType="CREATE",
-                    ChangeSetName="NewRelicLogIngestion-CREATE",
+                    ChangeSetName=ANY,
                 )
             ]
         )
@@ -106,9 +106,9 @@ def test_create_log_ingestion_function_opts(success_mock):
                             "ParameterValue": "CustomExecRole",
                         },
                     ],
-                    Capabilities=["CAPABILITY_IAM"],
+                    Capabilities=[],
                     ChangeSetType="CREATE",
-                    ChangeSetName="NewRelicLogIngestion-CREATE",
+                    ChangeSetName=ANY,
                 )
             ]
         )

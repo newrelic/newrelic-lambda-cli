@@ -60,6 +60,7 @@ def register(group):
 )
 @click.option(
     "--role-name",
+    default=None,
     help="The name of a pre-created execution role for the log ingest function",
     metavar="<role_name>",
     show_default=False,
@@ -189,8 +190,10 @@ def uninstall(aws_profile, aws_region, aws_permissions_check, nr_account_id, for
 )
 @click.option(
     "--role-name",
+    default=None,
     help="The name of a new pre-created execution role for the log ingest function",
     metavar="<role_name>",
+    show_default=False,
 )
 def update(
     aws_profile,

@@ -1,4 +1,5 @@
 import os
+import time
 
 import botocore
 import click
@@ -127,8 +128,10 @@ def create_parameters(
     capabilities = ["CAPABILITY_IAM"]
     if role_name is not None:
         parameters.append({"ParameterKey": "FunctionRole", "ParameterValue": role_name})
+        capabilities = []
     elif mode != "CREATE":
         parameters.append({"ParameterKey": "FunctionRole", "UsePreviousValue": True})
+        capabilities = []
 
     return parameters, capabilities
 
@@ -147,7 +150,7 @@ def import_log_ingestion_function(
         os.path.dirname(os.path.abspath(__file__)), "templates", "import-template.yaml"
     )
     with open(template_path) as template:
-        change_set_name = "%s-IMPORT" % INGEST_STACK_NAME
+        change_set_name = "%s-IMPORT-%d" % (INGEST_STACK_NAME, int(time.time()))
         click.echo("Creating change set: %s" % change_set_name)
 
         change_set = cf_client.create_change_set(
@@ -182,7 +185,7 @@ def create_log_ingestion_function(
 
     template_url = get_sar_template_url(session)
 
-    change_set_name = "%s-%s" % (INGEST_STACK_NAME, mode)
+    change_set_name = "%s-%s-%d" % (INGEST_STACK_NAME, mode, int(time.time()))
     click.echo("Creating change set: %s" % change_set_name)
 
     change_set = cf_client.create_change_set(
