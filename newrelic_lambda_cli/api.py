@@ -318,7 +318,7 @@ def retrieve_license_key(gql):
     try:
         return gql.get_license_key()
     except Exception:
-        raise click.BadParameterError(
+        raise click.BadParameter(
             "Could not retrieve license key from New Relic. Check that your New Relic "
             "Account ID is valid and try again.",
             param="nr_account_id",
