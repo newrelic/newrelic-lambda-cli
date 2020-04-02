@@ -57,21 +57,18 @@ def test_create_log_ingestion_function_defaults(success_mock):
                     TemplateURL=ANY,
                     Parameters=[
                         {"ParameterKey": "MemorySize", "ParameterValue": str(128)},
-                        {"ParameterKey": "NRLicenseKey", "ParameterValue": "test_key",},
-                        {
-                            "ParameterKey": "NRLoggingEnabled",
-                            "ParameterValue": "False",
-                        },
+                        {"ParameterKey": "NRLicenseKey", "ParameterValue": "test_key"},
+                        {"ParameterKey": "NRLoggingEnabled", "ParameterValue": "False"},
                         {"ParameterKey": "Timeout", "ParameterValue": str(30)},
                     ],
                     Capabilities=["CAPABILITY_IAM"],
                     ChangeSetType="CREATE",
-                    ChangeSetName="NewRelicLogIngestion-CREATE",
-                ),
+                    ChangeSetName=ANY,
+                )
             ]
         )
         cf_client.assert_has_calls(
-            [call.execute_change_set(ChangeSetName="arn:something"),]
+            [call.execute_change_set(ChangeSetName="arn:something")]
         )
         success_mock.assert_called_once()
 
@@ -101,8 +98,8 @@ def test_create_log_ingestion_function_opts(success_mock):
                     TemplateURL=ANY,
                     Parameters=[
                         {"ParameterKey": "MemorySize", "ParameterValue": str(256)},
-                        {"ParameterKey": "NRLicenseKey", "ParameterValue": "test_key",},
-                        {"ParameterKey": "NRLoggingEnabled", "ParameterValue": "True",},
+                        {"ParameterKey": "NRLicenseKey", "ParameterValue": "test_key"},
+                        {"ParameterKey": "NRLoggingEnabled", "ParameterValue": "True"},
                         {"ParameterKey": "Timeout", "ParameterValue": str(60)},
                         {
                             "ParameterKey": "FunctionRole",
@@ -111,12 +108,12 @@ def test_create_log_ingestion_function_opts(success_mock):
                     ],
                     Capabilities=[],
                     ChangeSetType="CREATE",
-                    ChangeSetName="NewRelicLogIngestion-CREATE",
-                ),
+                    ChangeSetName=ANY,
+                )
             ]
         )
         cf_client.assert_has_calls(
-            [call.execute_change_set(ChangeSetName="arn:something"),]
+            [call.execute_change_set(ChangeSetName="arn:something")]
         )
         success_mock.assert_called_once()
 

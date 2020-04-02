@@ -1,4 +1,5 @@
 import os
+import time
 
 import botocore
 import click
@@ -89,7 +90,7 @@ def get_sar_template_url(session):
 
 
 def create_parameters(
-    nr_license_key, enable_logs, memory_size, timeout, role_name, mode="CREATE",
+    nr_license_key, enable_logs, memory_size, timeout, role_name, mode="CREATE"
 ):
     update_mode = mode == "UPDATE"
     parameters = []
@@ -136,21 +137,21 @@ def create_parameters(
 
 
 def import_log_ingestion_function(
-    session, nr_license_key, enable_logs, memory_size, timeout, role_name,
+    session, nr_license_key, enable_logs, memory_size, timeout, role_name
 ):
     parameters, capabilities = create_parameters(
         nr_license_key, enable_logs, memory_size, timeout, role_name, "IMPORT"
     )
     cf_client = session.client("cloudformation")
 
-    click.echo(f"Fetching new CloudFormation template url")
+    click.echo("Fetching new CloudFormation template url")
 
     template_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "templates", "import-template.yaml",
+        os.path.dirname(os.path.abspath(__file__)), "templates", "import-template.yaml"
     )
     with open(template_path) as template:
-        change_set_name = f"{INGEST_STACK_NAME}-IMPORT"
-        click.echo(f"Creating change set {change_set_name}")
+        change_set_name = "%s-IMPORT-%d" % (INGEST_STACK_NAME, int(time.time()))
+        click.echo("Creating change set: %s" % change_set_name)
 
         change_set = cf_client.create_change_set(
             StackName=INGEST_STACK_NAME,
@@ -164,7 +165,7 @@ def import_log_ingestion_function(
                     "ResourceType": "AWS::Lambda::Function",
                     "LogicalResourceId": "NewRelicLogIngestionFunctionNoCap",
                     "ResourceIdentifier": {"FunctionName": "newrelic-log-ingestion"},
-                },
+                }
             ],
         )
 
@@ -172,13 +173,7 @@ def import_log_ingestion_function(
 
 
 def create_log_ingestion_function(
-    session,
-    nr_license_key,
-    enable_logs,
-    memory_size,
-    timeout,
-    role_name,
-    mode="CREATE",
+    session, nr_license_key, enable_logs, memory_size, timeout, role_name, mode="CREATE"
 ):
     parameters, capabilities = create_parameters(
         nr_license_key, enable_logs, memory_size, timeout, role_name, mode
@@ -186,12 +181,12 @@ def create_log_ingestion_function(
 
     cf_client = session.client("cloudformation")
 
-    click.echo(f"Fetching new CloudFormation template url")
+    click.echo("Fetching new CloudFormation template url")
 
     template_url = get_sar_template_url(session)
 
-    change_set_name = f"{INGEST_STACK_NAME}-{mode}"
-    click.echo(f"Creating change set {change_set_name}")
+    change_set_name = "%s-%s-%d" % (INGEST_STACK_NAME, mode, int(time.time()))
+    click.echo("Creating change set: %s" % change_set_name)
 
     change_set = cf_client.create_change_set(
         StackName=INGEST_STACK_NAME,
@@ -207,25 +202,39 @@ def create_log_ingestion_function(
 
 def exec_change_set(cf_client, change_set, mode):
     click.echo(
-        "Waiting for change set creation to complete, this may take a minute... "
+        "Waiting for change set creation to complete, this may take a minute... ",
+        nl=False,
     )
-    cf_client.get_waiter("change_set_create_complete").wait(
-        ChangeSetName=change_set["Id"], WaiterConfig={"Delay": 10},
-    )
+    try:
+        cf_client.get_waiter("change_set_create_complete").wait(
+            ChangeSetName=change_set["Id"], WaiterConfig={"Delay": 10}
+        )
+    except botocore.exceptions.WaiterError as e:
+        response = e.last_response
+        status = response["Status"]
+        reason = response["StatusReason"]
+        if (
+            status == "FAILED"
+            and "The submitted information didn't contain changes." in reason
+            or "No updates are to be performed" in reason
+        ):
+            success("No Changes Detected")
+            return
+        raise e
     cf_client.execute_change_set(ChangeSetName=change_set["Id"])
     click.echo(
         "Waiting for change set to finish execution. This may take a minute... ",
         nl=False,
     )
-    exec_waiter_type = f"stack_{mode.lower()}_complete"
+    exec_waiter_type = "stack_%s_complete" % mode.lower()
     cf_client.get_waiter(exec_waiter_type).wait(
-        StackName=INGEST_STACK_NAME, WaiterConfig={"Delay": 15},
+        StackName=INGEST_STACK_NAME, WaiterConfig={"Delay": 15}
     )
     success("Done")
 
 
 def update_log_ingestion_function(
-    session, nr_license_key, enable_logs, memory_size, timeout, role_name=None,
+    session, nr_license_key, enable_logs, memory_size, timeout, role_name=None
 ):
     # Detect an old-style nested install and unwrap it
     client = session.client("cloudformation")
