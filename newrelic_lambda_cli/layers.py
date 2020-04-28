@@ -9,7 +9,7 @@ from newrelic_lambda_cli.functions import get_function
 
 def index(region, runtime):
     req = requests.get(
-        "https://%s.nr-layers.iopipe.com/get-layers?CompatibleRuntime=%s"
+        "https://%s.layers.newrelic-external.com/get-layers?CompatibleRuntime=%s"
         % (region, runtime)
     )
     layers_response = req.json()
