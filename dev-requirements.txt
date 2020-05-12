@@ -1,6 +1,7 @@
 boto3
 Click
 colorama
+emoji==0.5.4
 gql
 moto
 pytest
