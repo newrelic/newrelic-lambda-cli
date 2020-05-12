@@ -1,10 +1,9 @@
-from __future__ import print_function
-
-import sys
+# -*- coding: utf-8 -*-
 
 import boto3
 import botocore
 import click
+from click.exceptions import Exit
 
 
 NEW_RELIC_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:451483290750"
@@ -70,8 +69,8 @@ def is_valid_handler(runtime, handler):
 
 
 def error(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-    sys.exit(1)
+    click.echo(*args, err=True, **kwargs)
+    raise Exit(1)
 
 
 def validate_aws_profile(ctx, param, value):

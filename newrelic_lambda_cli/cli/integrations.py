@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import boto3
 import click
 

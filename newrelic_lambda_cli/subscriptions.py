@@ -1,5 +1,8 @@
+# -*- coding: utf-8 -*-
+
 import botocore
 import click
+import emoji
 
 from newrelic_lambda_cli.cliutils import failure
 from newrelic_lambda_cli.functions import get_function
@@ -94,14 +97,18 @@ def create_log_subscription(
     ]
     if len(subscription_filters) > len(newrelic_filters):
         click.echo(
+            emoji.emojize(":heavy_exclamation_mark: ", use_aliases=True),
+            color="blue",
+            nl=False,
+        )
+        click.echo(
             "WARNING: Found a log subscription filter that was not installed by New "
             "Relic. This may prevent the New Relic log subscription filter from being "
             "installed. If you know you don't need this log subscription filter, you "
             "should first remove it and rerun this command. If your organization "
             "requires this log subscription filter, please contact New Relic at "
             "serverless@newrelic.com for assistance with getting the AWS log "
-            "subscription filter limit increased.",
-            color="blue",
+            "subscription filter limit increased."
         )
     if not newrelic_filters:
         click.echo("Adding New Relic log subscription to '%s'" % function_name)
