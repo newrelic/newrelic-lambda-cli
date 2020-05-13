@@ -1,10 +1,8 @@
 from moto import mock_lambda
-import pytest
 
 from newrelic_lambda_cli.cli import cli, register_groups
 
 
-@pytest.mark.skip
 @mock_lambda
 def test_layers_install(aws_credentials, cli_runner):
     """
@@ -23,8 +21,15 @@ def test_layers_install(aws_credentials, cli_runner):
             "foobar",
             "--nr-account-id",
             "12345678",
+            "--aws-region",
+            "us-east-1",
         ],
-        env={"AWS_DEFAULT_REGION": "us-east-1"},
+        env={
+            "AWS_ACCESS_KEY_ID": "testing",
+            "AWS_SECRET_ACCESS_KEY": "testing",
+            "AWS_SECURITY_TOKEN": "testing",
+            "AWS_SESSION_TOKEN": "testing",
+        },
     )
 
     assert result.exit_code == 1
@@ -44,18 +49,22 @@ def test_layers_install(aws_credentials, cli_runner):
             "barbaz",
             "--nr-account-id",
             "12345678",
+            "--aws-region",
+            "us-east-1",
         ],
-        env={"AWS_DEFAULT_REGION": "us-east-1"},
+        env={
+            "AWS_ACCESS_KEY_ID": "testing",
+            "AWS_SECRET_ACCESS_KEY": "testing",
+            "AWS_SECURITY_TOKEN": "testing",
+            "AWS_SESSION_TOKEN": "testing",
+        },
     )
 
     assert result2.exit_code == 1
     assert result2.stdout == ""
     assert "Could not find function: foobar" in result2.stderr
-    assert "Could not find function: barbaz" in result2.stderr
-    assert "Install Incomplete. See messages above for details." in result2.stderr
 
 
-@pytest.mark.skip
 @mock_lambda
 def test_layers_uninstall(aws_credentials, cli_runner):
     """
@@ -66,8 +75,21 @@ def test_layers_uninstall(aws_credentials, cli_runner):
 
     result = cli_runner.invoke(
         cli,
-        ["layers", "uninstall", "--no-aws-permissions-check", "--function", "foobar"],
-        env={"AWS_DEFAULT_REGION": "us-east-1"},
+        [
+            "layers",
+            "uninstall",
+            "--no-aws-permissions-check",
+            "--function",
+            "foobar",
+            "--aws-region",
+            "us-east-1",
+        ],
+        env={
+            "AWS_ACCESS_KEY_ID": "testing",
+            "AWS_SECRET_ACCESS_KEY": "testing",
+            "AWS_SECURITY_TOKEN": "testing",
+            "AWS_SESSION_TOKEN": "testing",
+        },
     )
 
     assert result.exit_code == 1
@@ -85,12 +107,17 @@ def test_layers_uninstall(aws_credentials, cli_runner):
             "foobar",
             "--function",
             "barbaz",
+            "--aws-region",
+            "us-east-1",
         ],
-        env={"AWS_DEFAULT_REGION": "us-east-1"},
+        env={
+            "AWS_ACCESS_KEY_ID": "testing",
+            "AWS_SECRET_ACCESS_KEY": "testing",
+            "AWS_SECURITY_TOKEN": "testing",
+            "AWS_SESSION_TOKEN": "testing",
+        },
     )
 
     assert result2.exit_code == 1
     assert result2.stdout == ""
     assert "Could not find function: foobar" in result2.stderr
-    assert "Could not find function: barbaz" in result2.stderr
-    assert "Uninstall Incomplete. See messages above for details." in result2.stderr
