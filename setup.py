@@ -6,7 +6,7 @@ README = open(os.path.join(os.path.dirname(__file__), "README.md"), "r").read()
 
 setup(
     name="newrelic-lambda-cli",
-    version="0.2.2",
+    version="0.2.3",
     python_requires=">=3.3",
     description="A CLI to install the New Relic AWS Lambda integration and layers.",
     long_description=README,
@@ -15,7 +15,15 @@ setup(
     author_email="serverless-dev@newrelic.com",
     url="https://github.com/newrelic/newrelic-lambda-cli",
     packages=find_packages(exclude=("tests", "tests.*")),
-    install_requires=["boto3", "click", "colorama", "gql", "requests", "tabulate"],
+    install_requires=[
+        "boto3",
+        "click",
+        "colorama",
+        "emoji",
+        "gql",
+        "requests",
+        "tabulate",
+    ],
     setup_requires=["pytest-runner"],
     tests_require=["moto", "pytest", "requests"],
     entry_points={

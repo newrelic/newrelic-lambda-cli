@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+
+from concurrent.futures import as_completed, ThreadPoolExecutor
 import json
 
 import boto3
@@ -82,14 +85,22 @@ def install(
     functions = get_aliased_functions(session, functions, excludes)
 
     install_success = True
+    futures = []
 
-    for function in functions:
-        res = layers.install(session, function, layer_arn, nr_account_id, upgrade)
-        install_success = res and install_success
-        if res:
-            success("Successfully installed layer on %s" % function)
-            if ctx.obj["VERBOSE"]:
-                click.echo(json.dumps(res, indent=2))
+    with ThreadPoolExecutor() as executor:
+        for function in functions:
+            futures.append(
+                executor.submit(
+                    layers.install, session, function, layer_arn, nr_account_id, upgrade
+                )
+            )
+        for future in as_completed(futures):
+            res = future.result()
+            install_success = res and install_success
+            if res:
+                success("Successfully installed layer on %s" % function)
+                if ctx.obj["VERBOSE"]:
+                    click.echo(json.dumps(res, indent=2))
 
     if install_success:
         done("Install Complete")
@@ -127,14 +138,18 @@ def uninstall(ctx, aws_profile, aws_region, aws_permissions_check, functions, ex
     functions = get_aliased_functions(session, functions, excludes)
 
     uninstall_success = True
+    futures = []
 
-    for function in functions:
-        res = layers.uninstall(session, function)
-        uninstall_success = res and uninstall_success
-        if res:
-            success("Successfully uninstalled layer on %s" % function)
-            if ctx.obj["VERBOSE"]:
-                click.echo(json.dumps(res, indent=2))
+    with ThreadPoolExecutor() as executor:
+        for function in functions:
+            futures.append(executor.submit(layers.uninstall, session, function))
+        for future in as_completed(futures):
+            res = future.result()
+            uninstall_success = res and uninstall_success
+            if res:
+                success("Successfully uninstalled layer on %s" % function)
+                if ctx.obj["VERBOSE"]:
+                    click.echo(json.dumps(res, indent=2))
 
     if uninstall_success:
         done("Uninstall Complete")

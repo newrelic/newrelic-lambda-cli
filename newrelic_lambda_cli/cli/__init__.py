@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import click
 
 from newrelic_lambda_cli import utils

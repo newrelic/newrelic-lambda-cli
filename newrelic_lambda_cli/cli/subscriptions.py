@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+
+from concurrent.futures import as_completed, ThreadPoolExecutor
+
 import boto3
 import click
 
@@ -57,14 +61,23 @@ def install(
     functions = get_aliased_functions(session, functions, excludes)
 
     install_success = True
+    futures = []
 
-    for function in functions:
-        result = subscriptions.create_log_subscription(
-            session, function, filter_pattern
-        )
-        install_success = result and install_success
-        if result:
-            success("Successfully installed log subscription on %s" % function)
+    with ThreadPoolExecutor() as executor:
+        for function in functions:
+            futures.append(
+                executor.submit(
+                    subscriptions.create_log_subscription,
+                    session,
+                    function,
+                    filter_pattern,
+                )
+            )
+        for future in as_completed(futures):
+            result = future.result()
+            install_success = result and install_success
+            if result:
+                success("Successfully installed log subscription on %s" % function)
 
     if install_success:
         done("Install Complete")
@@ -101,12 +114,20 @@ def uninstall(aws_profile, aws_region, aws_permissions_check, functions, exclude
     functions = get_aliased_functions(session, functions, excludes)
 
     uninstall_success = True
+    futures = []
 
-    for function in functions:
-        result = subscriptions.remove_log_subscription(session, function)
-        uninstall_success = result and uninstall_success
-        if result:
-            success("Successfully uninstalled log subscription on %s" % function)
+    with ThreadPoolExecutor() as executor:
+        for function in functions:
+            futures.append(
+                executor.submit(
+                    subscriptions.remove_log_subscription, session, function
+                )
+            )
+        for future in as_completed(futures):
+            result = future.result()
+            uninstall_success = result and uninstall_success
+            if result:
+                success("Successfully uninstalled log subscription on %s" % function)
 
     if uninstall_success:
         done("Uninstall Complete")
