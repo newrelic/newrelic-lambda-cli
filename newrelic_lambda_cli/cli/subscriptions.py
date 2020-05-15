@@ -6,7 +6,7 @@ import boto3
 import click
 
 from newrelic_lambda_cli import permissions, subscriptions
-from newrelic_lambda_cli.cliutils import done, failure, success
+from newrelic_lambda_cli.cliutils import done, failure
 from newrelic_lambda_cli.cli.decorators import add_options, AWS_OPTIONS
 from newrelic_lambda_cli.functions import get_aliased_functions
 
@@ -60,24 +60,14 @@ def install(
 
     functions = get_aliased_functions(session, functions, excludes)
 
-    install_success = True
-    futures = []
-
     with ThreadPoolExecutor() as executor:
-        for function in functions:
-            futures.append(
-                executor.submit(
-                    subscriptions.create_log_subscription,
-                    session,
-                    function,
-                    filter_pattern,
-                )
+        futures = [
+            executor.submit(
+                subscriptions.create_log_subscription, session, function, filter_pattern
             )
-        for future in as_completed(futures):
-            result = future.result()
-            install_success = result and install_success
-            if result:
-                success("Successfully installed log subscription on %s" % function)
+            for function in functions
+        ]
+        install_success = all(future.result() for future in as_completed(futures))
 
     if install_success:
         done("Install Complete")
@@ -113,21 +103,12 @@ def uninstall(aws_profile, aws_region, aws_permissions_check, functions, exclude
 
     functions = get_aliased_functions(session, functions, excludes)
 
-    uninstall_success = True
-    futures = []
-
     with ThreadPoolExecutor() as executor:
-        for function in functions:
-            futures.append(
-                executor.submit(
-                    subscriptions.remove_log_subscription, session, function
-                )
-            )
-        for future in as_completed(futures):
-            result = future.result()
-            uninstall_success = result and uninstall_success
-            if result:
-                success("Successfully uninstalled log subscription on %s" % function)
+        futures = [
+            executor.submit(subscriptions.remove_log_subscription, session, function)
+            for function in functions
+        ]
+        uninstall_success = all(future.result() for future in as_completed(futures))
 
     if uninstall_success:
         done("Uninstall Complete")

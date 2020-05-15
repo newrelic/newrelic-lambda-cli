@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 
 from concurrent.futures import as_completed, ThreadPoolExecutor
-import json
 
 import boto3
 import click
 
 from newrelic_lambda_cli import layers, permissions
-from newrelic_lambda_cli.cliutils import done, failure, success
+from newrelic_lambda_cli.cliutils import done, failure
 from newrelic_lambda_cli.cli.decorators import add_options, AWS_OPTIONS
 from newrelic_lambda_cli.functions import get_aliased_functions
 
@@ -84,23 +83,20 @@ def install(
 
     functions = get_aliased_functions(session, functions, excludes)
 
-    install_success = True
-    futures = []
-
     with ThreadPoolExecutor() as executor:
-        for function in functions:
-            futures.append(
-                executor.submit(
-                    layers.install, session, function, layer_arn, nr_account_id, upgrade
-                )
+        futures = [
+            executor.submit(
+                layers.install,
+                session,
+                function,
+                layer_arn,
+                nr_account_id,
+                upgrade,
+                ctx.obj["VERBOSE"],
             )
-        for future in as_completed(futures):
-            res = future.result()
-            install_success = res and install_success
-            if res:
-                success("Successfully installed layer on %s" % function)
-                if ctx.obj["VERBOSE"]:
-                    click.echo(json.dumps(res, indent=2))
+            for function in functions
+        ]
+        install_success = all(future.result() for future in as_completed(futures))
 
     if install_success:
         done("Install Complete")
@@ -137,19 +133,12 @@ def uninstall(ctx, aws_profile, aws_region, aws_permissions_check, functions, ex
 
     functions = get_aliased_functions(session, functions, excludes)
 
-    uninstall_success = True
-    futures = []
-
     with ThreadPoolExecutor() as executor:
-        for function in functions:
-            futures.append(executor.submit(layers.uninstall, session, function))
-        for future in as_completed(futures):
-            res = future.result()
-            uninstall_success = res and uninstall_success
-            if res:
-                success("Successfully uninstalled layer on %s" % function)
-                if ctx.obj["VERBOSE"]:
-                    click.echo(json.dumps(res, indent=2))
+        futures = [
+            executor.submit(layers.uninstall, session, function, ctx.obj["VERBOSE"])
+            for function in functions
+        ]
+        uninstall_success = all(future.result() for future in as_completed(futures))
 
     if uninstall_success:
         done("Uninstall Complete")
