@@ -203,7 +203,7 @@ newrelic-lambda subscriptions install --function <name or arn>
 |--------|-----------|-------------|
 | `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to add a log subscription. Can provide multiple `--function` arguments. Will also accept `all`, `installed` and `not-installed` similar to `newrelic-lambda functions list`. |
 | `--exclude` or `-e` | No | A function name to exclude while installing subscriptions. Can provide multiple `--exclude` arguments. Only checked when `all`, `installed` and `not-installed` are used. See `newrelic-lambda functions list` for function names. |
-| `--filter-pattern` | No | Specify a custom log subscription filter pattern. To collect all logs use `--filter_pattern ""`. |
+| `--filter-pattern` | No | Specify a custom log subscription filter pattern. To collect all logs use `--filter-pattern ""`. | 
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 
