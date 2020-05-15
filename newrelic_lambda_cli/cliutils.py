@@ -8,20 +8,16 @@ from click.exceptions import Exit
 
 def done(message):
     """Prints a done message to the terminal"""
-    click.echo(emoji.emojize(":sparkles: ", use_aliases=True), color="yellow", nl=False)
-    click.echo(message, nl=False)
-    click.echo(emoji.emojize(" :sparkles:", use_aliases=True), color="yellow")
+    click.echo(emoji.emojize(":sparkles: %s :sparkles:" % message, use_aliases=True))
 
 
 def failure(message, exit=False):
     """Prints a failure message to the terminal"""
     click.echo(
-        emoji.emojize(":heavy_multiplication_x: ", use_aliases=True),
+        emoji.emojize(":heavy_multiplication_x: %s" % message, use_aliases=True),
         color="red",
         err=True,
-        nl=False,
     )
-    click.echo(message, err=True)
     if exit:
         raise Exit(1)
 
@@ -29,6 +25,14 @@ def failure(message, exit=False):
 def success(message):
     """Prints a success message to the terminal"""
     click.echo(
-        emoji.emojize(":heavy_check_mark: ", use_aliases=True), color="green", nl=False
+        emoji.emojize(":heavy_check_mark: %s" % message, use_aliases=True),
+        color="green",
     )
-    click.echo(message)
+
+
+def warning(message):
+    """Prints a warningmessage to the terminal"""
+    click.echo(
+        emoji.emojize(":heavy_exclamation_mark: %s" % message, use_aliases=True),
+        color="blue",
+    )

@@ -2,6 +2,7 @@
 
 import botocore
 import click
+import json
 import requests
 
 from newrelic_lambda_cli import utils
@@ -25,7 +26,7 @@ def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
             "Unsupported Lambda runtime for '%s': %s"
             % (config["Configuration"]["FunctionArn"], runtime)
         )
-        return
+        return False
 
     handler = config["Configuration"]["Handler"]
     runtime_handler = utils.RUNTIME_CONFIG.get(runtime, {}).get("Handler")
@@ -35,7 +36,7 @@ def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
             "upgrade or reinstall to latest layer version."
             % config["Configuration"]["FunctionArn"]
         )
-        return
+        return False
 
     existing_layers = [
         layer["Arn"]
@@ -55,7 +56,7 @@ def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
                 "No Lambda layers published for '%s' runtime: %s"
                 % (config["Configuration"]["FunctionArn"], runtime)
             )
-            return
+            return False
 
         # TODO: MAke this a layer selection screen
         if len(available_layers) > 1:
@@ -98,26 +99,32 @@ def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
     return update_kwargs
 
 
-def install(session, function_arn, layer_arn, account_id, allow_upgrade):
+def install(session, function_arn, layer_arn, account_id, allow_upgrade, verbose):
     client = session.client("lambda")
     config = get_function(session, function_arn)
     if not config:
         failure("Could not find function: %s" % function_arn)
-        return
+        return False
+
     region = session.region_name
 
     update_kwargs = _add_new_relic(config, region, layer_arn, account_id, allow_upgrade)
     if not update_kwargs:
-        return
+        return False
 
     try:
-        return client.update_function_configuration(**update_kwargs)
+        res = client.update_function_configuration(**update_kwargs)
     except botocore.exceptions.ClientError as e:
         failure(
             "Failed to update configuration for '%s': %s"
             % (config["Configuration"]["FunctionArn"], e)
         )
-        return
+        return False
+    else:
+        if verbose:
+            click.echo(json.dumps(res, indent=2))
+        success("Successfully installed layer on %s" % function_arn)
+        return True
 
 
 def _remove_new_relic(config, region):
@@ -127,7 +134,7 @@ def _remove_new_relic(config, region):
             "Unsupported Lambda runtime for '%s': %s"
             % (config["Configuration"]["FunctionArn"], runtime)
         )
-        return
+        return False
 
     handler = config["Configuration"]["Handler"]
 
@@ -138,7 +145,7 @@ def _remove_new_relic(config, region):
             "function '%s'. Unrecognized handler in deployed function."
             % config["Configuration"]["FunctionArn"]
         )
-        return
+        return False
 
     env_handler = (
         config["Configuration"]
@@ -153,7 +160,7 @@ def _remove_new_relic(config, region):
             "function '%s'. Environment variable NEW_RELIC_LAMBDA_HANDLER not found."
             % config["Configuration"]["FunctionArn"]
         )
-        return
+        return False
 
     # Delete New Relic env vars
     config["Configuration"]["Environment"]["Variables"] = {
@@ -180,24 +187,30 @@ def _remove_new_relic(config, region):
     }
 
 
-def uninstall(session, function_arn):
+def uninstall(session, function_arn, verbose):
     client = session.client("lambda")
 
     config = get_function(session, function_arn)
     if not config:
         failure("Could not find function: %s" % function_arn)
-        return
+        return False
 
     region = session.region_name
 
     update_kwargs = _remove_new_relic(config, region)
     if not update_kwargs:
-        return
+        return False
 
     try:
-        return client.update_function_configuration(**update_kwargs)
+        res = client.update_function_configuration(**update_kwargs)
     except botocore.exceptions.ClientError as e:
         failure(
             "Failed to update configuration for '%s': %s"
             % (config["Configuration"]["FunctionArn"], e)
         )
+        return False
+    else:
+        if verbose:
+            click.echo(json.dumps(res, indent=2))
+        success("Successfully uninstalled layer on %s" % function_arn)
+        return True

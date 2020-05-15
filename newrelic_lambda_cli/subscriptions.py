@@ -2,9 +2,8 @@
 
 import botocore
 import click
-import emoji
 
-from newrelic_lambda_cli.cliutils import failure
+from newrelic_lambda_cli.cliutils import failure, success, warning
 from newrelic_lambda_cli.functions import get_function
 
 DEFAULT_FILTER_PATTERN = '?REPORT ?NR_LAMBDA_MONITORING ?"Task timed out" ?RequestId'
@@ -58,14 +57,14 @@ def create_subscription_filter(
         )
         return False
     else:
+        success("Successfully installed log subscription on %s" % function_name)
         return True
 
 
-def remove_subscription_filter(session, function_name):
+def remove_subscription_filter(session, function_name, filter_name):
     try:
         session.client("logs").delete_subscription_filter(
-            logGroupName=get_log_group_name(function_name),
-            filterName="NewRelicLogStreaming",
+            logGroupName=get_log_group_name(function_name), filterName=filter_name
         )
     except botocore.exceptions.ClientError as e:
         failure(
@@ -73,6 +72,7 @@ def remove_subscription_filter(session, function_name):
         )
         return False
     else:
+        success("Successfully uninstalled log subscription on %s" % function_name)
         return True
 
 
@@ -93,15 +93,10 @@ def create_log_subscription(
     newrelic_filters = [
         filter
         for filter in subscription_filters
-        if filter["filterName"] == "NewRelicLogStreaming"
+        if "NewRelicLogStreaming" in filter["filterName"]
     ]
     if len(subscription_filters) > len(newrelic_filters):
-        click.echo(
-            emoji.emojize(":heavy_exclamation_mark: ", use_aliases=True),
-            color="blue",
-            nl=False,
-        )
-        click.echo(
+        warning(
             "WARNING: Found a log subscription filter that was not installed by New "
             "Relic. This may prevent the New Relic log subscription filter from being "
             "installed. If you know you don't need this log subscription filter, you "
@@ -122,8 +117,10 @@ def create_log_subscription(
         newrelic_filter = newrelic_filters[0]
         if newrelic_filter["filterPattern"] != filter_pattern:
             return remove_subscription_filter(
-                session, function_name
-            ) and create_subscription_filter(session, function_name, destination_arn)
+                session, function_name, newrelic_filter["filterName"]
+            ) and create_subscription_filter(
+                session, function_name, destination_arn, filter_pattern
+            )
         return True
 
 
@@ -134,12 +131,15 @@ def remove_log_subscription(session, function_name):
     newrelic_filters = [
         filter
         for filter in subscription_filters
-        if filter["filterName"] == "NewRelicLogStreaming"
+        if "NewRelicLogStreaming" in filter["filterName"]
     ]
     if not newrelic_filters:
         click.echo(
             "No New Relic subscription filters found for '%s', skipping" % function_name
         )
-        return False
+        return True
+    newrelic_filter = newrelic_filters[0]
     click.echo("Removing New Relic log subscription from '%s'" % function_name)
-    return remove_subscription_filter(session, function_name)
+    return remove_subscription_filter(
+        session, function_name, newrelic_filter["filterName"]
+    )
