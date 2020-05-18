@@ -94,7 +94,7 @@ def ensure_integration_install_permissions(session):
 
     if needed_permissions:
         message = [
-            "The following AWS permissions are needed to install the New RElic AWS "
+            "The following AWS permissions are needed to install the New Relic AWS "
             "Lambda integration:\n"
         ]
         for needed_permission in needed_permissions:
@@ -121,7 +121,7 @@ def ensure_integration_uninstall_permissions(session):
 
     if needed_permissions:
         message = [
-            "The following AWS permissions are needed to uninstall the New RElic AWS "
+            "The following AWS permissions are needed to uninstall the New Relic AWS "
             "Lambda integration:\n"
         ]
         for needed_permission in needed_permissions:
@@ -143,7 +143,7 @@ def ensure_lambda_install_permissions(session):
 
     if needed_permissions:
         message = [
-            "The following AWS permissions are needed to install the New RElic AWS Lambda layer:\n"
+            "The following AWS permissions are needed to install the New Relic AWS Lambda layer:\n"
         ]
 
         for needed_permission in needed_permissions:
@@ -167,7 +167,7 @@ def ensure_lambda_uninstall_permissions(session):
 
     if needed_permissions:
         message = [
-            "The following AWS permissions are needed to uninstall the New RElic AWS "
+            "The following AWS permissions are needed to uninstall the New Relic AWS "
             "Lambda layer:\n"
         ]
         for needed_permission in needed_permissions:
@@ -210,7 +210,7 @@ def ensure_subscription_install_permissions(session):
     )
     if needed_permissions:
         message = [
-            "The following AWS permissions are needed to install the New RElic log "
+            "The following AWS permissions are needed to install the New Relic log "
             "subscription filter:\n"
         ]
         for needed_permission in needed_permissions:
@@ -232,7 +232,7 @@ def ensure_subscription_uninstall_permissions(session):
     )
     if needed_permissions:
         message = [
-            "The following AWS permissions are needed to uninstall the New RElic log "
+            "The following AWS permissions are needed to uninstall the New Relic log "
             "subscription filter:\n"
         ]
         for needed_permission in needed_permissions:
