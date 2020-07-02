@@ -67,6 +67,11 @@ def register(group):
     metavar="<role_name>",
     show_default=False,
 )
+@click.option(
+    "--permissions-boundary",
+    default=None,
+    help="IAM Role PermissionsBoundary"
+)
 def install(
     aws_profile,
     aws_region,
@@ -80,6 +85,7 @@ def install(
     nr_region,
     timeout,
     role_name,
+    permissions_boundary,
 ):
     """Install New Relic AWS Lambda Integration"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
@@ -97,7 +103,7 @@ def install(
     integrations.validate_linked_account(session, gql_client, linked_account_name)
 
     click.echo("Creating the AWS role for the New Relic AWS Lambda Integration")
-    role = integrations.create_integration_role(session, aws_role_policy, nr_account_id)
+    role = integrations.create_integration_role(session, aws_role_policy, nr_account_id, permissions_boundary)
 
     install_success = True
 

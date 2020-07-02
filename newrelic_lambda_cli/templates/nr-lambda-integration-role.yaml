@@ -12,7 +12,9 @@ Parameters:
     If a value is supplied a custom policy will be created with the provided name. This custom policy only includes the minimum 
     required permissions to allow NewRelic to monitor your Lambda functions. Take into account that this policy is not automatically 
     updated by AWS, and must be managed by you.'
-    
+  PermissionsBoundary:
+    Type: String
+    Description: IAM Role PermissionsBoundary (optional)
 
 Conditions: 
   UseCustomPolicy: !Not [!Equals [ !Ref PolicyName, '']]
@@ -26,6 +28,7 @@ Resources:
       ManagedPolicyArns: 
         - arn:aws:iam::aws:policy/ReadOnlyAccess
       RoleName: !Join ['_', ['NewRelicLambdaIntegrationRole', !Ref NewRelicAccountNumber]]
+      PermissionsBoundary: !Ref PermissionsBoundary
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -42,6 +45,7 @@ Resources:
     Condition: UseCustomPolicy
     Properties:
       RoleName: !Join ['_', ['NewRelicLambdaIntegrationRole', !Ref NewRelicAccountNumber]]
+      PermissionsBoundary: !Ref PermissionsBoundary
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:

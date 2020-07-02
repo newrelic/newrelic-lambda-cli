@@ -55,7 +55,7 @@ def get_cf_stack_status(session, stack_name):
 
 
 # TODO: Merge this with create_integration_role?
-def create_role(session, role_policy, nr_account_id):
+def create_role(session, role_policy, nr_account_id, permissions_boundary):
     client = session.client("cloudformation")
     role_policy_name = "" if role_policy is None else role_policy
     stack_name = "NewRelicLambdaIntegrationRole-%d" % nr_account_id
@@ -74,6 +74,7 @@ def create_role(session, role_policy, nr_account_id):
                     "ParameterValue": str(nr_account_id),
                 },
                 {"ParameterKey": "PolicyName", "ParameterValue": role_policy_name},
+                {"ParameterKey": "PermissionsBoundary", "ParameterValue": permissions_boundary}
             ],
             Capabilities=["CAPABILITY_NAMED_IAM"],
         )
@@ -343,7 +344,7 @@ def remove_log_ingestion_function(session):
     success("Done")
 
 
-def create_integration_role(session, role_policy, nr_account_id):
+def create_integration_role(session, role_policy, nr_account_id, permissions_boundary):
     """
     Creates a AWS CloudFormation stack that adds the New Relic AWSLambda Integration
     IAM role.
@@ -356,7 +357,7 @@ def create_integration_role(session, role_policy, nr_account_id):
         return role
     stack_status = get_cf_stack_status(session, stack_name)
     if stack_status is None:
-        create_role(session, role_policy, nr_account_id)
+        create_role(session, role_policy, nr_account_id, permissions_boundary)
         role = get_role(session, role_name)
         success(
             "Created role [%s] with policy [%s] in AWS account."
