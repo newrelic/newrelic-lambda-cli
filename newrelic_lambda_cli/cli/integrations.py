@@ -122,7 +122,7 @@ def install(
 
     click.echo("Creating newrelic-log-ingestion Lambda function in AWS account")
     res = integrations.install_log_ingestion(
-        session, nr_license_key, enable_logs, memory_size, timeout, role_name
+        session, nr_license_key, enable_logs, memory_size, timeout, role_name, permissions_boundary,
     )
     install_success = res and install_success
 

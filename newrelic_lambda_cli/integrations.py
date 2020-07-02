@@ -93,10 +93,12 @@ def get_sar_template_url(session):
 
 
 def create_parameters(
-    nr_license_key, enable_logs, memory_size, timeout, role_name, mode="CREATE"
+    nr_license_key, enable_logs, memory_size, timeout, role_name, permissions_boundary, mode="CREATE"
 ):
     update_mode = mode == "UPDATE"
-    parameters = []
+    parameters = [
+        {"ParameterKey": "PermissionsBoundary", "ParameterValue": permissions_boundary}
+    ]
     if memory_size is not None:
         parameters.append(
             {"ParameterKey": "MemorySize", "ParameterValue": str(memory_size)}
@@ -128,7 +130,7 @@ def create_parameters(
     elif update_mode:
         parameters.append({"ParameterKey": "Timeout", "UsePreviousValue": True})
 
-    capabilities = ["CAPABILITY_IAM"]
+    capabilities = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]
     if role_name is not None:
         parameters.append({"ParameterKey": "FunctionRole", "ParameterValue": role_name})
         capabilities = []
@@ -140,10 +142,10 @@ def create_parameters(
 
 
 def import_log_ingestion_function(
-    session, nr_license_key, enable_logs, memory_size, timeout, role_name
+    session, nr_license_key, enable_logs, memory_size, timeout, role_name, permissions_boundary
 ):
     parameters, capabilities = create_parameters(
-        nr_license_key, enable_logs, memory_size, timeout, role_name, "IMPORT"
+        nr_license_key, enable_logs, memory_size, timeout, role_name, permissions_boundary, "IMPORT"
     )
     cf_client = session.client("cloudformation")
 
@@ -176,31 +178,33 @@ def import_log_ingestion_function(
 
 
 def create_log_ingestion_function(
-    session, nr_license_key, enable_logs, memory_size, timeout, role_name, mode="CREATE"
+    session, nr_license_key, enable_logs, memory_size, timeout, role_name, permissions_boundary, mode="CREATE"
 ):
     parameters, capabilities = create_parameters(
-        nr_license_key, enable_logs, memory_size, timeout, role_name, mode
+        nr_license_key, enable_logs, memory_size, timeout, role_name, permissions_boundary, mode
     )
 
     cf_client = session.client("cloudformation")
 
     click.echo("Fetching new CloudFormation template url")
 
-    template_url = get_sar_template_url(session)
-
-    change_set_name = "%s-%s-%d" % (INGEST_STACK_NAME, mode, int(time.time()))
-    click.echo("Creating change set: %s" % change_set_name)
-
-    change_set = cf_client.create_change_set(
-        StackName=INGEST_STACK_NAME,
-        TemplateURL=template_url,
-        Parameters=parameters,
-        Capabilities=capabilities,
-        ChangeSetType=mode,
-        ChangeSetName=change_set_name,
+    template_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "templates", "import-template.yaml"
     )
+    with open(template_path) as template:
+        change_set_name = "%s-%s-%d" % (INGEST_STACK_NAME, mode, int(time.time()))
+        click.echo("Creating change set: %s" % change_set_name)
 
-    exec_change_set(cf_client, change_set, mode)
+        change_set = cf_client.create_change_set(
+            StackName=INGEST_STACK_NAME,
+            TemplateBody=template.read(),
+            Parameters=parameters,
+            Capabilities=capabilities,
+            ChangeSetType=mode,
+            ChangeSetName=change_set_name,
+        )
+
+        exec_change_set(cf_client, change_set, mode)
 
 
 def exec_change_set(cf_client, change_set, mode):
@@ -237,7 +241,7 @@ def exec_change_set(cf_client, change_set, mode):
 
 
 def update_log_ingestion_function(
-    session, nr_license_key, enable_logs, memory_size, timeout, role_name=None
+    session, nr_license_key, enable_logs, memory_size, timeout, role_name, permissions_boundary
 ):
     # Detect an old-style nested install and unwrap it
     client = session.client("cloudformation")
@@ -310,7 +314,8 @@ def update_log_ingestion_function(
             old_enable_logs,
             old_memory_size,
             old_timeout,
-            role_name=old_role_name,
+            old_role_name,
+            permissions_boundary,
         )
         # Now that we've unnested, do the actual update
 
@@ -322,6 +327,7 @@ def update_log_ingestion_function(
         memory_size,
         timeout,
         role_name,
+        permissions_boundary,
         mode="UPDATE",
     )
 
@@ -410,10 +416,11 @@ def validate_linked_account(session, gql, linked_account_name):
 def install_log_ingestion(
     session,
     nr_license_key,
-    enable_logs=False,
-    memory_size=128,
-    timeout=30,
-    role_name=None,
+    enable_logs,
+    memory_size,
+    timeout,
+    role_name,
+    permissions_boundary,
 ):
     """
     Installs the New Relic AWS Lambda log ingestion function and role.
@@ -436,10 +443,12 @@ def install_log_ingestion(
                     memory_size,
                     timeout,
                     role_name,
+                    permissions_boundary,
                 )
             except Exception as e:
                 failure("Failed to create 'newrelic-log-ingestion' function: %s" % e)
-                return False
+                raise
+                # return False
         else:
             failure(
                 "CloudFormation Stack NewRelicLogIngestion exists (status: %s), but "

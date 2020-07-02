@@ -34,6 +34,9 @@ Parameters:
       IAM Role name that this function will assume. Should provide the AWSLambdaBasicExecutionRole policy. If not
       specified, an appropriate Role will be created, which will require CAPABILITY_IAM to be acknowledged.
     Default: ''
+  PermissionsBoundary:
+    Type: String
+    Description: IAM Role PermissionsBoundary (optional)
 
 Conditions:
   NoRole: !Equals ['', !Ref FunctionRole]
@@ -88,6 +91,7 @@ Resources:
       MemorySize:
         Ref: MemorySize
       Runtime: python3.7
+      PermissionsBoundary: !Ref PermissionsBoundary
       Timeout:
         Ref: Timeout
       Environment:
