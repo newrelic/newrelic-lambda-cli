@@ -99,3 +99,20 @@ Resources:
           LICENSE_KEY: !Ref NRLicenseKey
           LOGGING_ENABLED: !Ref NRLoggingEnabled
           INFRA_ENABLED: !Ref NRInfraLogging
+  LambdaInvokePermissionNoCap:
+    Type: AWS::Lambda::Permission
+    Condition: NoCap
+    Properties:
+      FunctionName: !GetAtt NewRelicLogIngestionFunctionNoCap.Arn 
+      Action: lambda:InvokeFunction
+      Principal: !Sub logs.${AWS::Region}.amazonaws.com
+      SourceArn: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*
+
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Condition: NoRole
+    Properties:
+      FunctionName: !GetAtt NewRelicLogIngestionFunction.Arn 
+      Action: lambda:InvokeFunction
+      Principal: !Sub logs.${AWS::Region}.amazonaws.com
+      SourceArn: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*
