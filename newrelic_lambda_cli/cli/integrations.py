@@ -68,9 +68,7 @@ def register(group):
     show_default=False,
 )
 @click.option(
-    "--permissions-boundary",
-    default=None,
-    help="IAM Role PermissionsBoundary"
+    "--permissions-boundary", default=None, help="IAM Role PermissionsBoundary"
 )
 def install(
     aws_profile,
@@ -103,7 +101,9 @@ def install(
     integrations.validate_linked_account(session, gql_client, linked_account_name)
 
     click.echo("Creating the AWS role for the New Relic AWS Lambda Integration")
-    role = integrations.create_integration_role(session, aws_role_policy, nr_account_id, permissions_boundary)
+    role = integrations.create_integration_role(
+        session, aws_role_policy, nr_account_id, permissions_boundary
+    )
 
     install_success = True
 
@@ -122,7 +122,13 @@ def install(
 
     click.echo("Creating newrelic-log-ingestion Lambda function in AWS account")
     res = integrations.install_log_ingestion(
-        session, nr_license_key, enable_logs, memory_size, timeout, role_name, permissions_boundary,
+        session,
+        nr_license_key,
+        enable_logs,
+        memory_size,
+        timeout,
+        role_name,
+        permissions_boundary,
     )
     install_success = res and install_success
 

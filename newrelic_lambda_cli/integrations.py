@@ -74,7 +74,10 @@ def create_role(session, role_policy, nr_account_id, permissions_boundary):
                     "ParameterValue": str(nr_account_id),
                 },
                 {"ParameterKey": "PolicyName", "ParameterValue": role_policy_name},
-                {"ParameterKey": "PermissionsBoundary", "ParameterValue": permissions_boundary}
+                {
+                    "ParameterKey": "PermissionsBoundary",
+                    "ParameterValue": permissions_boundary,
+                },
             ],
             Capabilities=["CAPABILITY_NAMED_IAM"],
         )
@@ -93,7 +96,13 @@ def get_sar_template_url(session):
 
 
 def create_parameters(
-    nr_license_key, enable_logs, memory_size, timeout, role_name, permissions_boundary, mode="CREATE"
+    nr_license_key,
+    enable_logs,
+    memory_size,
+    timeout,
+    role_name,
+    permissions_boundary,
+    mode="CREATE",
 ):
     update_mode = mode == "UPDATE"
     parameters = [
@@ -142,10 +151,22 @@ def create_parameters(
 
 
 def import_log_ingestion_function(
-    session, nr_license_key, enable_logs, memory_size, timeout, role_name, permissions_boundary
+    session,
+    nr_license_key,
+    enable_logs,
+    memory_size,
+    timeout,
+    role_name,
+    permissions_boundary,
 ):
     parameters, capabilities = create_parameters(
-        nr_license_key, enable_logs, memory_size, timeout, role_name, permissions_boundary, "IMPORT"
+        nr_license_key,
+        enable_logs,
+        memory_size,
+        timeout,
+        role_name,
+        permissions_boundary,
+        "IMPORT",
     )
     cf_client = session.client("cloudformation")
 
@@ -178,10 +199,23 @@ def import_log_ingestion_function(
 
 
 def create_log_ingestion_function(
-    session, nr_license_key, enable_logs, memory_size, timeout, role_name, permissions_boundary, mode="CREATE"
+    session,
+    nr_license_key,
+    enable_logs,
+    memory_size,
+    timeout,
+    role_name,
+    permissions_boundary,
+    mode="CREATE",
 ):
     parameters, capabilities = create_parameters(
-        nr_license_key, enable_logs, memory_size, timeout, role_name, permissions_boundary, mode
+        nr_license_key,
+        enable_logs,
+        memory_size,
+        timeout,
+        role_name,
+        permissions_boundary,
+        mode,
     )
 
     cf_client = session.client("cloudformation")
@@ -241,7 +275,13 @@ def exec_change_set(cf_client, change_set, mode):
 
 
 def update_log_ingestion_function(
-    session, nr_license_key, enable_logs, memory_size, timeout, role_name, permissions_boundary
+    session,
+    nr_license_key,
+    enable_logs,
+    memory_size,
+    timeout,
+    role_name,
+    permissions_boundary,
 ):
     # Detect an old-style nested install and unwrap it
     client = session.client("cloudformation")
