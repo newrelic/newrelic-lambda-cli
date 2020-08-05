@@ -74,7 +74,7 @@ def test_integrations_uninstall(
             "12345678",
         ],
         env={"AWS_DEFAULT_REGION": "us-east-1"},
-        input="y\ny",
+        input="y\ny\ny",
     )
 
     assert result.exit_code == 0, result.stderr

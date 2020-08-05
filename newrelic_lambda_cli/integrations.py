@@ -11,6 +11,7 @@ from newrelic_lambda_cli.cliutils import failure, success
 from newrelic_lambda_cli.functions import get_function
 
 INGEST_STACK_NAME = "NewRelicLogIngestion"
+LICENSE_KEY_STACK_NAME = "NewRelicLicenseKeySecret"
 
 
 def list_all_regions(session):
@@ -91,7 +92,7 @@ def get_sar_template_url(session):
     return template_details["TemplateUrl"]
 
 
-def create_parameters(
+def create_log_ingest_parameters(
     nr_license_key, enable_logs, memory_size, timeout, role_name, mode="CREATE"
 ):
     update_mode = mode == "UPDATE"
@@ -141,7 +142,7 @@ def create_parameters(
 def import_log_ingestion_function(
     session, nr_license_key, enable_logs, memory_size, timeout, role_name
 ):
-    parameters, capabilities = create_parameters(
+    parameters, capabilities = create_log_ingest_parameters(
         nr_license_key, enable_logs, memory_size, timeout, role_name, "IMPORT"
     )
     cf_client = session.client("cloudformation")
@@ -177,7 +178,7 @@ def import_log_ingestion_function(
 def create_log_ingestion_function(
     session, nr_license_key, enable_logs, memory_size, timeout, role_name, mode="CREATE"
 ):
-    parameters, capabilities = create_parameters(
+    parameters, capabilities = create_log_ingest_parameters(
         nr_license_key, enable_logs, memory_size, timeout, role_name, mode
     )
 
@@ -202,7 +203,7 @@ def create_log_ingestion_function(
     exec_change_set(cf_client, change_set, mode)
 
 
-def exec_change_set(cf_client, change_set, mode):
+def exec_change_set(cf_client, change_set, mode, stack_name=INGEST_STACK_NAME):
     click.echo(
         "Waiting for change set creation to complete, this may take a minute... ",
         nl=False,
@@ -230,7 +231,7 @@ def exec_change_set(cf_client, change_set, mode):
     )
     exec_waiter_type = "stack_%s_complete" % mode.lower()
     cf_client.get_waiter(exec_waiter_type).wait(
-        StackName=INGEST_STACK_NAME, WaiterConfig={"Delay": 15}
+        StackName=stack_name, WaiterConfig={"Delay": 15}
     )
     success("Done")
 
@@ -494,3 +495,82 @@ def update_log_ingestion(
         return False
     else:
         return True
+
+
+def install_license_key(session, nr_license_key, policy_name=None, mode="CREATE"):
+    lk_stack_status = get_cf_stack_status(session, LICENSE_KEY_STACK_NAME)
+    if lk_stack_status is None:
+        click.echo(
+            "Setting up %s stack in region: %s"
+            % (LICENSE_KEY_STACK_NAME, session.region_name)
+        )
+        try:
+            cf_client = session.client("cloudformation")
+
+            update_mode = mode == "UPDATE"
+            parameters = []
+            if policy_name is not None:
+                parameters.append(
+                    {"ParameterKey": "PolicyName", "ParameterValue": policy_name}
+                )
+            elif update_mode:
+                parameters.append(
+                    {"ParameterKey": "PolicyName", "UsePreviousValue": True}
+                )
+
+            parameters.append(
+                {"ParameterKey": "LicenseKey", "ParameterValue": nr_license_key}
+            )
+
+            change_set_name = "%s-%s-%d" % (
+                LICENSE_KEY_STACK_NAME,
+                mode,
+                int(time.time()),
+            )
+            click.echo("Creating change set: %s" % change_set_name)
+            template_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "templates",
+                "license-key-secret.yaml",
+            )
+            with open(template_path) as template:
+                change_set = cf_client.create_change_set(
+                    StackName=LICENSE_KEY_STACK_NAME,
+                    TemplateBody=template.read(),
+                    Parameters=parameters,
+                    Capabilities=["CAPABILITY_NAMED_IAM"],
+                    ChangeSetType=mode,
+                    ChangeSetName=change_set_name,
+                )
+
+                exec_change_set(
+                    cf_client, change_set, mode, stack_name=LICENSE_KEY_STACK_NAME
+                )
+        except Exception as e:
+            failure("Failed to create %s stack: %s" % (LICENSE_KEY_STACK_NAME, e))
+            return False
+    return True
+
+
+def update_license_key(
+    session, nr_license_key, policy_name=None,
+):
+    return install_license_key(session, nr_license_key, policy_name, mode="UPDATE")
+
+
+def remove_license_key(session):
+    client = session.client("cloudformation")
+    lk_stack_status = get_cf_stack_status(session, LICENSE_KEY_STACK_NAME)
+    if lk_stack_status is None:
+        click.echo(
+            "No New Relic license key secret found in region %s, skipping"
+            % session.region_name
+        )
+        return
+    click.echo("Deleting stack '%s'" % LICENSE_KEY_STACK_NAME)
+    client.delete_stack(StackName=LICENSE_KEY_STACK_NAME)
+    click.echo(
+        "Waiting for stack deletion to complete, this may take a minute... ", nl=False
+    )
+    client.get_waiter("stack_delete_complete").wait(StackName=LICENSE_KEY_STACK_NAME)
+    success("Done")

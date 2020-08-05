@@ -100,6 +100,7 @@ newrelic-lambda integrations install \
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region for the integration. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 | `--aws-role-policy` | No | Specify an alternative IAM role policy ARN for this integration. |
+| `--enable-license-key-secret` | No | Creates a managed secret for your account's New Relic License Key |
 
 #### Uninstall Integration
 
