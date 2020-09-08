@@ -26,7 +26,7 @@ def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
             "Unsupported Lambda runtime for '%s': %s"
             % (config["Configuration"]["FunctionArn"], runtime)
         )
-        return False
+        return True
 
     handler = config["Configuration"]["Handler"]
     runtime_handler = utils.RUNTIME_CONFIG.get(runtime, {}).get("Handler")
@@ -134,7 +134,7 @@ def _remove_new_relic(config, region):
             "Unsupported Lambda runtime for '%s': %s"
             % (config["Configuration"]["FunctionArn"], runtime)
         )
-        return False
+        return True
 
     handler = config["Configuration"]["Handler"]
 
