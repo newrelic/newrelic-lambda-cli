@@ -63,6 +63,12 @@ def register(group):
     help="Permit upgrade of function layers to new version.",
     is_flag=True,
 )
+@click.option(
+    "--enable-extension",
+    "-x",
+    help="Enable the New Relic Lambda Extension",
+    is_flag=True,
+)
 @click.pass_context
 def install(
     ctx,
@@ -74,6 +80,7 @@ def install(
     excludes,
     layer_arn,
     upgrade,
+    enable_extension,
 ):
     """Install New Relic AWS Lambda Layers"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
@@ -92,6 +99,7 @@ def install(
                 layer_arn,
                 nr_account_id,
                 upgrade,
+                enable_extension,
                 ctx.obj["VERBOSE"],
             )
             for function in functions

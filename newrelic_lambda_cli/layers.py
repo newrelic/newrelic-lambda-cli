@@ -19,7 +19,9 @@ def index(region, runtime):
     return layers_response.get("Layers", [])
 
 
-def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
+def _add_new_relic(
+    config, region, layer_arn, account_id, allow_upgrade, enable_extension
+):
     runtime = config["Configuration"]["Runtime"]
     if runtime not in utils.RUNTIME_CONFIG:
         failure(
@@ -36,7 +38,7 @@ def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
             "upgrade or reinstall to latest layer version."
             % config["Configuration"]["FunctionArn"]
         )
-        return False
+        return True
 
     existing_layers = [
         layer["Arn"]
@@ -96,10 +98,23 @@ def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
     if handler != runtime_handler:
         update_kwargs["Environment"]["Variables"]["NEW_RELIC_LAMBDA_HANDLER"] = handler
 
+    if enable_extension:
+        update_kwargs["Environment"]["Variables"][
+            "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
+        ] = "true"
+
     return update_kwargs
 
 
-def install(session, function_arn, layer_arn, account_id, allow_upgrade, verbose):
+def install(
+    session,
+    function_arn,
+    layer_arn,
+    account_id,
+    allow_upgrade,
+    enable_extension,
+    verbose,
+):
     client = session.client("lambda")
     config = get_function(session, function_arn)
     if not config:
@@ -108,7 +123,9 @@ def install(session, function_arn, layer_arn, account_id, allow_upgrade, verbose
 
     region = session.region_name
 
-    update_kwargs = _add_new_relic(config, region, layer_arn, account_id, allow_upgrade)
+    update_kwargs = _add_new_relic(
+        config, region, layer_arn, account_id, allow_upgrade, enable_extension
+    )
     if not update_kwargs:
         return False
 

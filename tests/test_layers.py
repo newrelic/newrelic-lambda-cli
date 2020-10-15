@@ -5,7 +5,7 @@ def test_add_new_relic(mock_function_config):
     config = mock_function_config("python3.7")
     assert config["Configuration"]["Handler"] == "original_handler"
 
-    update_kwargs = _add_new_relic(config, "us-east-1", None, "12345", False)
+    update_kwargs = _add_new_relic(config, "us-east-1", None, "12345", False, False)
     assert update_kwargs["FunctionName"] == config["Configuration"]["FunctionArn"]
     assert update_kwargs["Handler"] == "newrelic_lambda_wrapper.handler"
     assert update_kwargs["Environment"]["Variables"]["NEW_RELIC_ACCOUNT_ID"] == "12345"
