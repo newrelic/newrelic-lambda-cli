@@ -30,13 +30,20 @@ def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
 
     handler = config["Configuration"]["Handler"]
     runtime_handler = utils.RUNTIME_CONFIG.get(runtime, {}).get("Handler")
-    if not allow_upgrade and handler == runtime_handler:
+
+    existing_newrelic_layer = [
+        layer["Arn"]
+        for layer in config["Configuration"].get("Layers", [])
+        if layer["Arn"].startswith(utils.get_arn_prefix(region))
+    ]
+
+    if not allow_upgrade and existing_newrelic_layer:
         success(
             "Already installed on function '%s'. Pass --upgrade (or -u) to allow "
             "upgrade or reinstall to latest layer version."
             % config["Configuration"]["FunctionArn"]
         )
-        return False
+        return True
 
     existing_layers = [
         layer["Arn"]
@@ -45,6 +52,7 @@ def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
     ]
 
     new_relic_layers = []
+
     if layer_arn:
         new_relic_layers = [layer_arn]
     else:
@@ -80,7 +88,6 @@ def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
 
     update_kwargs = {
         "FunctionName": config["Configuration"]["FunctionArn"],
-        "Handler": runtime_handler,
         "Environment": {
             "Variables": config["Configuration"]
             .get("Environment", {})
@@ -89,11 +96,15 @@ def _add_new_relic(config, region, layer_arn, account_id, allow_upgrade):
         "Layers": new_relic_layers + existing_layers,
     }
 
+    # Only used by Python and Node.js runtimes
+    if runtime_handler:
+        update_kwargs["Handler"] = runtime_handler
+
     # Update the account id
     update_kwargs["Environment"]["Variables"]["NEW_RELIC_ACCOUNT_ID"] = str(account_id)
 
     # Update the NEW_RELIC_LAMBDA_HANDLER envvars only when it's a new install.
-    if handler != runtime_handler:
+    if runtime_handler and handler != runtime_handler:
         update_kwargs["Environment"]["Variables"]["NEW_RELIC_LAMBDA_HANDLER"] = handler
 
     return update_kwargs
