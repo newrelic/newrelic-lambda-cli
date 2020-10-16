@@ -26,17 +26,25 @@ A CLI to install the New Relic AWS Lambda integration and layers.
 * Installs and configures a New Relic AWS Lambda layer onto your AWS Lambda functions
 * Automatically selects the correct New Relic layer for your function's runtime and region
 * Wraps your AWS Lambda functions without requiring a code change
-* Supports Node.js and Python AWS Lambda runtimes
+* Supports Go, Java, .NET, Node.js and Python AWS Lambda runtimes
 * Easily uninstall the AWS Lambda layer with a single command
 
 ## Runtimes Supported
 
+* dotnetcore3.1
+* java8.al2
+* java11
 * nodejs10.x
 * nodejs12.x
+* provided
+* provided.al2
 * python2.7
 * python3.6
 * python3.7
 * python3.8
+
+**Note:** Automatic handler wrapping is only supported for Node.js and Python. For other runtimes,
+manual function wrapping is required using the runtime specific New Relic agent.
 
 ## Requirements
 
