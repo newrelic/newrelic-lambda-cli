@@ -8,6 +8,7 @@ import requests
 from newrelic_lambda_cli import utils
 from newrelic_lambda_cli.cliutils import failure, success
 from newrelic_lambda_cli.functions import get_function
+from newrelic_lambda_cli.integrations import get_license_key_policy_arn
 
 
 def index(region, runtime):
@@ -242,3 +243,12 @@ def uninstall(session, function_arn, verbose):
             click.echo(json.dumps(res, indent=2))
         success("Successfully uninstalled layer on %s" % function_arn)
         return True
+
+
+def _add_policy_to_role(session, role_name):
+    policy_arn = get_license_key_policy_arn(session)
+    if not policy_arn:
+        return False
+    iam = session.client("iam")
+    iam.attach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
+    return True
