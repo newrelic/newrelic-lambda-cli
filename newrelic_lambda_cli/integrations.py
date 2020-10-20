@@ -580,9 +580,9 @@ def remove_license_key(session):
 
 def get_license_key_policy_arn(session):
     """Returns the policy ARN for the license key secret if it exists"""
-    cloudformation = session.client("cloudformation")
+    client = session.client("cloudformation")
     try:
-        stacks = cloudformation.describe_stacks(StackName=LICENSE_KEY_STACK_NAME).get(
+        stacks = client.describe_stacks(StackName=LICENSE_KEY_STACK_NAME).get(
             "Stacks", []
         )
     except botocore.exceptions.ClientError as e:
@@ -598,7 +598,9 @@ def get_license_key_policy_arn(session):
         if not stacks:
             return None
         stack = stacks[0]
-        output_key = "%s-NewRelic-LicenseKeySecretARN" % LICENSE_KEY_STACK_NAME
-        for output in stack["Outputs"]:
+        output_key = "ViewPolicyARN"
+        for output in stack.get("Outputs", []):
             if output["OutputKey"] == output_key:
                 return output["OutputValue"]
+        else:
+            return None

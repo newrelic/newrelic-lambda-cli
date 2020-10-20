@@ -138,6 +138,7 @@ def install(
     update_kwargs = _add_new_relic(
         config, region, layer_arn, account_id, allow_upgrade, enable_extension
     )
+
     if not update_kwargs:
         return False
 
@@ -150,6 +151,9 @@ def install(
         )
         return False
     else:
+        if enable_extension:
+            if not _attach_license_key_policy(session, config["Configuration"]["Role"]):
+                return False
         if verbose:
             click.echo(json.dumps(res, indent=2))
         success("Successfully installed layer on %s" % function_arn)
@@ -239,16 +243,44 @@ def uninstall(session, function_arn, verbose):
         )
         return False
     else:
+        _detach_license_key_policy(session, config["Configuration"]["Role"])
         if verbose:
             click.echo(json.dumps(res, indent=2))
         success("Successfully uninstalled layer on %s" % function_arn)
         return True
 
 
-def _add_policy_to_role(session, role_name):
+def _attach_license_key_policy(session, role_arn):
+    """Attaches the license key secret policy to the specified role"""
+    policy_arn = get_license_key_policy_arn(session)
+    if not policy_arn:
+        failure(
+            "Could not find the New Relic license key secret policy. "
+            "Make sure you run 'newrelic-lambda integrations install' with "
+            "the '--enable-license-key-secret' flag."
+        )
+        return False
+    _, role_name = role_arn.rsplit("/", 1)
+    client = session.client("iam")
+    try:
+        client.attach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
+    except botocore.exceptions.ClientError:
+        failure("Failed to attach %s policy to %s" % (policy_arn, role_arn))
+        return False
+    else:
+        return True
+
+
+def _detach_license_key_policy(session, role_arn):
+    """Detaches the license key secret policy from the specified role"""
     policy_arn = get_license_key_policy_arn(session)
     if not policy_arn:
         return False
-    iam = session.client("iam")
-    iam.attach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
-    return True
+    _, role_name = role_arn.rsplit("/", 1)
+    client = session.client("iam")
+    try:
+        client.detach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
+    except botocore.exceptions.ClientError:
+        return False
+    else:
+        return True
