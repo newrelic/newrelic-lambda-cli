@@ -22,6 +22,7 @@ def test_integrations_install(
             "test_key",
             "--linked-account-name",
             "test_linked_account",
+            "--aws-permissions-check",
         ],
         env={"AWS_DEFAULT_REGION": "us-east-1"},
     )
@@ -109,6 +110,7 @@ def test_integrations_uninstall_force(
             "--nr-account-id",
             "12345678",
             "--force",
+            "--aws-permissions-check",
         ],
         env={"AWS_DEFAULT_REGION": "us-east-1"},
     )
@@ -142,10 +144,7 @@ def test_integrations_update(
     register_groups(cli)
     result = cli_runner.invoke(
         cli,
-        [
-            "integrations",
-            "update",
-        ],
+        ["integrations", "update", "--aws-permissions-check"],
         env={"AWS_DEFAULT_REGION": "us-east-1"},
     )
 
