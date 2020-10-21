@@ -25,7 +25,7 @@ AWS_OPTIONS = [
     click.option(
         "--aws-permissions-check/--no-aws-permissions-check",
         help="Perform AWS permissions checks",
-        default=True,
+        default=False,
         show_default=True,
     ),
 ]
