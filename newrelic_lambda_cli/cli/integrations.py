@@ -72,7 +72,9 @@ def register(group):
     is_flag=True,
     help="Enable the license key managed secret",
 )
+@click.pass_context
 def install(
+    ctx,
     aws_profile,
     aws_region,
     aws_permissions_check,
@@ -132,6 +134,27 @@ def install(
 
     if install_success:
         done("Install Complete")
+
+        if ctx.obj["VERBOSE"]:
+            click.echo(
+                "\nNext steps: Add the New Relic layers to your Lambda functions with "
+                "the below command.\n"
+            )
+            command = [
+                "$",
+                "newrelic-lambda",
+                "layers",
+                "install",
+                "--function",
+                "all",
+                "--nr-account-id",
+                nr_account_id,
+            ]
+            if aws_profile:
+                command.append("--aws-profile %s" % aws_profile)
+            if aws_region:
+                command.append("--aws-region %s" % aws_region)
+            click.echo(" ".join(command))
     else:
         failure("Install Incomplete. See messages above for details.", exit=True)
 
@@ -178,7 +201,8 @@ def uninstall(aws_profile, aws_region, aws_permissions_check, nr_account_id, for
 
     if not force:
         click.confirm(
-            "This will uninstall the New Relic License Key managed secret, and IAM Policy. "
+            "This will uninstall the New Relic License Key managed secret, and IAM "
+            "Policy. "
             "Are you sure you want to proceed?",
             abort=True,
             default=False,

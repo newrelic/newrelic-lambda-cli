@@ -108,6 +108,30 @@ def install(
 
     if install_success:
         done("Install Complete")
+        if ctx.obj["VERBOSE"]:
+            click.echo(
+                "\nNext step. Configure the CloudWatch subscription filter for your "
+                "Lambda functions with the below command:\n"
+            )
+            command = [
+                "$",
+                "newrelic-lambda",
+                "subscriptions",
+                "install",
+                "--function",
+                "all",
+            ]
+            if aws_profile:
+                command.append("--aws-profile %s" % aws_profile)
+            if aws_region:
+                command.append("--aws-region %s" % aws_region)
+            click.echo(" ".join(command))
+            click.echo(
+                "\nIf you used `--enable-logs` for the `newrelic-lambda integrations "
+                "install` command earlier, run this command instead:\n"
+            )
+            command.append('--filter-pattern ""')
+            click.echo(" ".join(command))
     else:
         failure("Install Incomplete. See messages above for details.", exit=True)
 
