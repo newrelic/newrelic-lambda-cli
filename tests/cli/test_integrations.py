@@ -103,7 +103,13 @@ def test_integrations_uninstall_force(
     register_groups(cli)
     result = cli_runner.invoke(
         cli,
-        ["integrations", "uninstall", "--nr-account-id", "12345678", "--force",],
+        [
+            "integrations",
+            "uninstall",
+            "--nr-account-id",
+            "12345678",
+            "--force",
+        ],
         env={"AWS_DEFAULT_REGION": "us-east-1"},
     )
 
@@ -135,7 +141,12 @@ def test_integrations_update(
     """
     register_groups(cli)
     result = cli_runner.invoke(
-        cli, ["integrations", "update",], env={"AWS_DEFAULT_REGION": "us-east-1"},
+        cli,
+        [
+            "integrations",
+            "update",
+        ],
+        env={"AWS_DEFAULT_REGION": "us-east-1"},
     )
 
     assert result.exit_code == 0, result.stderr
@@ -147,5 +158,14 @@ def test_integrations_update(
         [call.ensure_integration_install_permissions(ANY)]
     )
     integrations_mock.assert_has_calls(
-        [call.update_log_ingestion(ANY, None, None, None, None, None,),]
+        [
+            call.update_log_ingestion(
+                ANY,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ),
+        ]
     )

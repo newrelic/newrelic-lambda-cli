@@ -19,7 +19,8 @@ jobs:
       - run:
           name: Check code style
           command: |
-            sudo pip install -q black==19.10b0
+            sudo pip install -q -U pip
+            sudo pip install -q -U black
             black --check newrelic_lambda_cli tests
       - run:
           name: Check README

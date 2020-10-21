@@ -348,7 +348,7 @@ def create_integration_role(session, role_policy, nr_account_id):
     """
     Creates a AWS CloudFormation stack that adds the New Relic AWSLambda Integration
     IAM role.
-   """
+    """
     role_name = "NewRelicLambdaIntegrationRole_%s" % nr_account_id
     stack_name = "NewRelicLambdaIntegrationRole-%s" % nr_account_id
     role = get_role(session, role_name)
@@ -553,7 +553,9 @@ def install_license_key(session, nr_license_key, policy_name=None, mode="CREATE"
 
 
 def update_license_key(
-    session, nr_license_key, policy_name=None,
+    session,
+    nr_license_key,
+    policy_name=None,
 ):
     return install_license_key(session, nr_license_key, policy_name, mode="UPDATE")
 
@@ -574,3 +576,31 @@ def remove_license_key(session):
     )
     client.get_waiter("stack_delete_complete").wait(StackName=LICENSE_KEY_STACK_NAME)
     success("Done")
+
+
+def get_license_key_policy_arn(session):
+    """Returns the policy ARN for the license key secret if it exists"""
+    client = session.client("cloudformation")
+    try:
+        stacks = client.describe_stacks(StackName=LICENSE_KEY_STACK_NAME).get(
+            "Stacks", []
+        )
+    except botocore.exceptions.ClientError as e:
+        if (
+            e.response
+            and "ResponseMetadata" in e.response
+            and "HTTPStatusCode" in e.response["ResponseMetadata"]
+            and e.response["ResponseMetadata"]["HTTPStatusCode"] in (400, 404)
+        ):
+            return None
+        raise e
+    else:
+        if not stacks:
+            return None
+        stack = stacks[0]
+        output_key = "ViewPolicyARN"
+        for output in stack.get("Outputs", []):
+            if output["OutputKey"] == output_key:
+                return output["OutputValue"]
+        else:
+            return None

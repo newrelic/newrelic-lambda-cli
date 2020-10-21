@@ -13,6 +13,7 @@ from newrelic_lambda_cli.integrations import (
     install_license_key,
     update_license_key,
     remove_license_key,
+    get_license_key_policy_arn,
 )
 
 
@@ -252,7 +253,9 @@ def test_install_license_key_already_installed(success_mock):
         assert result is True
 
         cf_client.assert_has_calls(
-            [call.describe_stacks(StackName="NewRelicLicenseKeySecret"),],
+            [
+                call.describe_stacks(StackName="NewRelicLicenseKeySecret"),
+            ],
             any_order=True,
         )
         success_mock.assert_not_called()
@@ -268,6 +271,21 @@ def test_remove_license_key(success_mock):
         remove_license_key(session)
 
         cf_client.assert_has_calls(
-            [call().delete_stack(StackName="NewRelicLicenseKeySecret")], any_order=True,
+            [call().delete_stack(StackName="NewRelicLicenseKeySecret")],
+            any_order=True,
         )
         success_mock.assert_called_once()
+
+
+def test_get_license_key_policy_arn():
+    session = MagicMock()
+    with patch.object(session, "client") as mock_client_factory:
+        cf_client = MagicMock(name="cloudformation")
+        mock_client_factory.side_effect = cf_client
+
+        get_license_key_policy_arn(session)
+
+        cf_client.assert_has_calls(
+            [call().describe_stacks(StackName="NewRelicLicenseKeySecret")],
+            any_order=True,
+        )

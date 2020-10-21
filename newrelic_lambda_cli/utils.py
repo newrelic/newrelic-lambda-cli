@@ -5,7 +5,6 @@ import botocore
 import click
 from click.exceptions import Exit
 
-
 NEW_RELIC_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:451483290750"
 RUNTIME_CONFIG = {
     "dotnetcore3.1": {},
