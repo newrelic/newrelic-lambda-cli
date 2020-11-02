@@ -91,15 +91,14 @@ region. By default this command will look for a default AWS profile configured v
 ```bash
 newrelic-lambda integrations install \
     --nr-account-id <account id> \
-    --nr-api-key <api key> \
-    --linked-account-name <linked account name>
+    --nr-api-key <api key>
 ```
 
 | Option | Required? | Description |
 |--------|-----------|-------------|
 | `--nr-account-id` or `-a` | Yes | The [New Relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) for this integration. Can also use the `NEW_RELIC_ACCOUNT_ID` environment variable. |
 | `--nr-api-key` or `-k` | Yes | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Can also use the `NEW_RELIC_API_KEY` environment variable. |
-| `--linked-account-name` or `-l` | Yes | A label for the New Relic Linked Account. This is how this integration will appear in New Relic. |
+| `--linked-account-name` or `-l` | No | A label for the New Relic Linked Account. This is how this integration will appear in New Relic. Defaults to "New Relic Lambda Integration - <AWS Account ID>". |
 | `--enable-logs` or `-e` | No | Enables forwarding logs to New Relic Logging. This is disabled by default. Make sure you run `newrelic-lambda subscriptions install --function ... --filter-pattern ""` afterwards. |
 | `--memory-size` or `-m` | No | Memory size (in MiB) for the New Relic log ingestion function. Default to 128MB. |
 | `--nr-region` | No | The New Relic region to use for the integration. Can use the `NEW_RELIC_REGION` environment variable. Can be either `eu` or `us`. Defaults to `us`. |
@@ -162,9 +161,11 @@ newrelic-lambda layers install \
 | `--exclude` or `-e` | No | A function name to exclude while installing layers. Can provide multiple `--exclude` arguments. Only checked when `all`, `installed` and `not-installed` are used. See `newrelic-lambda functions list` for function names. |
 | `--layer-arn` or `-l` | No | Specify a specific layer version ARN to use. This is auto detected by default. |
 | `--upgrade` or `-u` | No | Permit upgrade to the latest layer version for this region and runtime. |
-| `--enable-extension` or `-x` | No | Enable the [New Relic Lambda Extension](https://github.com/newrelic/newrelic-lambda-extension). Requires `newrelic-lambda integrations install ... --enable-license-key-secret` to set the license key secret. |
+| `--enable-extension` or `-x` | No | Enable the [New Relic Lambda Extension](https://github.com/newrelic/newrelic-lambda-extension). Requires `newrelic-lambda integrations install ... --enable-license-key-secret` to set the license key secret in AWS Secrets Manager. |
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
+| `--nr-api-key` or `-k` | No | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Can also use the `NEW_RELIC_API_KEY` environment variable. Only used if `--enable-extension` is set and there is no New Relic license key in AWS Secrets Manager. |
+| `--nr-region` | No | The New Relic region to use for the integration. Can use the `NEW_RELIC_REGION` environment variable. Can be either `eu` or `us`. Defaults to `us`. Only used if `--enable-extension` is set and there is no New Relic license key in AWS Secrets Manager. |
 
 #### Uninstall Layer
 

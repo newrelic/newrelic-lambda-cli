@@ -33,6 +33,23 @@ def register(group):
     required=True,
     type=click.INT,
 )
+@click.option(
+    "--nr-api-key",
+    "-k",
+    envvar="NEW_RELIC_API_KEY",
+    help="New Relic User API Key",
+    metavar="<key>",
+    required=False,
+)
+@click.option(
+    "--nr-region",
+    default="us",
+    envvar="NEW_RELIC_REGION",
+    help="New Relic Account Region",
+    metavar="<region>",
+    show_default=True,
+    type=click.Choice(["us", "eu"]),
+)
 @add_options(AWS_OPTIONS)
 @click.option(
     "functions",
@@ -73,6 +90,8 @@ def register(group):
 def install(
     ctx,
     nr_account_id,
+    nr_api_key,
+    nr_region,
     aws_profile,
     aws_region,
     aws_permissions_check,
@@ -98,6 +117,8 @@ def install(
                 function,
                 layer_arn,
                 nr_account_id,
+                nr_api_key,
+                nr_region,
                 upgrade,
                 enable_extension,
                 ctx.obj["VERBOSE"],

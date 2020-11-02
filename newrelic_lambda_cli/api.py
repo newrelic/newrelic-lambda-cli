@@ -18,6 +18,8 @@ import requests
 
 from newrelic_lambda_cli.cliutils import failure, success
 
+__cached_license_key = None
+
 
 class NewRelicGQL(object):
     def __init__(self, account_id, api_key, region="us"):
@@ -317,8 +319,12 @@ def validate_gql_credentials(nr_account_id, nr_api_key, nr_region):
 
 
 def retrieve_license_key(gql):
+    global __cached_license_key
+    if __cached_license_key:
+        return __cached_license_key
     try:
-        return gql.get_license_key()
+        __cached_license_key = gql.get_license_key()
+        return __cached_license_key
     except Exception:
         raise click.BadParameter(
             "Could not retrieve license key from New Relic. Check that your New Relic "
