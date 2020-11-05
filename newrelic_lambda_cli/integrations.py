@@ -13,6 +13,8 @@ from newrelic_lambda_cli.functions import get_function
 INGEST_STACK_NAME = "NewRelicLogIngestion"
 LICENSE_KEY_STACK_NAME = "NewRelicLicenseKeySecret"
 
+__cached_license_key_policy_arn = None
+
 
 def list_all_regions(session):
     """Returns all regions where Lambda is currently supported"""
@@ -85,7 +87,7 @@ def create_role(session, role_policy, nr_account_id):
 
 def get_sar_template_url(session):
     sar_client = session.client("serverlessrepo")
-    sar_app_id = "arn:aws:serverlessrepo:us-east-1:463657938898:applications/NewRelic-log-ingestion"
+    sar_app_id = "arn:aws:serverlessrepo:us-east-1:463657938898:applications/NewRelic-log-ingestion"  # noqa
     template_details = sar_client.create_cloud_formation_template(
         ApplicationId=sar_app_id
     )
@@ -299,7 +301,8 @@ def update_log_ingestion_function(
         )
 
         click.echo("Removing outer stack")
-        # Delete the parent stack, which will delete its child and orphan the ingest function
+        # Delete the parent stack, which will delete its child and orphan the
+        # ingest function
         client.delete_stack(StackName=INGEST_STACK_NAME)
         client.get_waiter("stack_delete_complete").wait(StackName=INGEST_STACK_NAME)
 
@@ -398,12 +401,12 @@ def validate_linked_account(session, gql, linked_account_name):
     """
     account = gql.get_linked_account_by_name(linked_account_name)
     if account is not None:
-        res = session.client("sts").get_caller_identity()
-        if res["Account"] != account["externalId"]:
+        aws_account_id = get_aws_account_id(session)
+        if aws_account_id != account["externalId"]:
             raise click.UsageError(
                 "The selected linked AWS account [%s] does not match "
                 "the AWS account of your AWS profile [%s]."
-                % (account["externalId"], res["Account"])
+                % (account["externalId"], aws_account_id)
             )
 
 
@@ -481,9 +484,10 @@ def update_log_ingestion(
     if stack_status is None:
         failure(
             "No 'NewRelicLogIngestion' stack in region '%s'. "
-            "This likely means the New Relic log ingestion function was installed manually. "
-            "In order to install via the CLI, please delete this function and run 'newrelic-lambda integrations install'."
-            % session.region_name
+            "This likely means the New Relic log ingestion function was "
+            "installed manually. "
+            "In order to install via the CLI, please delete this function and "
+            "run 'newrelic-lambda integrations install'." % session.region_name
         )
         return False
     try:
@@ -580,6 +584,9 @@ def remove_license_key(session):
 
 def get_license_key_policy_arn(session):
     """Returns the policy ARN for the license key secret if it exists"""
+    global __cached_license_key_policy_arn
+    if __cached_license_key_policy_arn:
+        return __cached_license_key_policy_arn
     client = session.client("cloudformation")
     try:
         stacks = client.describe_stacks(StackName=LICENSE_KEY_STACK_NAME).get(
@@ -601,6 +608,11 @@ def get_license_key_policy_arn(session):
         output_key = "ViewPolicyARN"
         for output in stack.get("Outputs", []):
             if output["OutputKey"] == output_key:
-                return output["OutputValue"]
+                __cached_license_key_policy_arn = output["OutputValue"]
+                return __cached_license_key_policy_arn
         else:
             return None
+
+
+def get_aws_account_id(session):
+    return session.client("sts").get_caller_identity().get("Account")

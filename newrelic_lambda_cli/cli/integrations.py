@@ -48,7 +48,7 @@ def register(group):
     "-n",
     help="New Relic Linked Account Label",
     metavar="<name>",
-    required=True,
+    required=False,
 )
 @add_options(NR_OPTIONS)
 @click.option(
@@ -100,6 +100,12 @@ def install(
 
     click.echo("Retrieving integration license key")
     nr_license_key = api.retrieve_license_key(gql_client)
+
+    if not linked_account_name:
+        linked_account_name = (
+            "New Relic Lambda Integration - %s"
+            % integrations.get_aws_account_id(session)
+        )
 
     click.echo("Checking for a pre-existing link between New Relic and AWS")
     integrations.validate_linked_account(session, gql_client, linked_account_name)
