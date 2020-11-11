@@ -70,6 +70,7 @@ def register(group):
 @click.option(
     "--enable-license-key-secret/--disable-license-key-secret",
     default=True,
+    show_default=True,
     help="Enable/disable the license key managed secret",
 )
 @click.pass_context
@@ -249,6 +250,7 @@ def uninstall(aws_profile, aws_region, aws_permissions_check, nr_account_id, for
 @click.option(
     "--enable-license-key-secret/--disable-license-key-secret",
     default=True,
+    show_default=True,
     help="Enable/disable the license key managed secret",
 )
 def update(

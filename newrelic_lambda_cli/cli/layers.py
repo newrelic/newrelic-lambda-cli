@@ -84,6 +84,7 @@ def register(group):
     "--enable-extension/--disable-extension",
     "-x",
     default=True,
+    show_default=True,
     help="Enable/disable the New Relic Lambda Extension",
 )
 @click.pass_context
