@@ -276,7 +276,9 @@ def update(
     update_success = res and update_success
 
     if enable_license_key_secret:
-        update_success = update_success and integrations.auto_install_license_key(session)
+        update_success = update_success and integrations.auto_install_license_key(
+            session
+        )
     else:
         integrations.remove_license_key(session)
 
