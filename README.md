@@ -107,7 +107,7 @@ newrelic-lambda integrations install \
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region for the integration. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 | `--aws-role-policy` | No | Specify an alternative IAM role policy ARN for this integration. |
-| `--enable-license-key-secret` | No | Creates a managed secret for your account's New Relic License Key |
+| `--disable-license-key-secret` | No | Don't create a managed secret for your account's New Relic License Key |
 
 #### Uninstall Integration
 
@@ -125,7 +125,8 @@ newrelic-lambda integrations uninstall
 #### Update Integration
 
 Updates the New Relic log ingestion function to the latest version. Existing ingestion function parameters will 
-retain their values, unless you specify different values on the command line.
+retain their values, unless you specify different values on the command line. By default, installs the license key
+secret, if it is missing.
 
 ```bash
 newrelic-lambda integrations update 
@@ -143,6 +144,7 @@ newrelic-lambda integrations update
 | `--role-name` | No | Role name for the ingestion function. If you prefer to create and manage an IAM role for the function to assume out of band, do so and specify that role's name here. This avoids needing CAPABILITY_IAM. |
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region for the integration. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
+| `--disable-license-key-secret` | No | Disable automatic creation of the license key secret on update. The secret is not created if it exists. |
 
 ### AWS Lambda Layers
 
@@ -161,7 +163,7 @@ newrelic-lambda layers install \
 | `--exclude` or `-e` | No | A function name to exclude while installing layers. Can provide multiple `--exclude` arguments. Only checked when `all`, `installed` and `not-installed` are used. See `newrelic-lambda functions list` for function names. |
 | `--layer-arn` or `-l` | No | Specify a specific layer version ARN to use. This is auto detected by default. |
 | `--upgrade` or `-u` | No | Permit upgrade to the latest layer version for this region and runtime. |
-| `--enable-extension` or `-x` | No | Enable the [New Relic Lambda Extension](https://github.com/newrelic/newrelic-lambda-extension). Requires `newrelic-lambda integrations install ... --enable-license-key-secret` to set the license key secret in AWS Secrets Manager. |
+| `--disable-extension` | No | Disable the [New Relic Lambda Extension](https://github.com/newrelic/newrelic-lambda-extension). |
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 | `--nr-api-key` or `-k` | No | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Can also use the `NEW_RELIC_API_KEY` environment variable. Only used if `--enable-extension` is set and there is no New Relic license key in AWS Secrets Manager. |

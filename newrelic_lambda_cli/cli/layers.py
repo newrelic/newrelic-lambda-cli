@@ -81,10 +81,10 @@ def register(group):
     is_flag=True,
 )
 @click.option(
-    "--enable-extension",
+    "--enable-extension/--disable-extension",
     "-x",
-    help="Enable the New Relic Lambda Extension",
-    is_flag=True,
+    default=True,
+    help="Enable/disable the New Relic Lambda Extension",
 )
 @click.pass_context
 def install(

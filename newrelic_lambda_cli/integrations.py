@@ -501,6 +501,34 @@ def update_log_ingestion(
         return True
 
 
+def get_log_ingestion_license_key(session):
+    """
+    Fetches the license key value from the log ingestion function
+    """
+    function = get_function(session, "newrelic-log-ingestion")
+    if function:
+        return function["Configuration"]["Environment"]["Variables"]["LICENSE_KEY"]
+    return None
+
+
+def auto_install_license_key(session):
+    """
+    If the LK secret is missing, create it, picking up the LK value from the ingest lambda's configuration.
+    """
+    lk_stack_status = get_cf_stack_status(session, LICENSE_KEY_STACK_NAME)
+    if lk_stack_status is None:
+        click.echo("Creating the managed secret for the New Relic License Key")
+
+        lk = get_log_ingestion_license_key(session)
+        if lk is None:
+            failure(
+                "Could not create license key secret; failed to fetch license key value from ingest lambda"
+            )
+            return False
+        return install_license_key(session, nr_license_key=lk)
+    return True
+
+
 def install_license_key(session, nr_license_key, policy_name=None, mode="CREATE"):
     lk_stack_status = get_cf_stack_status(session, LICENSE_KEY_STACK_NAME)
     if lk_stack_status is None:
@@ -557,9 +585,7 @@ def install_license_key(session, nr_license_key, policy_name=None, mode="CREATE"
 
 
 def update_license_key(
-    session,
-    nr_license_key,
-    policy_name=None,
+    session, nr_license_key, policy_name=None,
 ):
     return install_license_key(session, nr_license_key, policy_name, mode="UPDATE")
 

@@ -159,7 +159,7 @@ def install(
             "In order to use `--enable-extension`, you must first run "
             "`newrelic-lambda integrations install` with the "
             "`--enable-license-key-secret` flag. This uses AWS Secrets Manager "
-            "to securely store your New Relic license key in tyour AWS account. "
+            "to securely store your New Relic license key in your AWS account. "
             "If you are unable to use AWS Secrets Manager, re-run this command with "
             "`--nr-api-key` argument with your New Relic API key to set your license "
             "key in a NEW_RELIC_LICENSE_KEY environment variable instead."
