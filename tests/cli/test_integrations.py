@@ -157,5 +157,14 @@ def test_integrations_update(
         [call.ensure_integration_install_permissions(ANY)]
     )
     integrations_mock.assert_has_calls(
-        [call.update_log_ingestion(ANY, None, None, None, None, None,),]
+        [
+            call.update_log_ingestion(
+                ANY,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ),
+        ]
     )

@@ -585,7 +585,9 @@ def install_license_key(session, nr_license_key, policy_name=None, mode="CREATE"
 
 
 def update_license_key(
-    session, nr_license_key, policy_name=None,
+    session,
+    nr_license_key,
+    policy_name=None,
 ):
     return install_license_key(session, nr_license_key, policy_name, mode="UPDATE")
 
