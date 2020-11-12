@@ -68,9 +68,10 @@ def register(group):
     show_default=False,
 )
 @click.option(
-    "--enable-license-key-secret",
-    is_flag=True,
-    help="Enable the license key managed secret",
+    "--enable-license-key-secret/--disable-license-key-secret",
+    default=True,
+    show_default=True,
+    help="Enable/disable the license key managed secret",
 )
 @click.pass_context
 def install(
@@ -246,6 +247,12 @@ def uninstall(aws_profile, aws_region, aws_permissions_check, nr_account_id, for
     metavar="<role_name>",
     show_default=False,
 )
+@click.option(
+    "--enable-license-key-secret/--disable-license-key-secret",
+    default=True,
+    show_default=True,
+    help="Enable/disable the license key managed secret",
+)
 def update(
     aws_profile,
     aws_region,
@@ -254,6 +261,7 @@ def update(
     memory_size,
     timeout,
     role_name,
+    enable_license_key_secret,
 ):
     """UpdateNew Relic AWS Lambda Integration"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
@@ -268,6 +276,13 @@ def update(
         session, None, enable_logs, memory_size, timeout, role_name
     )
     update_success = res and update_success
+
+    if enable_license_key_secret:
+        update_success = update_success and integrations.auto_install_license_key(
+            session
+        )
+    else:
+        integrations.remove_license_key(session)
 
     if update_success:
         done("Update Complete")

@@ -34,7 +34,7 @@ def register(group):
     "--output",
     "-o",
     default="table",
-    help="Formet output",
+    help="Format output",
     show_default=True,
     type=click.Choice(["table", "text"]),
 )
