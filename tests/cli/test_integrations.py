@@ -47,7 +47,7 @@ def test_integrations_install(
     integrations_mock.assert_has_calls(
         [
             call.validate_linked_account(ANY, ANY, "test_linked_account"),
-            call.create_integration_role(ANY, None, 12345678),
+            call.create_integration_role(ANY, None, 12345678, None),
             call.install_log_ingestion(ANY, ANY, False, 128, 30, None),
         ],
         any_order=True,

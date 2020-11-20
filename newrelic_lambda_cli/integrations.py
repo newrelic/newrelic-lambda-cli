@@ -23,6 +23,9 @@ def list_all_regions(session):
 
 def get_role(session, role_name):
     """Returns details about an IAM role"""
+    # We only want the role name if an ARN is passed
+    if "/" in role_name:
+        _, role_name = role_name.split("/", 1)
     try:
         return session.client("iam").get_role(RoleName=role_name)
     except botocore.exceptions.ClientError as e:
@@ -347,11 +350,26 @@ def remove_log_ingestion_function(session):
     success("Done")
 
 
-def create_integration_role(session, role_policy, nr_account_id):
+def create_integration_role(session, role_policy, nr_account_id, integration_arn):
     """
     Creates a AWS CloudFormation stack that adds the New Relic AWSLambda Integration
-    IAM role.
+    IAM role. This can be overridden with the `role_arn` parameter, which just checks
+    that the role exists.
     """
+    if integration_arn is not None:
+        role = get_role(session, integration_arn)
+        if role:
+            success(
+                "Found existing AWS IAM role '%s', using it with the New Relic Lambda "
+                "integration" % integration_arn
+            )
+            return role
+        failure(
+            "Could not find AWS IAM role '%s', please verify it exists and run this "
+            "command again" % integration_arn
+        )
+        return
+
     role_name = "NewRelicLambdaIntegrationRole_%s" % nr_account_id
     stack_name = "NewRelicLambdaIntegrationRole-%s" % nr_account_id
     role = get_role(session, role_name)
@@ -513,7 +531,8 @@ def get_log_ingestion_license_key(session):
 
 def auto_install_license_key(session):
     """
-    If the LK secret is missing, create it, picking up the LK value from the ingest lambda's configuration.
+    If the LK secret is missing, create it, picking up the LK value from the ingest
+    lambda's configuration.
     """
     lk_stack_status = get_cf_stack_status(session, LICENSE_KEY_STACK_NAME)
     if lk_stack_status is None:
@@ -522,7 +541,8 @@ def auto_install_license_key(session):
         lk = get_log_ingestion_license_key(session)
         if lk is None:
             failure(
-                "Could not create license key secret; failed to fetch license key value from ingest lambda"
+                "Could not create license key secret; failed to fetch license key "
+                "value from ingest lambda"
             )
             return False
         return install_license_key(session, nr_license_key=lk)
