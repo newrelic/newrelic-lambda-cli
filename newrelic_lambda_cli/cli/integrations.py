@@ -73,6 +73,13 @@ def register(group):
     show_default=True,
     help="Enable/disable the license key managed secret",
 )
+@click.option(
+    "--integration-arn",
+    default=None,
+    help="The ARN of a pre-existing AWS IAM role for the New Relic Lambda integration",
+    metavar="<role_arn>",
+    show_default=False,
+)
 @click.pass_context
 def install(
     ctx,
@@ -89,6 +96,7 @@ def install(
     timeout,
     role_name,
     enable_license_key_secret,
+    integration_arn,
 ):
     """Install New Relic AWS Lambda Integration"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
@@ -112,7 +120,9 @@ def install(
     integrations.validate_linked_account(session, gql_client, linked_account_name)
 
     click.echo("Creating the AWS role for the New Relic AWS Lambda Integration")
-    role = integrations.create_integration_role(session, aws_role_policy, nr_account_id)
+    role = integrations.create_integration_role(
+        session, aws_role_policy, nr_account_id, integration_arn
+    )
 
     if enable_license_key_secret:
         click.echo("Creating the managed secret for the New Relic License Key")
