@@ -109,6 +109,7 @@ newrelic-lambda integrations install \
 | `--aws-region` or `-r` | No | The AWS region for the integration. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 | `--aws-role-policy` | No | Specify an alternative IAM role policy ARN for this integration. |
 | `--disable-license-key-secret` | No | Don't create a managed secret for your account's New Relic License Key |
+| `--tag <key> <value>` | No | Sets tags on the CloudFormation Stacks this CLI creates. Can be used multiple times, example: `--tag key1 value1 --tag key2 value2`. |
 
 #### Uninstall Integration
 
@@ -146,6 +147,7 @@ newrelic-lambda integrations update
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region for the integration. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 | `--disable-license-key-secret` | No | Disable automatic creation of the license key secret on update. The secret is not created if it exists. |
+| `--tag <key> <value>` | No | Sets tags on the CloudFormation Stacks this CLI creates. Can be used multiple times, example: `--tag key1 value1 --tag key2 value2`. |
 
 ### AWS Lambda Layers
 
