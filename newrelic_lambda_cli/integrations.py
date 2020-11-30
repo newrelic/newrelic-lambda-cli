@@ -61,7 +61,7 @@ def get_cf_stack_status(session, stack_name):
 
 
 # TODO: Merge this with create_integration_role?
-def create_role(session, role_policy, nr_account_id):
+def create_role(session, role_policy, nr_account_id, tags):
     client = session.client("cloudformation")
     role_policy_name = "" if role_policy is None else role_policy
     stack_name = "NewRelicLambdaIntegrationRole-%d" % nr_account_id
@@ -82,6 +82,9 @@ def create_role(session, role_policy, nr_account_id):
                 {"ParameterKey": "PolicyName", "ParameterValue": role_policy_name},
             ],
             Capabilities=["CAPABILITY_NAMED_IAM"],
+            Tags=[{"Key": key, "Value": value} for key, value in tags]
+            if tags
+            else None,
         )
         click.echo("Waiting for stack creation to complete...", nl=False)
         client.get_waiter("stack_create_complete").wait(StackName=stack_name)
@@ -181,7 +184,14 @@ def import_log_ingestion_function(
 
 
 def create_log_ingestion_function(
-    session, nr_license_key, enable_logs, memory_size, timeout, role_name, mode="CREATE"
+    session,
+    nr_license_key,
+    enable_logs,
+    memory_size,
+    timeout,
+    role_name,
+    mode="CREATE",
+    tags=None,
 ):
     parameters, capabilities = create_log_ingest_parameters(
         nr_license_key, enable_logs, memory_size, timeout, role_name, mode
@@ -201,6 +211,7 @@ def create_log_ingestion_function(
         TemplateURL=template_url,
         Parameters=parameters,
         Capabilities=capabilities,
+        Tags=[{"Key": key, "Value": value} for key, value in tags] if tags else None,
         ChangeSetType=mode,
         ChangeSetName=change_set_name,
     )
@@ -242,7 +253,13 @@ def exec_change_set(cf_client, change_set, mode, stack_name=INGEST_STACK_NAME):
 
 
 def update_log_ingestion_function(
-    session, nr_license_key, enable_logs, memory_size, timeout, role_name=None
+    session,
+    nr_license_key,
+    enable_logs,
+    memory_size,
+    timeout,
+    role_name=None,
+    tags=None,
 ):
     # Detect an old-style nested install and unwrap it
     client = session.client("cloudformation")
@@ -298,6 +315,9 @@ def update_log_ingestion_function(
             TemplateBody=json.dumps(template_body),
             Parameters=params,
             Capabilities=["CAPABILITY_IAM"],
+            Tags=[{"Key": key, "Value": value} for key, value in tags]
+            if tags
+            else None,
         )
         client.get_waiter("stack_update_complete").wait(
             StackName=nested_stack["PhysicalResourceId"]
@@ -350,7 +370,7 @@ def remove_log_ingestion_function(session):
     success("Done")
 
 
-def create_integration_role(session, role_policy, nr_account_id, integration_arn):
+def create_integration_role(session, role_policy, nr_account_id, integration_arn, tags):
     """
     Creates a AWS CloudFormation stack that adds the New Relic AWSLambda Integration
     IAM role. This can be overridden with the `role_arn` parameter, which just checks
@@ -378,7 +398,7 @@ def create_integration_role(session, role_policy, nr_account_id, integration_arn
         return role
     stack_status = get_cf_stack_status(session, stack_name)
     if stack_status is None:
-        create_role(session, role_policy, nr_account_id)
+        create_role(session, role_policy, nr_account_id, tags)
         role = get_role(session, role_name)
         success(
             "Created role [%s] with policy [%s] in AWS account."
@@ -435,6 +455,7 @@ def install_log_ingestion(
     memory_size=128,
     timeout=30,
     role_name=None,
+    tags=None,
 ):
     """
     Installs the New Relic AWS Lambda log ingestion function and role.
@@ -457,6 +478,7 @@ def install_log_ingestion(
                     memory_size,
                     timeout,
                     role_name,
+                    tags,
                 )
             except Exception as e:
                 failure("Failed to create 'newrelic-log-ingestion' function: %s" % e)
@@ -529,7 +551,7 @@ def get_log_ingestion_license_key(session):
     return None
 
 
-def auto_install_license_key(session):
+def auto_install_license_key(session, tags):
     """
     If the LK secret is missing, create it, picking up the LK value from the ingest
     lambda's configuration.
@@ -545,11 +567,13 @@ def auto_install_license_key(session):
                 "value from ingest lambda"
             )
             return False
-        return install_license_key(session, nr_license_key=lk)
+        return install_license_key(session, nr_license_key=lk, tags=tags)
     return True
 
 
-def install_license_key(session, nr_license_key, policy_name=None, mode="CREATE"):
+def install_license_key(
+    session, nr_license_key, policy_name=None, mode="CREATE", tags=None
+):
     lk_stack_status = get_cf_stack_status(session, LICENSE_KEY_STACK_NAME)
     if lk_stack_status is None:
         click.echo(
@@ -591,6 +615,9 @@ def install_license_key(session, nr_license_key, policy_name=None, mode="CREATE"
                     TemplateBody=template.read(),
                     Parameters=parameters,
                     Capabilities=["CAPABILITY_NAMED_IAM"],
+                    Tags=[{"Key": key, "Value": value} for key, value in tags]
+                    if tags
+                    else None,
                     ChangeSetType=mode,
                     ChangeSetName=change_set_name,
                 )
@@ -604,12 +631,10 @@ def install_license_key(session, nr_license_key, policy_name=None, mode="CREATE"
     return True
 
 
-def update_license_key(
-    session,
-    nr_license_key,
-    policy_name=None,
-):
-    return install_license_key(session, nr_license_key, policy_name, mode="UPDATE")
+def update_license_key(session, nr_license_key, policy_name=None, tags=None):
+    return install_license_key(
+        session, nr_license_key, policy_name, mode="UPDATE", tags=tags
+    )
 
 
 def remove_license_key(session):

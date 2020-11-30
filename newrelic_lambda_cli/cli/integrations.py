@@ -80,6 +80,15 @@ def register(group):
     metavar="<role_arn>",
     show_default=False,
 )
+@click.option(
+    "--tag",
+    "tags",
+    default=[],
+    help="A tag to be added to the CloudFormation Stack (can be used multiple times)",
+    metavar="<key> <value>",
+    multiple=True,
+    nargs=2,
+)
 @click.pass_context
 def install(
     ctx,
@@ -97,6 +106,7 @@ def install(
     role_name,
     enable_license_key_secret,
     integration_arn,
+    tags,
 ):
     """Install New Relic AWS Lambda Integration"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
@@ -121,12 +131,12 @@ def install(
 
     click.echo("Creating the AWS role for the New Relic AWS Lambda Integration")
     role = integrations.create_integration_role(
-        session, aws_role_policy, nr_account_id, integration_arn
+        session, aws_role_policy, nr_account_id, integration_arn, tags
     )
 
     if enable_license_key_secret:
         click.echo("Creating the managed secret for the New Relic License Key")
-        integrations.install_license_key(session, nr_license_key)
+        integrations.install_license_key(session, nr_license_key, tags)
 
     install_success = True
 
@@ -145,7 +155,7 @@ def install(
 
     click.echo("Creating newrelic-log-ingestion Lambda function in AWS account")
     res = integrations.install_log_ingestion(
-        session, nr_license_key, enable_logs, memory_size, timeout, role_name
+        session, nr_license_key, enable_logs, memory_size, timeout, role_name, tags
     )
     install_success = res and install_success
 
@@ -263,6 +273,15 @@ def uninstall(aws_profile, aws_region, aws_permissions_check, nr_account_id, for
     show_default=True,
     help="Enable/disable the license key managed secret",
 )
+@click.option(
+    "--tag",
+    "tags",
+    default=[],
+    help="A tag to be added to the CloudFormation Stack (can be used multiple times)",
+    metavar="<key> <value>",
+    multiple=True,
+    nargs=2,
+)
 def update(
     aws_profile,
     aws_region,
@@ -272,6 +291,7 @@ def update(
     timeout,
     role_name,
     enable_license_key_secret,
+    tags,
 ):
     """UpdateNew Relic AWS Lambda Integration"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
@@ -283,13 +303,13 @@ def update(
 
     click.echo("Updating newrelic-log-ingestion Lambda function in AWS account")
     res = integrations.update_log_ingestion(
-        session, None, enable_logs, memory_size, timeout, role_name
+        session, None, enable_logs, memory_size, timeout, role_name, tags
     )
     update_success = res and update_success
 
     if enable_license_key_secret:
         update_success = update_success and integrations.auto_install_license_key(
-            session
+            session, tags
         )
     else:
         integrations.remove_license_key(session)
