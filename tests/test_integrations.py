@@ -66,6 +66,7 @@ def test_create_log_ingestion_function_defaults(success_mock):
                         {"ParameterKey": "Timeout", "ParameterValue": str(30)},
                     ],
                     Capabilities=["CAPABILITY_IAM"],
+                    Tags=None,
                     ChangeSetType="CREATE",
                     ChangeSetName=ANY,
                 )
@@ -111,6 +112,7 @@ def test_create_log_ingestion_function_opts(success_mock):
                         },
                     ],
                     Capabilities=[],
+                    Tags=None,
                     ChangeSetType="CREATE",
                     ChangeSetName=ANY,
                 )
@@ -191,6 +193,7 @@ def test_install_license_key(success_mock):
                         {"ParameterKey": "LicenseKey", "ParameterValue": "1234abcd"},
                     ],
                     Capabilities=["CAPABILITY_NAMED_IAM"],
+                    Tags=None,
                     ChangeSetType="CREATE",
                     ChangeSetName=ANY,
                 ),
@@ -227,6 +230,7 @@ def test_update_license_key(success_mock):
                         {"ParameterKey": "LicenseKey", "ParameterValue": "1234abcd"},
                     ],
                     Capabilities=["CAPABILITY_NAMED_IAM"],
+                    Tags=None,
                     ChangeSetType="UPDATE",
                     ChangeSetName=ANY,
                 ),
