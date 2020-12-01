@@ -82,9 +82,7 @@ def create_role(session, role_policy, nr_account_id, tags):
                 {"ParameterKey": "PolicyName", "ParameterValue": role_policy_name},
             ],
             Capabilities=["CAPABILITY_NAMED_IAM"],
-            Tags=[{"Key": key, "Value": value} for key, value in tags]
-            if tags
-            else None,
+            Tags=[{"Key": key, "Value": value} for key, value in tags] if tags else [],
         )
         click.echo("Waiting for stack creation to complete...", nl=False)
         client.get_waiter("stack_create_complete").wait(StackName=stack_name)
@@ -211,7 +209,7 @@ def create_log_ingestion_function(
         TemplateURL=template_url,
         Parameters=parameters,
         Capabilities=capabilities,
-        Tags=[{"Key": key, "Value": value} for key, value in tags] if tags else None,
+        Tags=[{"Key": key, "Value": value} for key, value in tags] if tags else [],
         ChangeSetType=mode,
         ChangeSetName=change_set_name,
     )
@@ -315,9 +313,7 @@ def update_log_ingestion_function(
             TemplateBody=json.dumps(template_body),
             Parameters=params,
             Capabilities=["CAPABILITY_IAM"],
-            Tags=[{"Key": key, "Value": value} for key, value in tags]
-            if tags
-            else None,
+            Tags=[{"Key": key, "Value": value} for key, value in tags] if tags else [],
         )
         client.get_waiter("stack_update_complete").wait(
             StackName=nested_stack["PhysicalResourceId"]
@@ -617,7 +613,7 @@ def install_license_key(
                     Capabilities=["CAPABILITY_NAMED_IAM"],
                     Tags=[{"Key": key, "Value": value} for key, value in tags]
                     if tags
-                    else None,
+                    else [],
                     ChangeSetType=mode,
                     ChangeSetName=change_set_name,
                 )
