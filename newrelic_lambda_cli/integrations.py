@@ -146,7 +146,7 @@ def create_log_ingest_parameters(
 
 
 def import_log_ingestion_function(
-    session, nr_license_key, enable_logs, memory_size, timeout, role_name
+    session, nr_license_key, enable_logs, memory_size, timeout, role_name, tags
 ):
     parameters, capabilities = create_log_ingest_parameters(
         nr_license_key, enable_logs, memory_size, timeout, role_name, "IMPORT"
@@ -167,6 +167,7 @@ def import_log_ingestion_function(
             TemplateBody=template.read(),
             Parameters=parameters,
             Capabilities=capabilities,
+            Tags=[{"Key": key, "Value": value} for key, value in tags] if tags else [],
             ChangeSetType="IMPORT",
             ChangeSetName=change_set_name,
             ResourcesToImport=[
@@ -333,6 +334,7 @@ def update_log_ingestion_function(
             old_memory_size,
             old_timeout,
             role_name=old_role_name,
+            tags=tags,
         )
         # Now that we've unnested, do the actual update
 
@@ -474,7 +476,7 @@ def install_log_ingestion(
                     memory_size,
                     timeout,
                     role_name,
-                    tags,
+                    tags=tags,
                 )
             except Exception as e:
                 failure("Failed to create 'newrelic-log-ingestion' function: %s" % e)
@@ -502,6 +504,7 @@ def update_log_ingestion(
     memory_size=None,
     timeout=None,
     role_name=None,
+    tags=None,
 ):
     """
     Updates the New Relic AWS Lambda log ingestion function and role.
@@ -528,7 +531,13 @@ def update_log_ingestion(
         return False
     try:
         update_log_ingestion_function(
-            session, nr_license_key, enable_logs, memory_size, timeout, role_name
+            session,
+            nr_license_key,
+            enable_logs,
+            memory_size,
+            timeout,
+            role_name,
+            tags=tags,
         )
     except Exception as e:
         failure("Failed to update 'newrelic-log-ingestion' function: %s" % e)
