@@ -6,20 +6,22 @@ from moto import mock_cloudformation
 from unittest.mock import call, patch, MagicMock, ANY
 
 from newrelic_lambda_cli.integrations import (
-    check_for_ingest_stack,
-    create_log_ingestion_function,
-    get_cf_stack_status,
+    _check_for_ingest_stack,
+    _create_log_ingestion_function,
+    _get_cf_stack_status,
     remove_log_ingestion_function,
-    install_license_key,
-    update_license_key,
+    _install_license_key,
+    _update_license_key,
     remove_license_key,
-    get_license_key_policy_arn,
+    _get_license_key_policy_arn,
 )
 
+from .conftest import integration_install, integration_uninstall
 
-def test_check_for_ingest_stack_none_when_not_found():
+
+def test__check_for_ingest_stack_none_when_not_found():
     """
-    Asserts that check_for_ingestion_stack returns None if not present.
+    Asserts that _check_for_ingestion_stack returns None if not present.
     """
     describe_stack_mock = {
         "client.return_value.describe_stacks.side_effect": botocore.exceptions.ClientError(
@@ -27,12 +29,12 @@ def test_check_for_ingest_stack_none_when_not_found():
         )
     }
     session = MagicMock(**describe_stack_mock)
-    assert check_for_ingest_stack(session) is None
+    assert _check_for_ingest_stack(session) is None
 
 
-def test_check_for_ingest_stack_status_when_found():
+def test__check_for_ingest_stack_status_when_found():
     """
-    Asserts that check_for_ingestion_stack returns the ingestion stack if present.
+    Asserts that _check_for_ingestion_stack returns the ingestion stack if present.
     """
     describe_stack_mock = {
         "client.return_value.describe_stacks.return_value": {
@@ -40,11 +42,11 @@ def test_check_for_ingest_stack_status_when_found():
         }
     }
     session = MagicMock(**describe_stack_mock)
-    assert check_for_ingest_stack(session) == "CREATE_COMPLETE"
+    assert _check_for_ingest_stack(session) == "CREATE_COMPLETE"
 
 
 @patch("newrelic_lambda_cli.integrations.success")
-def test_create_log_ingestion_function_defaults(success_mock):
+def test__create_log_ingestion_function__defaults(success_mock):
     session = MagicMock()
     with patch.object(session, "client") as mock_client_factory:
         cf_mocks = {"create_change_set.return_value": {"Id": "arn:something"}}
@@ -52,7 +54,12 @@ def test_create_log_ingestion_function_defaults(success_mock):
         cf_client = MagicMock(name="cloudformation", **cf_mocks)
         mock_client_factory.side_effect = [cf_client, sar_client]
 
-        create_log_ingestion_function(session, "test_key", False, 128, 30, None)
+        _create_log_ingestion_function(
+            integration_install(
+                session=session, enable_logs=False, memory_size=128, timeout=30
+            ),
+            "test_key",
+        )
 
         cf_client.assert_has_calls(
             [
@@ -79,7 +86,7 @@ def test_create_log_ingestion_function_defaults(success_mock):
 
 
 @patch("newrelic_lambda_cli.integrations.success")
-def test_create_log_ingestion_function_opts(success_mock):
+def test__create_log_ingestion_function__opts(success_mock):
     session = MagicMock()
     with patch.object(session, "client") as mock_client_factory:
         cf_mocks = {"create_change_set.return_value": {"Id": "arn:something"}}
@@ -87,13 +94,15 @@ def test_create_log_ingestion_function_opts(success_mock):
         cf_client = MagicMock(name="cloudformation", **cf_mocks)
         mock_client_factory.side_effect = [cf_client, sar_client]
 
-        create_log_ingestion_function(
-            session,
+        _create_log_ingestion_function(
+            integration_install(
+                session=session,
+                enable_logs=True,
+                memory_size=256,
+                role_name="CustomExecRole",
+                timeout=60,
+            ),
             "test_key",
-            enable_logs=True,
-            memory_size=256,
-            timeout=60,
-            role_name="CustomExecRole",
         )
 
         cf_client.assert_has_calls(
@@ -128,7 +137,7 @@ def test_create_log_ingestion_function_opts(success_mock):
 def test_remove_log_ingestion_function(success_mock):
     session = MagicMock()
 
-    remove_log_ingestion_function(session)
+    remove_log_ingestion_function(integration_uninstall(session=session))
 
     session.assert_has_calls(
         [
@@ -150,7 +159,7 @@ def test_remove_log_ingestion_function_not_present(success_mock):
     }
     session = MagicMock(**describe_stack_mock)
 
-    remove_log_ingestion_function(session)
+    remove_log_ingestion_function(integration_uninstall(session=session))
 
     session.assert_has_calls(
         [
@@ -163,13 +172,13 @@ def test_remove_log_ingestion_function_not_present(success_mock):
 
 
 @mock_cloudformation
-def test_get_cf_stack_status(aws_credentials):
+def test__get_cf_stack_status(aws_credentials):
     session = boto3.Session(region_name="us-east-1")
-    assert get_cf_stack_status(session, "foo-bar-baz") is None
+    assert _get_cf_stack_status(session, "foo-bar-baz") is None
 
 
 @patch("newrelic_lambda_cli.integrations.success")
-def test_install_license_key(success_mock):
+def test__install_license_key(success_mock):
     session = MagicMock()
     with patch.object(session, "client") as mock_client_factory:
         cf_mocks = {
@@ -181,7 +190,7 @@ def test_install_license_key(success_mock):
         cf_client = MagicMock(name="cloudformation", **cf_mocks)
         mock_client_factory.side_effect = [cf_client, cf_client]
 
-        result = install_license_key(session, "1234abcd")
+        result = _install_license_key(session, "1234abcd")
         assert result is True
 
         cf_client.assert_has_calls(
@@ -205,7 +214,7 @@ def test_install_license_key(success_mock):
 
 
 @patch("newrelic_lambda_cli.integrations.success")
-def test_update_license_key(success_mock):
+def test__update_license_key(success_mock):
     session = MagicMock()
     with patch.object(session, "client") as mock_client_factory:
         cf_mocks = {
@@ -217,7 +226,7 @@ def test_update_license_key(success_mock):
         cf_client = MagicMock(name="cloudformation", **cf_mocks)
         mock_client_factory.side_effect = [cf_client, cf_client]
 
-        result = update_license_key(session, "1234abcd")
+        result = _update_license_key(session, "1234abcd")
         assert result is True
 
         cf_client.assert_has_calls(
@@ -242,7 +251,7 @@ def test_update_license_key(success_mock):
 
 
 @patch("newrelic_lambda_cli.integrations.success")
-def test_install_license_key_already_installed(success_mock):
+def test__install_license_key__already_installed(success_mock):
     session = MagicMock()
     with patch.object(session, "client") as mock_client_factory:
         cf_mocks = {
@@ -253,7 +262,7 @@ def test_install_license_key_already_installed(success_mock):
         cf_client = MagicMock(name="cloudformation", **cf_mocks)
         mock_client_factory.side_effect = [cf_client, cf_client]
 
-        result = install_license_key(session, "1234abcd")
+        result = _install_license_key(session, "1234abcd")
         assert result is True
 
         cf_client.assert_has_calls(
@@ -272,7 +281,7 @@ def test_remove_license_key(success_mock):
         cf_client = MagicMock(name="cloudformation")
         mock_client_factory.side_effect = cf_client
 
-        remove_license_key(session)
+        remove_license_key(integration_uninstall(session=session))
 
         cf_client.assert_has_calls(
             [call().delete_stack(StackName="NewRelicLicenseKeySecret")],
@@ -281,13 +290,13 @@ def test_remove_license_key(success_mock):
         success_mock.assert_called_once()
 
 
-def test_get_license_key_policy_arn():
+def test__get_license_key_policy_arn():
     session = MagicMock()
     with patch.object(session, "client") as mock_client_factory:
         cf_client = MagicMock(name="cloudformation")
         mock_client_factory.side_effect = cf_client
 
-        get_license_key_policy_arn(session)
+        _get_license_key_policy_arn(session)
 
         cf_client.assert_has_calls(
             [call().describe_stacks(StackName="NewRelicLicenseKeySecret")],

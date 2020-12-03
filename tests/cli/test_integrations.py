@@ -32,23 +32,26 @@ def test_integrations_install(
     boto3_mock.assert_has_calls(
         [call.Session(profile_name=None, region_name="us-east-1")]
     )
+
     permissions_mock.assert_has_calls(
         [call.ensure_integration_install_permissions(ANY)]
     )
+
     api_mock.assert_has_calls(
         [
-            call.validate_gql_credentials(12345678, "test_key", "us"),
+            call.validate_gql_credentials(ANY),
             call.retrieve_license_key(ANY),
-            call.create_integration_account(ANY, 12345678, "test_linked_account", ANY),
-            call.enable_lambda_integration(ANY, 12345678, "test_linked_account"),
+            call.create_integration_account(ANY, ANY, ANY),
+            call.enable_lambda_integration(ANY, ANY),
         ],
         any_order=True,
     )
+
     integrations_mock.assert_has_calls(
         [
-            call.validate_linked_account(ANY, ANY, "test_linked_account"),
-            call.create_integration_role(ANY, None, 12345678, None, ()),
-            call.install_log_ingestion(ANY, ANY, False, 128, 30, None, ()),
+            call.validate_linked_account(ANY, ANY),
+            call.create_integration_role(ANY),
+            call.install_log_ingestion(ANY, ANY),
         ],
         any_order=True,
     )
@@ -86,7 +89,7 @@ def test_integrations_uninstall(
     permissions_mock.assert_not_called()
     integrations_mock.assert_has_calls(
         [
-            call.remove_integration_role(ANY, 12345678),
+            call.remove_integration_role(ANY),
             call.remove_log_ingestion_function(ANY),
         ]
     )
@@ -120,12 +123,14 @@ def test_integrations_uninstall_force(
     boto3_mock.assert_has_calls(
         [call.Session(profile_name=None, region_name="us-east-1")]
     )
+
     permissions_mock.assert_has_calls(
         [call.ensure_integration_uninstall_permissions(ANY)]
     )
+
     integrations_mock.assert_has_calls(
         [
-            call.remove_integration_role(ANY, 12345678),
+            call.remove_integration_role(ANY),
             call.remove_log_ingestion_function(ANY),
         ]
     )
@@ -156,16 +161,12 @@ def test_integrations_update(
     permissions_mock.assert_has_calls(
         [call.ensure_integration_install_permissions(ANY)]
     )
+
     integrations_mock.assert_has_calls(
         [
-            call.update_log_ingestion(
-                ANY,
-                None,
-                None,
-                None,
-                None,
-                None,
-                (),
-            ),
+            call.update_log_ingestion(ANY),
+            call.update_log_ingestion().__bool__(),
+            call.auto_install_license_key(ANY),
+            call.auto_install_license_key().__bool__(),
         ]
     )

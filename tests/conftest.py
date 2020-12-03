@@ -2,6 +2,15 @@ from click.testing import CliRunner
 import os
 import pytest
 
+from newrelic_lambda_cli.types import (
+    INTEGRATION_INSTALL_KEYS,
+    INTEGRATION_UNINSTALL_KEYS,
+    INTEGRATION_UPDATE_KEYS,
+    IntegrationInstall,
+    IntegrationUninstall,
+    IntegrationUpdate,
+)
+
 
 def _mock_function_config(runtime):
     return {
@@ -33,3 +42,24 @@ def aws_credentials():
     os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
     os.environ["AWS_SECURITY_TOKEN"] = "testing"
     os.environ["AWS_SESSION_TOKEN"] = "testing"
+
+
+def integration_install(**kwargs):
+    assert all(key in INTEGRATION_INSTALL_KEYS for key in kwargs)
+    return IntegrationInstall(
+        **{key: kwargs.get(key) for key in INTEGRATION_INSTALL_KEYS}
+    )
+
+
+def integration_uninstall(**kwargs):
+    assert all(key in INTEGRATION_UNINSTALL_KEYS for key in kwargs)
+    return IntegrationUninstall(
+        **{key: kwargs.get(key) for key in INTEGRATION_UNINSTALL_KEYS}
+    )
+
+
+def integration_update(**kwargs):
+    assert all(key in INTEGRATION_UPDATE_KEYS for key in kwargs)
+    return IntegrationUpdate(
+        **{key: kwargs.get(key) for key in INTEGRATION_UPDATE_KEYS}
+    )

@@ -3,6 +3,11 @@
 import click
 import botocore
 
+from newrelic_lambda_cli.types import (
+    IntegrationInstall,
+    IntegrationUninstall,
+)
+
 
 def check_permissions(session, actions, resources=None, context=None):
     """
@@ -35,15 +40,18 @@ def check_permissions(session, actions, resources=None, context=None):
             for key, values in context.items()
         ]
 
-    # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/iam.html
+    # See here for docs:
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/iam.html
     iam = session.client("iam")
     sts = session.client("sts")
 
-    # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sts.html#STS.Client.get_caller_identity
+    # See here for docs:
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sts.html#STS.Client.get_caller_identity
     caller = sts.get_caller_identity()
     caller_arn = caller["Arn"]
 
-    # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/iam.html#IAM.Client.simulate_principal_policy
+    # See here for docs:
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/iam.html#IAM.Client.simulate_principal_policy
     results = None
     try:
         results = iam.simulate_principal_policy(
@@ -66,15 +74,17 @@ def check_permissions(session, actions, resources=None, context=None):
     )
 
 
-def ensure_integration_install_permissions(session):
+def ensure_integration_install_permissions(input):
     """
     Ensures that the current AWS session has the necessary permissions to install the
     New Relic AWS Lambda Integration.
 
-    :param session: A boto3 session
+    :param input: An IntegrationInstall instance
     """
+    assert isinstance(input, IntegrationInstall)
+
     needed_permissions = check_permissions(
-        session,
+        input.session,
         actions=[
             "cloudformation:CreateChangeSet",
             "cloudformation:CreateStack",
@@ -103,15 +113,17 @@ def ensure_integration_install_permissions(session):
         raise click.UsageError("\n".join(message))
 
 
-def ensure_integration_uninstall_permissions(session):
+def ensure_integration_uninstall_permissions(input):
     """
     Ensures that the current AWS session has the necessary permissions to uninstall the
     New Relic AWS Lambda Integration.
 
-    :param session: A boto3 session
+    :param input: An IntegrationUninstall instance
     """
+    assert isinstance(input, IntegrationUninstall)
+
     needed_permissions = check_permissions(
-        session,
+        input.session,
         actions=[
             "cloudformation:DeleteStack",
             "cloudformation:DescribeStacks",
@@ -143,7 +155,8 @@ def ensure_lambda_install_permissions(session):
 
     if needed_permissions:
         message = [
-            "The following AWS permissions are needed to install the New Relic AWS Lambda layer:\n"
+            "The following AWS permissions are needed to install the New Relic AWS "
+            "Lambda layer:\n"
         ]
 
         for needed_permission in needed_permissions:
@@ -178,8 +191,8 @@ def ensure_lambda_uninstall_permissions(session):
 
 def ensure_lambda_list_permissions(session):
     """
-    Ensures that the current AWS session has the necessary permissions to list the functions
-    with New Relic AWS Lambda layers.
+    Ensures that the current AWS session has the necessary permissions to list the
+    functions with New Relic AWS Lambda layers.
 
     :param session: A boto3 session
     """
