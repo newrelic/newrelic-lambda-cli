@@ -136,7 +136,7 @@ def install(
 
     if enable_license_key_secret:
         click.echo("Creating the managed secret for the New Relic License Key")
-        integrations.install_license_key(session, nr_license_key, tags)
+        integrations.install_license_key(session, nr_license_key, tags=tags)
 
     install_success = True
 
