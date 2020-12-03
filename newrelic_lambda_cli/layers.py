@@ -303,8 +303,8 @@ def _attach_license_key_policy(session, role_arn, policy_arn):
     client = session.client("iam")
     try:
         client.attach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
-    except botocore.exceptions.ClientError:
-        failure("Failed to attach %s policy to %s" % (policy_arn, role_arn))
+    except botocore.exceptions.ClientError as e:
+        failure("Failed to attach %s policy to %s: %s" % (policy_arn, role_arn, e))
         return False
     else:
         return True
@@ -316,7 +316,8 @@ def _detach_license_key_policy(session, role_arn, policy_arn):
     client = session.client("iam")
     try:
         client.detach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
-    except botocore.exceptions.ClientError:
+    except botocore.exceptions.ClientError as e:
+        failure("Failed to detach %s policy to %s: %s" % (policy_arn, role_arn, e))
         return False
     else:
         return True
