@@ -25,7 +25,7 @@ def get_role(session, role_name):
     """Returns details about an IAM role"""
     # We only want the role name if an ARN is passed
     if "/" in role_name:
-        _, role_name = role_name.split("/", 1)
+        _, role_name = role_name.rsplit("/", 1)
     try:
         return session.client("iam").get_role(RoleName=role_name)
     except botocore.exceptions.ClientError as e:
@@ -292,7 +292,7 @@ def update_log_ingestion_function(
         old_props = lambda_client.get_function_configuration(
             FunctionName="newrelic-log-ingestion"
         )
-        old_role_name = old_props["Role"].split(":role/")[-1]
+        old_role_name = old_props["Role"].split("/")[-1]
         old_nr_license_key = old_props["Environment"]["Variables"]["LICENSE_KEY"]
         old_enable_logs = False
         if (

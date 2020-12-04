@@ -299,7 +299,7 @@ def uninstall(session, function_arn, verbose):
 
 def _attach_license_key_policy(session, role_arn, policy_arn):
     """Attaches the license key secret policy to the specified role"""
-    _, role_name = role_arn.split("/", 1)
+    _, role_name = role_arn.rsplit("/", 1)
     client = session.client("iam")
     try:
         client.attach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
@@ -312,7 +312,7 @@ def _attach_license_key_policy(session, role_arn, policy_arn):
 
 def _detach_license_key_policy(session, role_arn, policy_arn):
     """Detaches the license key secret policy from the specified role"""
-    _, role_name = role_arn.split("/", 1)
+    _, role_name = role_arn.rsplit("/", 1)
     client = session.client("iam")
     try:
         client.detach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
