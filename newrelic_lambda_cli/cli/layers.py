@@ -5,9 +5,9 @@ from concurrent.futures import as_completed, ThreadPoolExecutor
 import boto3
 import click
 
-from newrelic_lambda_cli import layers, permissions
-from newrelic_lambda_cli.cliutils import done, failure
+from newrelic_lambda_cli import layers, permissions, subscriptions
 from newrelic_lambda_cli.cli.decorators import add_options, AWS_OPTIONS
+from newrelic_lambda_cli.cliutils import done, failure
 from newrelic_lambda_cli.functions import get_aliased_functions
 
 
@@ -87,6 +87,12 @@ def register(group):
     show_default=True,
     help="Enable/disable the New Relic Lambda Extension",
 )
+@click.option(
+    "--enable-extension-function-logs/--disable-extension-function-logs",
+    default=False,
+    show_default=True,
+    help="Enable/disable sending Lambda function logs via the Extension",
+)
 @click.pass_context
 def install(
     ctx,
@@ -101,6 +107,7 @@ def install(
     layer_arn,
     upgrade,
     enable_extension,
+    enable_extension_function_logs,
 ):
     """Install New Relic AWS Lambda Layers"""
     session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
@@ -110,19 +117,29 @@ def install(
 
     functions = get_aliased_functions(session, functions, excludes)
 
+    def config_layers(function):
+        result = layers.install(
+            session,
+            function,
+            layer_arn,
+            nr_account_id,
+            nr_api_key,
+            nr_region,
+            upgrade,
+            enable_extension,
+            enable_extension_function_logs,
+            ctx.obj["VERBOSE"],
+        )
+
+        if result and enable_extension_function_logs:
+            subscriptions.remove_log_subscription(session, function)
+        return result
+
     with ThreadPoolExecutor() as executor:
         futures = [
             executor.submit(
-                layers.install,
-                session,
+                config_layers,
                 function,
-                layer_arn,
-                nr_account_id,
-                nr_api_key,
-                nr_region,
-                upgrade,
-                enable_extension,
-                ctx.obj["VERBOSE"],
             )
             for function in functions
         ]
