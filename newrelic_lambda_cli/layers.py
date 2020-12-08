@@ -5,10 +5,11 @@ import click
 import json
 import requests
 
-from newrelic_lambda_cli import api, utils
+from newrelic_lambda_cli import api, subscriptions, utils
 from newrelic_lambda_cli.cliutils import failure, success
 from newrelic_lambda_cli.functions import get_function
 from newrelic_lambda_cli.integrations import _get_license_key_policy_arn
+from newrelic_lambda_cli.types import LayerInstall, LayerUninstall
 
 
 def index(region, runtime):
@@ -20,16 +21,11 @@ def index(region, runtime):
     return layers_response.get("Layers", [])
 
 
-def _add_new_relic(
-    config,
-    aws_region,
-    layer_arn,
-    nr_account_id,
-    nr_license_key,
-    allow_upgrade,
-    enable_extension,
-    enable_function_logs,
-):
+def _add_new_relic(input, config, nr_license_key):
+    assert isinstance(input, LayerInstall)
+
+    aws_region = input.session.region_name
+
     runtime = config["Configuration"]["Runtime"]
     if runtime not in utils.RUNTIME_CONFIG:
         failure(
@@ -47,7 +43,7 @@ def _add_new_relic(
         if layer["Arn"].startswith(utils.get_arn_prefix(aws_region))
     ]
 
-    if not allow_upgrade and existing_newrelic_layer:
+    if not input.upgrade and existing_newrelic_layer:
         success(
             "Already installed on function '%s'. Pass --upgrade (or -u) to allow "
             "upgrade or reinstall to latest layer version."
@@ -63,8 +59,8 @@ def _add_new_relic(
 
     new_relic_layers = []
 
-    if layer_arn:
-        new_relic_layers = [layer_arn]
+    if input.layer_arn:
+        new_relic_layers = [input.layer_arn]
     else:
         # discover compatible layers...
         available_layers = index(aws_region, runtime)
@@ -112,19 +108,19 @@ def _add_new_relic(
 
     # Update the account id
     update_kwargs["Environment"]["Variables"]["NEW_RELIC_ACCOUNT_ID"] = str(
-        nr_account_id
+        input.nr_account_id
     )
 
     # Update the NEW_RELIC_LAMBDA_HANDLER envvars only when it's a new install.
     if runtime_handler and handler != runtime_handler:
         update_kwargs["Environment"]["Variables"]["NEW_RELIC_LAMBDA_HANDLER"] = handler
 
-    if enable_extension:
+    if input.enable_extension:
         update_kwargs["Environment"]["Variables"][
             "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
         ] = "true"
 
-        if enable_function_logs:
+        if input.enable_extension_function_logs:
             update_kwargs["Environment"]["Variables"][
                 "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
             ] = "true"
@@ -145,29 +141,18 @@ def _add_new_relic(
     return update_kwargs
 
 
-def install(
-    session,
-    function_arn,
-    layer_arn,
-    nr_account_id,
-    nr_api_key,
-    nr_region,
-    allow_upgrade,
-    enable_extension,
-    enable_function_logs,
-    verbose,
-):
-    client = session.client("lambda")
+def install(input, function_arn):
+    assert isinstance(input, LayerInstall)
 
-    config = get_function(session, function_arn)
+    client = input.session.client("lambda")
+
+    config = get_function(input.session, function_arn)
     if not config:
         failure("Could not find function: %s" % function_arn)
         return False
 
-    aws_region = session.region_name
-
-    policy_arn = _get_license_key_policy_arn(session)
-    if enable_extension and not policy_arn and not nr_api_key:
+    policy_arn = _get_license_key_policy_arn(input.session)
+    if input.enable_extension and not policy_arn and not input.nr_api_key:
         raise click.UsageError(
             "In order to use `--enable-extension`, you must first run "
             "`newrelic-lambda integrations install` with the "
@@ -179,22 +164,13 @@ def install(
         )
 
     nr_license_key = None
-    if not policy_arn and nr_api_key and nr_region:
-        gql = api.validate_gql_credentials(nr_account_id, nr_api_key, nr_region)
+    if not policy_arn and input.nr_api_key and input.nr_region:
+        gql = api.validate_gql_credentials(input)
         nr_license_key = api.retrieve_license_key(gql)
 
-    update_kwargs = _add_new_relic(
-        config,
-        aws_region,
-        layer_arn,
-        nr_account_id,
-        nr_license_key,
-        allow_upgrade,
-        enable_extension,
-        enable_function_logs,
-    )
+    update_kwargs = _add_new_relic(input, config, nr_license_key)
 
-    if not update_kwargs or isinstance(update_kwargs, dict):
+    if not update_kwargs or not isinstance(update_kwargs, dict):
         return False
 
     try:
@@ -206,17 +182,26 @@ def install(
         )
         return False
     else:
-        if enable_extension and policy_arn:
+        if input.enable_extension and policy_arn:
             _attach_license_key_policy(
-                session, config["Configuration"]["Role"], policy_arn
+                input.session, config["Configuration"]["Role"], policy_arn
             )
-        if verbose:
+
+        if input.enable_extension_function_logs:
+            subscriptions.remove_log_subscription(input.session, function_arn)
+
+        if input.verbose:
             click.echo(json.dumps(res, indent=2))
+
         success("Successfully installed layer on %s" % function_arn)
         return True
 
 
-def _remove_new_relic(config, aws_region):
+def _remove_new_relic(input, config):
+    assert isinstance(input, LayerUninstall)
+
+    aws_region = input.session.region_name
+
     runtime = config["Configuration"]["Runtime"]
     if runtime not in utils.RUNTIME_CONFIG:
         failure(
@@ -276,17 +261,17 @@ def _remove_new_relic(config, aws_region):
     }
 
 
-def uninstall(session, function_arn, verbose):
-    client = session.client("lambda")
+def uninstall(input, function_arn):
+    assert isinstance(input, LayerUninstall)
 
-    config = get_function(session, function_arn)
+    client = input.session.client("lambda")
+
+    config = get_function(input.session, function_arn)
     if not config:
         failure("Could not find function: %s" % function_arn)
         return False
 
-    aws_region = session.region_name
-
-    update_kwargs = _remove_new_relic(config, aws_region)
+    update_kwargs = _remove_new_relic(input, config)
 
     if not update_kwargs:
         return False
@@ -300,13 +285,15 @@ def uninstall(session, function_arn, verbose):
         )
         return False
     else:
-        policy_arn = _get_license_key_policy_arn(session)
+        policy_arn = _get_license_key_policy_arn(input.session)
         if policy_arn:
             _detach_license_key_policy(
-                session, config["Configuration"]["Role"], policy_arn
+                input.session, config["Configuration"]["Role"], policy_arn
             )
-        if verbose:
+
+        if input.verbose:
             click.echo(json.dumps(res, indent=2))
+
         success("Successfully uninstalled layer on %s" % function_arn)
         return True
 

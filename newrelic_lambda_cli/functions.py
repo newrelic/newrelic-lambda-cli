@@ -3,6 +3,12 @@
 import botocore
 import click
 
+from newrelic_lambda_cli.types import (
+    LayerInstall,
+    LayerUninstall,
+    SubscriptionInstall,
+    SubscriptionUninstall,
+)
 from newrelic_lambda_cli import utils
 
 
@@ -44,34 +50,39 @@ def get_function(session, function_name):
         raise click.UsageError(str(e))
 
 
-def get_aliased_functions(session, functions, excludes):
+def get_aliased_functions(input):
     """
     Retrieves functions for 'all, 'installed' and 'not-installed' aliases and appends
     them to existing list of functions.
     """
+    assert isinstance(
+        input,
+        (LayerInstall, LayerUninstall, SubscriptionInstall, SubscriptionUninstall),
+    )
+
     aliases = [
         function.lower()
-        for function in functions
+        for function in input.functions
         if function.lower() in ("all", "installed", "not-installed")
     ]
 
     functions = [
         function
-        for function in functions
+        for function in input.functions
         if function.lower()
         not in ("all", "installed", "not-installed", "newrelic-log-ingestion")
-        and function not in excludes
+        and function not in input.excludes
     ]
 
     if not aliases:
         return utils.unique(functions)
 
     for alias in set(aliases):
-        for function in list_functions(session, alias):
+        for function in list_functions(input.session, alias):
             if (
                 "FunctionName" in function
                 and "newrelic-log-ingestion" not in function["FunctionName"]
-                and function["FunctionName"] not in excludes
+                and function["FunctionName"] not in input.excludes
             ):
                 functions.append(function["FunctionName"])
 

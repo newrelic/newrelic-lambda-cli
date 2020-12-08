@@ -6,6 +6,10 @@ import botocore
 from newrelic_lambda_cli.types import (
     IntegrationInstall,
     IntegrationUninstall,
+    LayerInstall,
+    LayerUninstall,
+    SubscriptionInstall,
+    SubscriptionUninstall,
 )
 
 
@@ -142,15 +146,17 @@ def ensure_integration_uninstall_permissions(input):
         raise click.UsageError("\n".join(message))
 
 
-def ensure_lambda_install_permissions(session):
+def ensure_layer_install_permissions(input):
     """
     Ensures that the current AWS session has the necessary permissions to install the
     New Relic AWS Lambda layer and log subscription.
 
-    :param session: A boto3 session
+    :param input: A LayerInstall instance
     """
+    assert isinstance(input, LayerInstall)
     needed_permissions = check_permissions(
-        session, actions=["lambda:GetFunction", "lambda:UpdateFunctionConfiguration"]
+        input.session,
+        actions=["lambda:GetFunction", "lambda:UpdateFunctionConfiguration"],
     )
 
     if needed_permissions:
@@ -167,15 +173,17 @@ def ensure_lambda_install_permissions(session):
         raise click.UsageError("\n".join(message))
 
 
-def ensure_lambda_uninstall_permissions(session):
+def ensure_layer_uninstall_permissions(input):
     """
     Ensures that the current AWS session has the necessary permissions to uninstall the
     New Relic AWS Lambda layer and log subscription.
 
-    :param session: A boto3 session
+    :param input: A LayerUninstall instance
     """
+    assert isinstance(input, LayerUninstall)
     needed_permissions = check_permissions(
-        session, actions=["lambda:GetFunction", "lambda:UpdateFunctionConfiguration"]
+        input.session,
+        actions=["lambda:GetFunction", "lambda:UpdateFunctionConfiguration"],
     )
 
     if needed_permissions:
@@ -189,7 +197,7 @@ def ensure_lambda_uninstall_permissions(session):
         raise click.UsageError("\n".join(message))
 
 
-def ensure_lambda_list_permissions(session):
+def ensure_function_list_permissions(session):
     """
     Ensures that the current AWS session has the necessary permissions to list the
     functions with New Relic AWS Lambda layers.
@@ -205,15 +213,16 @@ def ensure_lambda_list_permissions(session):
         raise click.UsageError("\n".join(message))
 
 
-def ensure_subscription_install_permissions(session):
+def ensure_subscription_install_permissions(input):
     """
     Ensures that the current AWS session has the necessary permissions to install the
     New Relic log subscription filter.
 
-    :param session: A boto3 session
+    :param input: A SubscriptionInstall instance
     """
+    assert isinstance(input, SubscriptionInstall)
     needed_permissions = check_permissions(
-        session,
+        input.session,
         actions=[
             "lambda:GetFunction",
             "logs:DeleteSubscriptionFilter",
@@ -232,15 +241,16 @@ def ensure_subscription_install_permissions(session):
         raise click.UsageError("\n".join(message))
 
 
-def ensure_subscription_uninstall_permissions(session):
+def ensure_subscription_uninstall_permissions(input):
     """
     Ensures that the current AWS session has the necessary permissions to uninstall the
     New Relic log subscription filter.
 
-    :param session: A boto3 session
+    :param input: A SubscriptionUninstall instance
     """
+    assert isinstance(input, SubscriptionUninstall)
     needed_permissions = check_permissions(
-        session,
+        input.session,
         actions=["logs:DeleteSubscriptionFilter", "logs:DescribeSubscriptionFilters"],
     )
     if needed_permissions:
