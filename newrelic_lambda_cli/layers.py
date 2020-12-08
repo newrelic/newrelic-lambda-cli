@@ -194,7 +194,7 @@ def install(
         enable_function_logs,
     )
 
-    if not update_kwargs or type(update_kwargs) != dict:
+    if not update_kwargs or isinstance(update_kwargs, dict):
         return False
 
     try:
