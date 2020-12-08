@@ -8,7 +8,7 @@ import requests
 from newrelic_lambda_cli import api, utils
 from newrelic_lambda_cli.cliutils import failure, success
 from newrelic_lambda_cli.functions import get_function
-from newrelic_lambda_cli.integrations import get_license_key_policy_arn
+from newrelic_lambda_cli.integrations import _get_license_key_policy_arn
 
 
 def index(region, runtime):
@@ -153,7 +153,7 @@ def install(
 
     aws_region = session.region_name
 
-    policy_arn = get_license_key_policy_arn(session)
+    policy_arn = _get_license_key_policy_arn(session)
     if enable_extension and not policy_arn and not nr_api_key:
         raise click.UsageError(
             "In order to use `--enable-extension`, you must first run "
@@ -286,7 +286,7 @@ def uninstall(session, function_arn, verbose):
         )
         return False
     else:
-        policy_arn = get_license_key_policy_arn(session)
+        policy_arn = _get_license_key_policy_arn(session)
         if policy_arn:
             _detach_license_key_policy(
                 session, config["Configuration"]["Role"], policy_arn

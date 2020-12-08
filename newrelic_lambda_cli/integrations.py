@@ -7,8 +7,10 @@ import botocore
 import click
 import json
 
+from newrelic_lambda_cli.api import NewRelicGQL
 from newrelic_lambda_cli.cliutils import failure, success
 from newrelic_lambda_cli.functions import get_function
+from newrelic_lambda_cli.types import IntegrationInstall, IntegrationUninstall
 
 INGEST_STACK_NAME = "NewRelicLogIngestion"
 LICENSE_KEY_STACK_NAME = "NewRelicLicenseKeySecret"
@@ -21,7 +23,7 @@ def list_all_regions(session):
     return session.get_available_regions("lambda")
 
 
-def get_role(session, role_name):
+def _get_role(session, role_name):
     """Returns details about an IAM role"""
     # We only want the role name if an ARN is passed
     if "/" in role_name:
@@ -39,11 +41,11 @@ def get_role(session, role_name):
         raise click.UsageError(str(e))
 
 
-def check_for_ingest_stack(session):
-    return get_cf_stack_status(session, INGEST_STACK_NAME)
+def _check_for_ingest_stack(session):
+    return _get_cf_stack_status(session, INGEST_STACK_NAME)
 
 
-def get_cf_stack_status(session, stack_name):
+def _get_cf_stack_status(session, stack_name):
     """Returns the status of the CloudFormation stack if it exists"""
     try:
         res = session.client("cloudformation").describe_stacks(StackName=stack_name)
@@ -61,10 +63,11 @@ def get_cf_stack_status(session, stack_name):
 
 
 # TODO: Merge this with create_integration_role?
-def create_role(session, role_policy, nr_account_id, tags):
-    client = session.client("cloudformation")
-    role_policy_name = "" if role_policy is None else role_policy
-    stack_name = "NewRelicLambdaIntegrationRole-%d" % nr_account_id
+def _create_role(input):
+    assert isinstance(input, IntegrationInstall)
+    client = input.session.client("cloudformation")
+    role_policy_name = "" if input.role_policy is None else input.role_policy
+    stack_name = "NewRelicLambdaIntegrationRole-%d" % input.nr_account_id
     template_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         "templates",
@@ -77,19 +80,21 @@ def create_role(session, role_policy, nr_account_id, tags):
             Parameters=[
                 {
                     "ParameterKey": "NewRelicAccountNumber",
-                    "ParameterValue": str(nr_account_id),
+                    "ParameterValue": str(input.nr_account_id),
                 },
                 {"ParameterKey": "PolicyName", "ParameterValue": role_policy_name},
             ],
             Capabilities=["CAPABILITY_NAMED_IAM"],
-            Tags=[{"Key": key, "Value": value} for key, value in tags] if tags else [],
+            Tags=[{"Key": key, "Value": value} for key, value in input.tags]
+            if input.tags
+            else [],
         )
         click.echo("Waiting for stack creation to complete...", nl=False)
         client.get_waiter("stack_create_complete").wait(StackName=stack_name)
         click.echo("Done")
 
 
-def get_sar_template_url(session):
+def _get_sar_template_url(session):
     sar_client = session.client("serverlessrepo")
     sar_app_id = "arn:aws:serverlessrepo:us-east-1:463657938898:applications/NewRelic-log-ingestion"  # noqa
     template_details = sar_client.create_cloud_formation_template(
@@ -98,14 +103,13 @@ def get_sar_template_url(session):
     return template_details["TemplateUrl"]
 
 
-def create_log_ingest_parameters(
-    nr_license_key, enable_logs, memory_size, timeout, role_name, mode="CREATE"
-):
+def _create_log_ingest_parameters(input, nr_license_key, mode="CREATE"):
+    assert isinstance(input, IntegrationInstall)
     update_mode = mode == "UPDATE"
     parameters = []
-    if memory_size is not None:
+    if input.memory_size is not None:
         parameters.append(
-            {"ParameterKey": "MemorySize", "ParameterValue": str(memory_size)}
+            {"ParameterKey": "MemorySize", "ParameterValue": str(input.memory_size)}
         )
     elif update_mode:
         parameters.append({"ParameterKey": "MemorySize", "UsePreviousValue": True})
@@ -117,11 +121,11 @@ def create_log_ingest_parameters(
     elif update_mode:
         parameters.append({"ParameterKey": "NRLicenseKey", "UsePreviousValue": True})
 
-    if enable_logs is not None:
+    if input.enable_logs is not None:
         parameters.append(
             {
                 "ParameterKey": "NRLoggingEnabled",
-                "ParameterValue": "True" if enable_logs else "False",
+                "ParameterValue": "True" if input.enable_logs else "False",
             }
         )
     elif update_mode:
@@ -129,14 +133,18 @@ def create_log_ingest_parameters(
             {"ParameterKey": "NRLoggingEnabled", "UsePreviousValue": True}
         )
 
-    if timeout is not None:
-        parameters.append({"ParameterKey": "Timeout", "ParameterValue": str(timeout)})
+    if input.timeout is not None:
+        parameters.append(
+            {"ParameterKey": "Timeout", "ParameterValue": str(input.timeout)}
+        )
     elif update_mode:
         parameters.append({"ParameterKey": "Timeout", "UsePreviousValue": True})
 
     capabilities = ["CAPABILITY_IAM"]
-    if role_name is not None:
-        parameters.append({"ParameterKey": "FunctionRole", "ParameterValue": role_name})
+    if input.role_name is not None:
+        parameters.append(
+            {"ParameterKey": "FunctionRole", "ParameterValue": input.role_name}
+        )
         capabilities = []
     elif mode != "CREATE":
         parameters.append({"ParameterKey": "FunctionRole", "UsePreviousValue": True})
@@ -145,10 +153,10 @@ def create_log_ingest_parameters(
     return parameters, capabilities
 
 
-def import_log_ingestion_function(
+def _import_log_ingestion_function(
     session, nr_license_key, enable_logs, memory_size, timeout, role_name, tags
 ):
-    parameters, capabilities = create_log_ingest_parameters(
+    parameters, capabilities = _create_log_ingest_parameters(
         nr_license_key, enable_logs, memory_size, timeout, role_name, "IMPORT"
     )
     cf_client = session.client("cloudformation")
@@ -179,52 +187,50 @@ def import_log_ingestion_function(
             ],
         )
 
-        exec_change_set(cf_client, change_set, "IMPORT")
+        _exec_change_set(cf_client, change_set, "IMPORT")
 
 
-def create_log_ingestion_function(
-    session,
+def _create_log_ingestion_function(
+    input,
     nr_license_key,
-    enable_logs,
-    memory_size,
-    timeout,
-    role_name,
     mode="CREATE",
-    tags=None,
 ):
-    parameters, capabilities = create_log_ingest_parameters(
-        nr_license_key, enable_logs, memory_size, timeout, role_name, mode
+    assert isinstance(input, IntegrationInstall)
+
+    parameters, capabilities = _create_log_ingest_parameters(
+        input, nr_license_key, mode
     )
 
-    cf_client = session.client("cloudformation")
+    client = input.session.client("cloudformation")
 
     click.echo("Fetching new CloudFormation template url")
-
-    template_url = get_sar_template_url(session)
+    template_url = _get_sar_template_url(input.session)
 
     change_set_name = "%s-%s-%d" % (INGEST_STACK_NAME, mode, int(time.time()))
     click.echo("Creating change set: %s" % change_set_name)
 
-    change_set = cf_client.create_change_set(
+    change_set = client.create_change_set(
         StackName=INGEST_STACK_NAME,
         TemplateURL=template_url,
         Parameters=parameters,
         Capabilities=capabilities,
-        Tags=[{"Key": key, "Value": value} for key, value in tags] if tags else [],
+        Tags=[{"Key": key, "Value": value} for key, value in input.tags]
+        if input.tags
+        else [],
         ChangeSetType=mode,
         ChangeSetName=change_set_name,
     )
 
-    exec_change_set(cf_client, change_set, mode)
+    _exec_change_set(client, change_set, mode)
 
 
-def exec_change_set(cf_client, change_set, mode, stack_name=INGEST_STACK_NAME):
+def _exec_change_set(client, change_set, mode, stack_name=INGEST_STACK_NAME):
     click.echo(
         "Waiting for change set creation to complete, this may take a minute... ",
         nl=False,
     )
     try:
-        cf_client.get_waiter("change_set_create_complete").wait(
+        client.get_waiter("change_set_create_complete").wait(
             ChangeSetName=change_set["Id"], WaiterConfig={"Delay": 10}
         )
     except botocore.exceptions.WaiterError as e:
@@ -239,13 +245,13 @@ def exec_change_set(cf_client, change_set, mode, stack_name=INGEST_STACK_NAME):
             success("No Changes Detected")
             return
         raise e
-    cf_client.execute_change_set(ChangeSetName=change_set["Id"])
+    client.execute_change_set(ChangeSetName=change_set["Id"])
     click.echo(
         "Waiting for change set to finish execution. This may take a minute... ",
         nl=False,
     )
     exec_waiter_type = "stack_%s_complete" % mode.lower()
-    cf_client.get_waiter(exec_waiter_type).wait(
+    client.get_waiter(exec_waiter_type).wait(
         StackName=stack_name, WaiterConfig={"Delay": 15}
     )
     success("Done")
@@ -327,7 +333,7 @@ def update_log_ingestion_function(
         client.get_waiter("stack_delete_complete").wait(StackName=INGEST_STACK_NAME)
 
         click.echo("Starting import")
-        import_log_ingestion_function(
+        _import_log_ingestion_function(
             session,
             old_nr_license_key,
             old_enable_logs,
@@ -339,7 +345,7 @@ def update_log_ingestion_function(
         # Now that we've unnested, do the actual update
 
     # Not a nested install; just update
-    create_log_ingestion_function(
+    _create_log_ingestion_function(
         session,
         nr_license_key,
         enable_logs,
@@ -350,13 +356,14 @@ def update_log_ingestion_function(
     )
 
 
-def remove_log_ingestion_function(session):
-    client = session.client("cloudformation")
-    stack_status = check_for_ingest_stack(session)
+def remove_log_ingestion_function(input):
+    assert isinstance(input, IntegrationUninstall)
+    client = input.session.client("cloudformation")
+    stack_status = _check_for_ingest_stack(input.session)
     if stack_status is None:
         click.echo(
             "No New Relic AWS Lambda log ingestion found in region %s, skipping"
-            % session.region_name
+            % input.session.region_name
         )
         return
     click.echo("Deleting New Relic log ingestion stack '%s'" % INGEST_STACK_NAME)
@@ -368,39 +375,40 @@ def remove_log_ingestion_function(session):
     success("Done")
 
 
-def create_integration_role(session, role_policy, nr_account_id, integration_arn, tags):
+def create_integration_role(input):
     """
     Creates a AWS CloudFormation stack that adds the New Relic AWSLambda Integration
     IAM role. This can be overridden with the `role_arn` parameter, which just checks
     that the role exists.
     """
-    if integration_arn is not None:
-        role = get_role(session, integration_arn)
+    assert isinstance(input, IntegrationInstall)
+    if input.integration_arn is not None:
+        role = _get_role(input.session, input.integration_arn)
         if role:
             success(
                 "Found existing AWS IAM role '%s', using it with the New Relic Lambda "
-                "integration" % integration_arn
+                "integration" % input.integration_arn
             )
             return role
         failure(
             "Could not find AWS IAM role '%s', please verify it exists and run this "
-            "command again" % integration_arn
+            "command again" % input.integration_arn
         )
         return
 
-    role_name = "NewRelicLambdaIntegrationRole_%s" % nr_account_id
-    stack_name = "NewRelicLambdaIntegrationRole-%s" % nr_account_id
-    role = get_role(session, role_name)
+    role_name = "NewRelicLambdaIntegrationRole_%s" % input.nr_account_id
+    stack_name = "NewRelicLambdaIntegrationRole-%s" % input.nr_account_id
+    role = _get_role(input.session, role_name)
     if role:
         success("New Relic AWS Lambda integration role '%s' already exists" % role_name)
         return role
-    stack_status = get_cf_stack_status(session, stack_name)
+    stack_status = _get_cf_stack_status(input.session, stack_name)
     if stack_status is None:
-        create_role(session, role_policy, nr_account_id, tags)
-        role = get_role(session, role_name)
+        _create_role(input)
+        role = _get_role(input.session, role_name)
         success(
             "Created role [%s] with policy [%s] in AWS account."
-            % (role_name, role_policy)
+            % (role_name, input.role_policy)
         )
         return role
     failure(
@@ -409,14 +417,15 @@ def create_integration_role(session, role_policy, nr_account_id, integration_arn
     )
 
 
-def remove_integration_role(session, nr_account_id):
+def remove_integration_role(input):
     """
     Removes the AWS CloudFormation stack that includes the New Relic AWS Integration
     IAM role.
     """
-    client = session.client("cloudformation")
-    stack_name = "NewRelicLambdaIntegrationRole-%s" % nr_account_id
-    stack_status = get_cf_stack_status(session, stack_name)
+    assert isinstance(input, IntegrationUninstall)
+    client = input.session.client("cloudformation")
+    stack_name = "NewRelicLambdaIntegrationRole-%s" % input.nr_account_id
+    stack_status = _get_cf_stack_status(input.session, stack_name)
     if stack_status is None:
         click.echo("No New Relic AWS Lambda Integration found, skipping")
         return
@@ -429,15 +438,18 @@ def remove_integration_role(session, nr_account_id):
     success("Done")
 
 
-def validate_linked_account(session, gql, linked_account_name):
+def validate_linked_account(gql, input):
     """
     Ensure that the aws account associated with the 'provider account',
     if it exists, is the same as the aws account of the default aws-cli
     profile configured in the local machine.
     """
-    account = gql.get_linked_account_by_name(linked_account_name)
+    assert isinstance(gql, NewRelicGQL)
+    assert isinstance(input, IntegrationInstall)
+
+    account = gql.get_linked_account_by_name(input.linked_account_name)
     if account is not None:
-        aws_account_id = get_aws_account_id(session)
+        aws_account_id = _get_aws_account_id(input.session)
         if aws_account_id != account["externalId"]:
             raise click.UsageError(
                 "The selected linked AWS account [%s] does not match "
@@ -447,36 +459,27 @@ def validate_linked_account(session, gql, linked_account_name):
 
 
 def install_log_ingestion(
-    session,
+    input,
     nr_license_key,
-    enable_logs=False,
-    memory_size=128,
-    timeout=30,
-    role_name=None,
-    tags=None,
 ):
     """
     Installs the New Relic AWS Lambda log ingestion function and role.
 
     Returns True for success and False for failure.
     """
-    function = get_function(session, "newrelic-log-ingestion")
+    assert isinstance(input, IntegrationInstall)
+    function = get_function(input.session, "newrelic-log-ingestion")
     if function is None:
-        stack_status = check_for_ingest_stack(session)
+        stack_status = _check_for_ingest_stack(input.session)
         if stack_status is None:
             click.echo(
                 "Setting up 'newrelic-log-ingestion' function in region: %s"
-                % session.region_name
+                % input.session.region_name
             )
             try:
-                create_log_ingestion_function(
-                    session,
+                _create_log_ingestion_function(
+                    input,
                     nr_license_key,
-                    enable_logs,
-                    memory_size,
-                    timeout,
-                    role_name,
-                    tags=tags,
                 )
             except Exception as e:
                 failure("Failed to create 'newrelic-log-ingestion' function: %s" % e)
@@ -492,7 +495,7 @@ def install_log_ingestion(
     else:
         success(
             "The 'newrelic-log-ingestion' function already exists in region %s, "
-            "skipping" % session.region_name
+            "skipping" % input.session.region_name
         )
     return True
 
@@ -519,7 +522,7 @@ def update_log_ingestion(
             % session.region_name
         )
         return False
-    stack_status = check_for_ingest_stack(session)
+    stack_status = _check_for_ingest_stack(session)
     if stack_status is None:
         failure(
             "No 'NewRelicLogIngestion' stack in region '%s'. "
@@ -561,10 +564,9 @@ def auto_install_license_key(session, tags):
     If the LK secret is missing, create it, picking up the LK value from the ingest
     lambda's configuration.
     """
-    lk_stack_status = get_cf_stack_status(session, LICENSE_KEY_STACK_NAME)
+    lk_stack_status = _get_cf_stack_status(session, LICENSE_KEY_STACK_NAME)
     if lk_stack_status is None:
         click.echo("Creating the managed secret for the New Relic License Key")
-
         lk = get_log_ingestion_license_key(session)
         if lk is None:
             failure(
@@ -572,14 +574,14 @@ def auto_install_license_key(session, tags):
                 "value from ingest lambda"
             )
             return False
-        return install_license_key(session, nr_license_key=lk, tags=tags)
+        return _install_license_key(session, nr_license_key=lk, tags=tags)
     return True
 
 
-def install_license_key(
+def _install_license_key(
     session, nr_license_key, policy_name=None, mode="CREATE", tags=None
 ):
-    lk_stack_status = get_cf_stack_status(session, LICENSE_KEY_STACK_NAME)
+    lk_stack_status = _get_cf_stack_status(session, LICENSE_KEY_STACK_NAME)
     if lk_stack_status is None:
         click.echo(
             "Setting up %s stack in region: %s"
@@ -627,7 +629,7 @@ def install_license_key(
                     ChangeSetName=change_set_name,
                 )
 
-                exec_change_set(
+                _exec_change_set(
                     cf_client, change_set, mode, stack_name=LICENSE_KEY_STACK_NAME
                 )
         except Exception as e:
@@ -636,19 +638,20 @@ def install_license_key(
     return True
 
 
-def update_license_key(session, nr_license_key, policy_name=None, tags=None):
-    return install_license_key(
+def _update_license_key(session, nr_license_key, policy_name=None, tags=None):
+    return _install_license_key(
         session, nr_license_key, policy_name, mode="UPDATE", tags=tags
     )
 
 
-def remove_license_key(session):
-    client = session.client("cloudformation")
-    lk_stack_status = get_cf_stack_status(session, LICENSE_KEY_STACK_NAME)
-    if lk_stack_status is None:
+def remove_license_key(input):
+    assert isinstance(input, IntegrationUninstall)
+    client = input.session.client("cloudformation")
+    stack_status = _get_cf_stack_status(input.session, LICENSE_KEY_STACK_NAME)
+    if stack_status is None:
         click.echo(
             "No New Relic license key secret found in region %s, skipping"
-            % session.region_name
+            % input.session.region_name
         )
         return
     click.echo("Deleting stack '%s'" % LICENSE_KEY_STACK_NAME)
@@ -660,7 +663,7 @@ def remove_license_key(session):
     success("Done")
 
 
-def get_license_key_policy_arn(session):
+def _get_license_key_policy_arn(session):
     """Returns the policy ARN for the license key secret if it exists"""
     global __cached_license_key_policy_arn
     if __cached_license_key_policy_arn:
@@ -692,5 +695,5 @@ def get_license_key_policy_arn(session):
             return None
 
 
-def get_aws_account_id(session):
+def _get_aws_account_id(session):
     return session.client("sts").get_caller_identity().get("Account")
