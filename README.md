@@ -1,4 +1,6 @@
-# newrelic-lambda-cli
+[![Community Project header](https://github.com/newrelic/opensource-website/raw/master/src/images/categories/Community_Project.png)](https://opensource.newrelic.com/oss-category/#community-project)
+
+# newrelic-lambda-cli [![Build Status](https://circleci.com/gh/newrelic/newrelic-lambda-cli.svg?style=svg)](https://circleci.com/gh/newrelic/newrelic-lambda-cli) [![Coverage](https://codecov.io/gh/newrelic/newrelic-lambda-cli/branch/master/graph/badge.svg?token=1Rl7h0O1JJ)](https://codecov.io/gh/newrelic/newrelic-lambda-cli)
 
 A CLI to install the New Relic AWS Lambda integration and layers.
 
