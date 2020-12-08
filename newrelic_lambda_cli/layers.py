@@ -28,6 +28,7 @@ def _add_new_relic(
     nr_license_key,
     allow_upgrade,
     enable_extension,
+    enable_function_logs,
 ):
     runtime = config["Configuration"]["Runtime"]
     if runtime not in utils.RUNTIME_CONFIG:
@@ -123,12 +124,23 @@ def _add_new_relic(
             "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
         ] = "true"
 
+        if enable_function_logs:
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
+            ] = "true"
+        else:
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
+            ] = "false"
+    else:
+        update_kwargs["Environment"]["Variables"][
+            "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
+        ] = "false"
+
     if nr_license_key:
         update_kwargs["Environment"]["Variables"][
             "NEW_RELIC_LICENSE_KEY"
         ] = nr_license_key
-
-    return update_kwargs
 
     return update_kwargs
 
@@ -142,6 +154,7 @@ def install(
     nr_region,
     allow_upgrade,
     enable_extension,
+    enable_function_logs,
     verbose,
 ):
     client = session.client("lambda")
@@ -178,9 +191,10 @@ def install(
         nr_license_key,
         allow_upgrade,
         enable_extension,
+        enable_function_logs,
     )
 
-    if not update_kwargs:
+    if not update_kwargs or isinstance(update_kwargs, dict):
         return False
 
     try:
