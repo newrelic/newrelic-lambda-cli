@@ -5,11 +5,10 @@ import click
 
 from newrelic_lambda_cli.cliutils import failure, success, warning
 from newrelic_lambda_cli.functions import get_function
+from newrelic_lambda_cli.types import SubscriptionInstall, SubscriptionUninstall
 
-DEFAULT_FILTER_PATTERN = '?REPORT ?NR_LAMBDA_MONITORING ?"Task timed out" ?RequestId'
 
-
-def get_log_group_name(function_name):
+def _get_log_group_name(function_name):
     """Builds a log group name path; handling ARNs if provided"""
     if ":" in function_name:
         parts = function_name.split(":")
@@ -18,9 +17,9 @@ def get_log_group_name(function_name):
     return "/aws/lambda/%s" % function_name
 
 
-def get_subscription_filters(session, function_name):
+def _get_subscription_filters(session, function_name):
     """Returns all the log subscription filters for the function"""
-    log_group_name = get_log_group_name(function_name)
+    log_group_name = _get_log_group_name(function_name)
     try:
         res = session.client("logs").describe_subscription_filters(
             logGroupName=log_group_name
@@ -41,12 +40,12 @@ def get_subscription_filters(session, function_name):
         return res.get("subscriptionFilters", [])
 
 
-def create_subscription_filter(
-    session, function_name, destination_arn, filter_pattern=DEFAULT_FILTER_PATTERN
+def _create_subscription_filter(
+    session, function_name, destination_arn, filter_pattern
 ):
     try:
         session.client("logs").put_subscription_filter(
-            logGroupName=get_log_group_name(function_name),
+            logGroupName=_get_log_group_name(function_name),
             filterName="NewRelicLogStreaming",
             filterPattern=filter_pattern,
             destinationArn=destination_arn,
@@ -61,10 +60,10 @@ def create_subscription_filter(
         return True
 
 
-def remove_subscription_filter(session, function_name, filter_name):
+def _remove_subscription_filter(session, function_name, filter_name):
     try:
         session.client("logs").delete_subscription_filter(
-            logGroupName=get_log_group_name(function_name), filterName=filter_name
+            logGroupName=_get_log_group_name(function_name), filterName=filter_name
         )
     except botocore.exceptions.ClientError as e:
         failure(
@@ -76,10 +75,9 @@ def remove_subscription_filter(session, function_name, filter_name):
         return True
 
 
-def create_log_subscription(
-    session, function_name, filter_pattern=DEFAULT_FILTER_PATTERN
-):
-    destination = get_function(session, "newrelic-log-ingestion")
+def create_log_subscription(input, function_name):
+    assert isinstance(input, SubscriptionInstall)
+    destination = get_function(input.session, "newrelic-log-ingestion")
     if destination is None:
         failure(
             "Could not find 'newrelic-log-ingestion' function. Is the New Relic AWS "
@@ -87,7 +85,7 @@ def create_log_subscription(
         )
         return False
     destination_arn = destination["Configuration"]["FunctionArn"]
-    subscription_filters = get_subscription_filters(session, function_name)
+    subscription_filters = _get_subscription_filters(input.session, function_name)
     if subscription_filters is None:
         return False
     newrelic_filters = [
@@ -107,25 +105,26 @@ def create_log_subscription(
         )
     if not newrelic_filters:
         click.echo("Adding New Relic log subscription to '%s'" % function_name)
-        return create_subscription_filter(
-            session, function_name, destination_arn, filter_pattern
+        return _create_subscription_filter(
+            input.session, function_name, destination_arn, input.filter_pattern
         )
     else:
         click.echo(
             "Found log subscription for '%s', verifying configuration" % function_name
         )
         newrelic_filter = newrelic_filters[0]
-        if newrelic_filter["filterPattern"] != filter_pattern:
-            return remove_subscription_filter(
-                session, function_name, newrelic_filter["filterName"]
-            ) and create_subscription_filter(
-                session, function_name, destination_arn, filter_pattern
+        if newrelic_filter["filterPattern"] != input.filter_pattern:
+            return _remove_subscription_filter(
+                input.session, function_name, newrelic_filter["filterName"]
+            ) and _create_subscription_filter(
+                input.session, function_name, destination_arn, input.filter_pattern
             )
         return True
 
 
-def remove_log_subscription(session, function_name):
-    subscription_filters = get_subscription_filters(session, function_name)
+def remove_log_subscription(input, function_name):
+    assert isinstance(input, SubscriptionUninstall)
+    subscription_filters = _get_subscription_filters(input.session, function_name)
     if subscription_filters is None:
         return False
     newrelic_filters = [
@@ -140,6 +139,6 @@ def remove_log_subscription(session, function_name):
         return True
     newrelic_filter = newrelic_filters[0]
     click.echo("Removing New Relic log subscription from '%s'" % function_name)
-    return remove_subscription_filter(
-        session, function_name, newrelic_filter["filterName"]
+    return _remove_subscription_filter(
+        input.session, function_name, newrelic_filter["filterName"]
     )

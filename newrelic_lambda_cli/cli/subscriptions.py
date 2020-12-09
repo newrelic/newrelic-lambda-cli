@@ -9,6 +9,9 @@ from newrelic_lambda_cli import permissions, subscriptions
 from newrelic_lambda_cli.cliutils import done, failure
 from newrelic_lambda_cli.cli.decorators import add_options, AWS_OPTIONS
 from newrelic_lambda_cli.functions import get_aliased_functions
+from newrelic_lambda_cli.types import SubscriptionInstall, SubscriptionUninstall
+
+DEFAULT_FILTER_PATTERN = '?REPORT ?NR_LAMBDA_MONITORING ?"Task timed out" ?RequestId'
 
 
 @click.group(name="subscriptions")
@@ -45,26 +48,29 @@ def register(group):
 @click.option(
     "filter_pattern",
     "--filter-pattern",
-    default=subscriptions.DEFAULT_FILTER_PATTERN,
+    default=DEFAULT_FILTER_PATTERN,
     help="Custom log subscription filter pattern",
     metavar="<pattern>",
+    show_default=False,
 )
-def install(
-    aws_profile, aws_region, aws_permissions_check, functions, excludes, filter_pattern
-):
+def install(**kwargs):
     """Install New Relic AWS Lambda Log Subscriptions"""
-    session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
+    input = SubscriptionInstall(session=None, **kwargs)
 
-    if aws_permissions_check:
-        permissions.ensure_subscription_install_permissions(session)
+    input = input._replace(
+        session=boto3.Session(
+            profile_name=input.aws_profile, region_name=input.aws_region
+        )
+    )
 
-    functions = get_aliased_functions(session, functions, excludes)
+    if input.aws_permissions_check:
+        permissions.ensure_subscription_install_permissions(input)
+
+    functions = get_aliased_functions(input)
 
     with ThreadPoolExecutor() as executor:
         futures = [
-            executor.submit(
-                subscriptions.create_log_subscription, session, function, filter_pattern
-            )
+            executor.submit(subscriptions.create_log_subscription, input, function)
             for function in functions
         ]
         install_success = all(future.result() for future in as_completed(futures))
@@ -94,18 +100,24 @@ def install(
     metavar="<name>",
     multiple=True,
 )
-def uninstall(aws_profile, aws_region, aws_permissions_check, functions, excludes):
+def uninstall(**kwargs):
     """Uninstall New Relic AWS Lambda Log Subscriptions"""
-    session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
+    input = SubscriptionUninstall(session=None, **kwargs)
 
-    if aws_permissions_check:
-        permissions.ensure_subscription_uninstall_permissions(session)
+    input = input._replace(
+        session=boto3.Session(
+            profile_name=input.aws_profile, region_name=input.aws_region
+        )
+    )
 
-    functions = get_aliased_functions(session, functions, excludes)
+    if input.aws_permissions_check:
+        permissions.ensure_subscription_uninstall_permissions(input)
+
+    functions = get_aliased_functions(input)
 
     with ThreadPoolExecutor() as executor:
         futures = [
-            executor.submit(subscriptions.remove_log_subscription, session, function)
+            executor.submit(subscriptions.remove_log_subscription, input, function)
             for function in functions
         ]
         uninstall_success = all(future.result() for future in as_completed(futures))

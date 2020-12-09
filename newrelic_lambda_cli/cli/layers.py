@@ -5,10 +5,11 @@ from concurrent.futures import as_completed, ThreadPoolExecutor
 import boto3
 import click
 
-from newrelic_lambda_cli import layers, permissions, subscriptions
+from newrelic_lambda_cli import layers, permissions
 from newrelic_lambda_cli.cli.decorators import add_options, AWS_OPTIONS
 from newrelic_lambda_cli.cliutils import done, failure
 from newrelic_lambda_cli.functions import get_aliased_functions
+from newrelic_lambda_cli.types import LayerInstall, LayerUninstall
 
 
 @click.group(name="layers")
@@ -94,54 +95,24 @@ def register(group):
     help="Enable/disable sending Lambda function logs via the Extension",
 )
 @click.pass_context
-def install(
-    ctx,
-    nr_account_id,
-    nr_api_key,
-    nr_region,
-    aws_profile,
-    aws_region,
-    aws_permissions_check,
-    functions,
-    excludes,
-    layer_arn,
-    upgrade,
-    enable_extension,
-    enable_extension_function_logs,
-):
+def install(ctx, **kwargs):
     """Install New Relic AWS Lambda Layers"""
-    session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
+    input = LayerInstall(session=None, verbose=ctx.obj["VERBOSE"], **kwargs)
 
-    if aws_permissions_check:
-        permissions.ensure_lambda_install_permissions(session)
-
-    functions = get_aliased_functions(session, functions, excludes)
-
-    def config_layers(function):
-        result = layers.install(
-            session,
-            function,
-            layer_arn,
-            nr_account_id,
-            nr_api_key,
-            nr_region,
-            upgrade,
-            enable_extension,
-            enable_extension_function_logs,
-            ctx.obj["VERBOSE"],
+    input = input._replace(
+        session=boto3.Session(
+            profile_name=input.aws_profile, region_name=input.aws_region
         )
+    )
 
-        if result and enable_extension_function_logs:
-            subscriptions.remove_log_subscription(session, function)
-        return result
+    if input.aws_permissions_check:
+        permissions.ensure_layer_install_permissions(input)
+
+    functions = get_aliased_functions(input)
 
     with ThreadPoolExecutor() as executor:
         futures = [
-            executor.submit(
-                config_layers,
-                function,
-            )
-            for function in functions
+            executor.submit(layers.install, input, function) for function in functions
         ]
         install_success = all(future.result() for future in as_completed(futures))
 
@@ -160,10 +131,10 @@ def install(
                 "--function",
                 "all",
             ]
-            if aws_profile:
-                command.append("--aws-profile %s" % aws_profile)
-            if aws_region:
-                command.append("--aws-region %s" % aws_region)
+            if input.aws_profile:
+                command.append("--aws-profile %s" % input.aws_profile)
+            if input.aws_region:
+                command.append("--aws-region %s" % input.aws_region)
             click.echo(" ".join(command))
             click.echo(
                 "\nIf you used `--enable-logs` for the `newrelic-lambda integrations "
@@ -195,19 +166,24 @@ def install(
     multiple=True,
 )
 @click.pass_context
-def uninstall(ctx, aws_profile, aws_region, aws_permissions_check, functions, excludes):
+def uninstall(ctx, **kwargs):
     """Uninstall New Relic AWS Lambda Layers"""
-    session = boto3.Session(profile_name=aws_profile, region_name=aws_region)
+    input = LayerUninstall(session=None, verbose=ctx.obj["VERBOSE"], **kwargs)
 
-    if aws_permissions_check:
-        permissions.ensure_lambda_uninstall_permissions(session)
+    input = input._replace(
+        session=boto3.Session(
+            profile_name=input.aws_profile, region_name=input.aws_region
+        )
+    )
 
-    functions = get_aliased_functions(session, functions, excludes)
+    if input.aws_permissions_check:
+        permissions.ensure_layer_uninstall_permissions(input)
+
+    functions = get_aliased_functions(input)
 
     with ThreadPoolExecutor() as executor:
         futures = [
-            executor.submit(layers.uninstall, session, function, ctx.obj["VERBOSE"])
-            for function in functions
+            executor.submit(layers.uninstall, input, function) for function in functions
         ]
         uninstall_success = all(future.result() for future in as_completed(futures))
 
