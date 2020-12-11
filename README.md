@@ -169,6 +169,7 @@ newrelic-lambda layers install \
 | `--layer-arn` or `-l` | No | Specify a specific layer version ARN to use. This is auto detected by default. |
 | `--upgrade` or `-u` | No | Permit upgrade to the latest layer version for this region and runtime. |
 | `--disable-extension` | No | Disable the [New Relic Lambda Extension](https://github.com/newrelic/newrelic-lambda-extension). |
+| `--enable-extension-function-logs` | No | Enable forwarding logs via the [New Relic Lambda Extension](https://github.com/newrelic/newrelic-lambda-extension). Disabled by default. |
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 | `--nr-api-key` or `-k` | No | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Can also use the `NEW_RELIC_API_KEY` environment variable. Only used if `--enable-extension` is set and there is no New Relic license key in AWS Secrets Manager. |
