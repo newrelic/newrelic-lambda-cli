@@ -66,7 +66,7 @@ def _get_cf_stack_status(session, stack_name):
 def _create_role(input):
     assert isinstance(input, IntegrationInstall)
     client = input.session.client("cloudformation")
-    role_policy_name = "" if input.role_policy is None else input.role_policy
+    role_policy_name = input.role_name or ""
     stack_name = "NewRelicLambdaIntegrationRole-%d" % input.nr_account_id
     template_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
