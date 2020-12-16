@@ -5,7 +5,11 @@ import click
 
 from newrelic_lambda_cli.cliutils import failure, success, warning
 from newrelic_lambda_cli.functions import get_function
-from newrelic_lambda_cli.types import SubscriptionInstall, SubscriptionUninstall
+from newrelic_lambda_cli.types import (
+    LayerInstall,
+    SubscriptionInstall,
+    SubscriptionUninstall,
+)
 
 
 def _get_log_group_name(function_name):
@@ -123,7 +127,7 @@ def create_log_subscription(input, function_name):
 
 
 def remove_log_subscription(input, function_name):
-    assert isinstance(input, SubscriptionUninstall)
+    assert isinstance(input, (LayerInstall, SubscriptionUninstall))
     subscription_filters = _get_subscription_filters(input.session, function_name)
     if subscription_filters is None:
         return False
