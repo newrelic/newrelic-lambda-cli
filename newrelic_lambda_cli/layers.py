@@ -188,7 +188,7 @@ def install(input, function_arn):
             )
 
         if input.enable_extension_function_logs:
-            subscriptions.remove_log_subscription(input.session, function_arn)
+            subscriptions.remove_log_subscription(input, function_arn)
 
         if input.verbose:
             click.echo(json.dumps(res, indent=2))
