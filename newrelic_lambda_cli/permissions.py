@@ -6,6 +6,7 @@ import botocore
 from newrelic_lambda_cli.types import (
     IntegrationInstall,
     IntegrationUninstall,
+    IntegrationUpdate,
     LayerInstall,
     LayerUninstall,
     SubscriptionInstall,
@@ -85,7 +86,7 @@ def ensure_integration_install_permissions(input):
 
     :param input: An IntegrationInstall instance
     """
-    assert isinstance(input, IntegrationInstall)
+    assert isinstance(input, (IntegrationInstall, IntegrationUpdate))
 
     needed_permissions = check_permissions(
         input.session,

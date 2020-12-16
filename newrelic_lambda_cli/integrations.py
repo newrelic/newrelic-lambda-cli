@@ -10,7 +10,11 @@ import json
 from newrelic_lambda_cli.api import NewRelicGQL
 from newrelic_lambda_cli.cliutils import failure, success
 from newrelic_lambda_cli.functions import get_function
-from newrelic_lambda_cli.types import IntegrationInstall, IntegrationUninstall
+from newrelic_lambda_cli.types import (
+    IntegrationInstall,
+    IntegrationUninstall,
+    IntegrationUpdate,
+)
 
 INGEST_STACK_NAME = "NewRelicLogIngestion"
 LICENSE_KEY_STACK_NAME = "NewRelicLicenseKeySecret"
@@ -104,7 +108,7 @@ def _get_sar_template_url(session):
 
 
 def _create_log_ingest_parameters(input, nr_license_key, mode="CREATE"):
-    assert isinstance(input, IntegrationInstall)
+    assert isinstance(input, (IntegrationInstall, IntegrationUpdate))
     update_mode = mode == "UPDATE"
     parameters = []
     if input.memory_size is not None:
@@ -195,7 +199,7 @@ def _create_log_ingestion_function(
     nr_license_key,
     mode="CREATE",
 ):
-    assert isinstance(input, IntegrationInstall)
+    assert isinstance(input, (IntegrationInstall, IntegrationUpdate))
 
     parameters, capabilities = _create_log_ingest_parameters(
         input, nr_license_key, mode
@@ -257,22 +261,16 @@ def _exec_change_set(client, change_set, mode, stack_name=INGEST_STACK_NAME):
     success("Done")
 
 
-def update_log_ingestion_function(
-    session,
-    nr_license_key,
-    enable_logs,
-    memory_size,
-    timeout,
-    role_name=None,
-    tags=None,
-):
-    # Detect an old-style nested install and unwrap it
-    client = session.client("cloudformation")
+def update_log_ingestion_function(input):
+    assert isinstance(input, IntegrationUpdate)
 
+    # Detect an old-style nested install and unwrap it
+    client = input.session.client("cloudformation")
     resources = client.describe_stack_resources(
         StackName=INGEST_STACK_NAME, LogicalResourceId="NewRelicLogIngestion"
     )
     stack_resources = resources["StackResources"]
+
     # The nested installs had a single Application resource
     if (
         len(stack_resources) > 0
@@ -294,7 +292,7 @@ def update_log_ingestion_function(
         ] = "Retain"
 
         # We can't change props during import, so let's set them to their current values
-        lambda_client = session.client("lambda")
+        lambda_client = input.session.client("lambda")
         old_props = lambda_client.get_function_configuration(
             FunctionName="newrelic-log-ingestion"
         )
@@ -320,7 +318,9 @@ def update_log_ingestion_function(
             TemplateBody=json.dumps(template_body),
             Parameters=params,
             Capabilities=["CAPABILITY_IAM"],
-            Tags=[{"Key": key, "Value": value} for key, value in tags] if tags else [],
+            Tags=[{"Key": key, "Value": value} for key, value in input.tags]
+            if input.tags
+            else [],
         )
         client.get_waiter("stack_update_complete").wait(
             StackName=nested_stack["PhysicalResourceId"]
@@ -334,30 +334,27 @@ def update_log_ingestion_function(
 
         click.echo("Starting import")
         _import_log_ingestion_function(
-            session,
+            input.session,
             old_nr_license_key,
             old_enable_logs,
             old_memory_size,
             old_timeout,
             role_name=old_role_name,
-            tags=tags,
+            tags=input.tags,
         )
         # Now that we've unnested, do the actual update
 
     # Not a nested install; just update
     _create_log_ingestion_function(
-        session,
-        nr_license_key,
-        enable_logs,
-        memory_size,
-        timeout,
-        role_name,
+        input,
+        nr_license_key=None,
         mode="UPDATE",
     )
 
 
 def remove_log_ingestion_function(input):
     assert isinstance(input, IntegrationUninstall)
+
     client = input.session.client("cloudformation")
     stack_status = _check_for_ingest_stack(input.session)
     if stack_status is None:
@@ -449,7 +446,7 @@ def validate_linked_account(gql, input):
 
     account = gql.get_linked_account_by_name(input.linked_account_name)
     if account is not None:
-        aws_account_id = _get_aws_account_id(input.session)
+        aws_account_id = get_aws_account_id(input.session)
         if aws_account_id != account["externalId"]:
             raise click.UsageError(
                 "The selected linked AWS account [%s] does not match "
@@ -500,48 +497,34 @@ def install_log_ingestion(
     return True
 
 
-def update_log_ingestion(
-    session,
-    nr_license_key=None,
-    enable_logs=None,
-    memory_size=None,
-    timeout=None,
-    role_name=None,
-    tags=None,
-):
+def update_log_ingestion(input):
     """
     Updates the New Relic AWS Lambda log ingestion function and role.
 
     Returns True for success and False for failure.
     """
-    function = get_function(session, "newrelic-log-ingestion")
+    assert isinstance(input, IntegrationUpdate)
+
+    function = get_function(input.session, "newrelic-log-ingestion")
     if function is None:
         failure(
             "No 'newrelic-log-ingestion' function in region '%s'. "
             "Run 'newrelic-lambda integrations install' to install it."
-            % session.region_name
+            % input.session.region_name
         )
         return False
-    stack_status = _check_for_ingest_stack(session)
+    stack_status = _check_for_ingest_stack(input.session)
     if stack_status is None:
         failure(
             "No 'NewRelicLogIngestion' stack in region '%s'. "
             "This likely means the New Relic log ingestion function was "
             "installed manually. "
             "In order to install via the CLI, please delete this function and "
-            "run 'newrelic-lambda integrations install'." % session.region_name
+            "run 'newrelic-lambda integrations install'." % input.session.region_name
         )
         return False
     try:
-        update_log_ingestion_function(
-            session,
-            nr_license_key,
-            enable_logs,
-            memory_size,
-            timeout,
-            role_name,
-            tags=tags,
-        )
+        update_log_ingestion_function(input)
     except Exception as e:
         failure("Failed to update 'newrelic-log-ingestion' function: %s" % e)
         return False
@@ -559,36 +542,36 @@ def get_log_ingestion_license_key(session):
     return None
 
 
-def auto_install_license_key(session, tags):
+def auto_install_license_key(input):
     """
     If the LK secret is missing, create it, picking up the LK value from the ingest
     lambda's configuration.
     """
-    lk_stack_status = _get_cf_stack_status(session, LICENSE_KEY_STACK_NAME)
+    assert isinstance(input, (IntegrationInstall, IntegrationUpdate))
+    lk_stack_status = _get_cf_stack_status(input.session, LICENSE_KEY_STACK_NAME)
     if lk_stack_status is None:
         click.echo("Creating the managed secret for the New Relic License Key")
-        lk = get_log_ingestion_license_key(session)
+        lk = get_log_ingestion_license_key(input.session)
         if lk is None:
             failure(
                 "Could not create license key secret; failed to fetch license key "
                 "value from ingest lambda"
             )
             return False
-        return _install_license_key(session, nr_license_key=lk, tags=tags)
+        return install_license_key(input, nr_license_key=lk)
     return True
 
 
-def _install_license_key(
-    session, nr_license_key, policy_name=None, mode="CREATE", tags=None
-):
-    lk_stack_status = _get_cf_stack_status(session, LICENSE_KEY_STACK_NAME)
+def install_license_key(input, nr_license_key, policy_name=None, mode="CREATE"):
+    assert isinstance(input, (IntegrationInstall, IntegrationUpdate))
+    lk_stack_status = _get_cf_stack_status(input.session, LICENSE_KEY_STACK_NAME)
     if lk_stack_status is None:
         click.echo(
             "Setting up %s stack in region: %s"
-            % (LICENSE_KEY_STACK_NAME, session.region_name)
+            % (LICENSE_KEY_STACK_NAME, input.session.region_name)
         )
         try:
-            cf_client = session.client("cloudformation")
+            client = input.session.client("cloudformation")
 
             update_mode = mode == "UPDATE"
             parameters = []
@@ -616,21 +599,22 @@ def _install_license_key(
                 "templates",
                 "license-key-secret.yaml",
             )
+
             with open(template_path) as template:
-                change_set = cf_client.create_change_set(
+                change_set = client.create_change_set(
                     StackName=LICENSE_KEY_STACK_NAME,
                     TemplateBody=template.read(),
                     Parameters=parameters,
                     Capabilities=["CAPABILITY_NAMED_IAM"],
-                    Tags=[{"Key": key, "Value": value} for key, value in tags]
-                    if tags
+                    Tags=[{"Key": key, "Value": value} for key, value in input.tags]
+                    if input.tags
                     else [],
                     ChangeSetType=mode,
                     ChangeSetName=change_set_name,
                 )
 
                 _exec_change_set(
-                    cf_client, change_set, mode, stack_name=LICENSE_KEY_STACK_NAME
+                    client, change_set, mode, stack_name=LICENSE_KEY_STACK_NAME
                 )
         except Exception as e:
             failure("Failed to create %s stack: %s" % (LICENSE_KEY_STACK_NAME, e))
@@ -638,14 +622,8 @@ def _install_license_key(
     return True
 
 
-def _update_license_key(session, nr_license_key, policy_name=None, tags=None):
-    return _install_license_key(
-        session, nr_license_key, policy_name, mode="UPDATE", tags=tags
-    )
-
-
 def remove_license_key(input):
-    assert isinstance(input, IntegrationUninstall)
+    assert isinstance(input, (IntegrationUninstall, IntegrationUpdate))
     client = input.session.client("cloudformation")
     stack_status = _get_cf_stack_status(input.session, LICENSE_KEY_STACK_NAME)
     if stack_status is None:
@@ -695,5 +673,5 @@ def _get_license_key_policy_arn(session):
             return None
 
 
-def _get_aws_account_id(session):
+def get_aws_account_id(session):
     return session.client("sts").get_caller_identity().get("Account")

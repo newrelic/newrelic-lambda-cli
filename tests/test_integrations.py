@@ -10,8 +10,7 @@ from newrelic_lambda_cli.integrations import (
     _create_log_ingestion_function,
     _get_cf_stack_status,
     remove_log_ingestion_function,
-    _install_license_key,
-    _update_license_key,
+    install_license_key,
     remove_license_key,
     _get_license_key_policy_arn,
 )
@@ -178,7 +177,7 @@ def test__get_cf_stack_status(aws_credentials):
 
 
 @patch("newrelic_lambda_cli.integrations.success")
-def test__install_license_key(success_mock):
+def test_install_license_key(success_mock):
     session = MagicMock()
     with patch.object(session, "client") as mock_client_factory:
         cf_mocks = {
@@ -190,7 +189,7 @@ def test__install_license_key(success_mock):
         cf_client = MagicMock(name="cloudformation", **cf_mocks)
         mock_client_factory.side_effect = [cf_client, cf_client]
 
-        result = _install_license_key(session, "1234abcd")
+        result = install_license_key(integration_install(session=session), "1234abcd")
         assert result is True
 
         cf_client.assert_has_calls(
@@ -214,44 +213,7 @@ def test__install_license_key(success_mock):
 
 
 @patch("newrelic_lambda_cli.integrations.success")
-def test__update_license_key(success_mock):
-    session = MagicMock()
-    with patch.object(session, "client") as mock_client_factory:
-        cf_mocks = {
-            "describe_stacks.side_effect": botocore.exceptions.ClientError(
-                {"ResponseMetadata": {"HTTPStatusCode": 404}}, "test"
-            ),
-            "create_change_set.return_value": {"Id": "arn:something"},
-        }
-        cf_client = MagicMock(name="cloudformation", **cf_mocks)
-        mock_client_factory.side_effect = [cf_client, cf_client]
-
-        result = _update_license_key(session, "1234abcd")
-        assert result is True
-
-        cf_client.assert_has_calls(
-            [
-                call.create_change_set(
-                    StackName="NewRelicLicenseKeySecret",
-                    TemplateBody=ANY,
-                    Parameters=[
-                        {"ParameterKey": "PolicyName", "UsePreviousValue": True},
-                        {"ParameterKey": "LicenseKey", "ParameterValue": "1234abcd"},
-                    ],
-                    Capabilities=["CAPABILITY_NAMED_IAM"],
-                    Tags=[],
-                    ChangeSetType="UPDATE",
-                    ChangeSetName=ANY,
-                ),
-                call.execute_change_set(ChangeSetName="arn:something"),
-            ],
-            any_order=True,
-        )
-        success_mock.assert_called_once()
-
-
-@patch("newrelic_lambda_cli.integrations.success")
-def test__install_license_key__already_installed(success_mock):
+def test_install_license_key__already_installed(success_mock):
     session = MagicMock()
     with patch.object(session, "client") as mock_client_factory:
         cf_mocks = {
@@ -262,7 +224,7 @@ def test__install_license_key__already_installed(success_mock):
         cf_client = MagicMock(name="cloudformation", **cf_mocks)
         mock_client_factory.side_effect = [cf_client, cf_client]
 
-        result = _install_license_key(session, "1234abcd")
+        result = install_license_key(integration_install(session=session), "1234abcd")
         assert result is True
 
         cf_client.assert_has_calls(
