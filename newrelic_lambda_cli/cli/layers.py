@@ -49,7 +49,7 @@ def register(group):
     help="New Relic Account Region",
     metavar="<region>",
     show_default=True,
-    type=click.Choice(["us", "eu"]),
+    type=click.Choice(["us", "eu", "staging"]),
 )
 @add_options(AWS_OPTIONS)
 @click.option(

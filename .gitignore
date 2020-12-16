@@ -94,5 +94,7 @@ ENV/
 node_modules
 .serverless
 
+.DS_Store
+
 .pytest_cache
 .requirements
