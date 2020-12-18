@@ -403,10 +403,7 @@ def create_integration_role(input):
     if stack_status is None:
         _create_role(input)
         role = _get_role(input.session, role_name)
-        success(
-            "Created role [%s] with policy [%s] in AWS account."
-            % (role_name, input.role_policy)
-        )
+        success("Created role [%s] in AWS account." % role_name)
         return role
     failure(
         "Cannot create CloudFormation stack %s because it exists in state %s"
