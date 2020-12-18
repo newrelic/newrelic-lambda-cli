@@ -128,15 +128,23 @@ def _add_new_relic(input, config, nr_license_key):
             update_kwargs["Environment"]["Variables"][
                 "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
             ] = "false"
+
+        if input.nr_region == "staging":
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_TELEMETRY_ENDPOINT"
+            ] = "https://staging-cloud-collector.newrelic.com/aws/lambda/v1"
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_LOG_ENDPOINT"
+            ] = "https://staging-log-api.newrelic.com/log/v1"
+
+        if nr_license_key:
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_LICENSE_KEY"
+            ] = nr_license_key
     else:
         update_kwargs["Environment"]["Variables"][
             "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
         ] = "false"
-
-    if nr_license_key:
-        update_kwargs["Environment"]["Variables"][
-            "NEW_RELIC_LICENSE_KEY"
-        ] = nr_license_key
 
     return update_kwargs
 

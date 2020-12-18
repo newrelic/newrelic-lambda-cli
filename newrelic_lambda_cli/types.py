@@ -16,6 +16,7 @@ INTEGRATION_INSTALL_KEYS = [
     "timeout",
     "role_name",
     "enable_license_key_secret",
+    "enable_cw_ingest",
     "integration_arn",
     "tags",
 ]

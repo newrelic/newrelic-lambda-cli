@@ -35,6 +35,8 @@ class NewRelicGQL(object):
             self.url = "https://api.newrelic.com/graphql"
         elif region == "eu":
             self.url = "https://api.eu.newrelic.com/graphql"
+        elif region == "staging":
+            self.url = "https://staging-api.newrelic.com/graphql"
         else:
             raise ValueError("Region must be one of 'us' or 'eu'")
 

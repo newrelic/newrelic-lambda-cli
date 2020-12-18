@@ -55,7 +55,7 @@ NR_OPTIONS = [
         help="New Relic Account Region",
         metavar="<region>",
         show_default=True,
-        type=click.Choice(["us", "eu"]),
+        type=click.Choice(["us", "eu", "staging"]),
     ),
 ]
 

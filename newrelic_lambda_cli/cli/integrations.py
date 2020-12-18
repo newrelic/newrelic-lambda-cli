@@ -79,6 +79,12 @@ def register(group):
     help="Enable/disable the license key managed secret",
 )
 @click.option(
+    "--enable-cw-ingest/--disable-cw-ingest",
+    default=True,
+    show_default=True,
+    help="Enable/disable the CloudWatch log ingest function",
+)
+@click.option(
     "--integration-arn",
     default=None,
     help="The ARN of a pre-existing AWS IAM role for the New Relic Lambda integration",
@@ -145,9 +151,10 @@ def install(ctx, **kwargs):
         res = integrations.install_license_key(input, nr_license_key)
         install_success = install_success and res
 
-    click.echo("Creating newrelic-log-ingestion Lambda function in AWS account")
-    res = integrations.install_log_ingestion(input, nr_license_key)
-    install_success = res and install_success
+    if input.enable_cw_ingest:
+        click.echo("Creating newrelic-log-ingestion Lambda function in AWS account")
+        res = integrations.install_log_ingestion(input, nr_license_key)
+        install_success = res and install_success
 
     if install_success:
         done("Install Complete")
