@@ -1,4 +1,4 @@
-[![Community Project header](https://github.com/newrelic/opensource-website/raw/master/src/images/categories/Community_Project.png)](https://opensource.newrelic.com/oss-category/#community-project)
+[![Community Plus header](https://github.com/newrelic/opensource-website/raw/master/src/images/categories/Community_Plus.png)](https://opensource.newrelic.com/oss-category/#community-plus)
 
 # newrelic-lambda-cli [![Build Status](https://circleci.com/gh/newrelic/newrelic-lambda-cli.svg?style=svg)](https://circleci.com/gh/newrelic/newrelic-lambda-cli) [![Coverage](https://codecov.io/gh/newrelic/newrelic-lambda-cli/branch/master/graph/badge.svg?token=1Rl7h0O1JJ)](https://codecov.io/gh/newrelic/newrelic-lambda-cli)
 
@@ -128,12 +128,12 @@ newrelic-lambda integrations uninstall
 
 #### Update Integration
 
-Updates the New Relic log ingestion function to the latest version. Existing ingestion function parameters will 
+Updates the New Relic log ingestion function to the latest version. Existing ingestion function parameters will
 retain their values, unless you specify different values on the command line. By default, installs the license key
 secret, if it is missing.
 
 ```bash
-newrelic-lambda integrations update 
+newrelic-lambda integrations update
 ```
 
 | Option | Required? | Description |
@@ -222,7 +222,7 @@ newrelic-lambda subscriptions install --function <name or arn>
 |--------|-----------|-------------|
 | `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to add a log subscription. Can provide multiple `--function` arguments. Will also accept `all`, `installed` and `not-installed` similar to `newrelic-lambda functions list`. |
 | `--exclude` or `-e` | No | A function name to exclude while installing subscriptions. Can provide multiple `--exclude` arguments. Only checked when `all`, `installed` and `not-installed` are used. See `newrelic-lambda functions list` for function names. |
-| `--filter-pattern` | No | Specify a custom log subscription filter pattern. To collect all logs use `--filter-pattern ""`. | 
+| `--filter-pattern` | No | Specify a custom log subscription filter pattern. To collect all logs use `--filter-pattern ""`. |
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 
@@ -307,7 +307,7 @@ If this is the case, supply the `--no-aws-permissions-check` flag to your comman
 Traceback (most recent call last):
   ...
   File "/Users/USER/PYTHONPATH/lib/python3.8/site-packages/newrelic_lambda_cli/gql.py", line 131, in link_account
-    return res["cloudLinkAccount"]["linkedAccounts"][0]  
+    return res["cloudLinkAccount"]["linkedAccounts"][0]
 IndexError: list index out of range`
 
 This error can happen if you have an existing AWS integration, and are running `newrelic-lambda integrations install` with a different `--linked-account-name` (for instance, to add a new region to the integration). The linked account name can be whatever you want it to be, but needs to be consistent with the previously linked AWS account.
