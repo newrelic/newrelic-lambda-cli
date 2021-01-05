@@ -93,9 +93,15 @@ def _create_role(input):
             if input.tags
             else [],
         )
-        click.echo("Waiting for stack creation to complete...", nl=False)
-        client.get_waiter("stack_create_complete").wait(StackName=stack_name)
-        click.echo("Done")
+
+        click.echo("Waiting for stack creation to complete... ", nl=False)
+
+        try:
+            client.get_waiter("stack_create_complete").wait(StackName=stack_name)
+        except botocore.exceptions.WaiterError as e:
+            failure(e.last_response["Status"]["StatusReason"])
+        else:
+            success("Done")
 
 
 def _get_sar_template_url(session):
@@ -170,6 +176,7 @@ def _import_log_ingestion_function(
     template_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "templates", "import-template.yaml"
     )
+
     with open(template_path) as template:
         change_set_name = "%s-IMPORT-%d" % (INGEST_STACK_NAME, int(time.time()))
         click.echo("Creating change set: %s" % change_set_name)
@@ -233,6 +240,7 @@ def _exec_change_set(client, change_set, mode, stack_name=INGEST_STACK_NAME):
         "Waiting for change set creation to complete, this may take a minute... ",
         nl=False,
     )
+
     try:
         client.get_waiter("change_set_create_complete").wait(
             ChangeSetName=change_set["Id"], WaiterConfig={"Delay": 10}
@@ -248,17 +256,25 @@ def _exec_change_set(client, change_set, mode, stack_name=INGEST_STACK_NAME):
         ):
             success("No Changes Detected")
             return
-        raise e
+        else:
+            failure(reason)
+            return
     client.execute_change_set(ChangeSetName=change_set["Id"])
     click.echo(
         "Waiting for change set to finish execution. This may take a minute... ",
         nl=False,
     )
+
     exec_waiter_type = "stack_%s_complete" % mode.lower()
-    client.get_waiter(exec_waiter_type).wait(
-        StackName=stack_name, WaiterConfig={"Delay": 15}
-    )
-    success("Done")
+
+    try:
+        client.get_waiter(exec_waiter_type).wait(
+            StackName=stack_name, WaiterConfig={"Delay": 15}
+        )
+    except botocore.exceptions.WaiterError as e:
+        failure(e.last_response["Status"]["StatusReason"])
+    else:
+        success("Done")
 
 
 def update_log_ingestion_function(input):
@@ -276,7 +292,8 @@ def update_log_ingestion_function(input):
         len(stack_resources) > 0
         and stack_resources[0]["ResourceType"] == "AWS::CloudFormation::Stack"
     ):
-        click.echo("Unwrapping nested stack")
+
+        click.echo("Unwrapping nested stack... ", nl=False)
 
         # Set the ingest function itself to disallow deletes
         nested_stack = stack_resources[0]
@@ -313,6 +330,7 @@ def update_log_ingestion_function(input):
             {"ParameterKey": name, "UsePreviousValue": True}
             for name in template_body["Parameters"]
         ]
+
         client.update_stack(
             StackName=nested_stack["PhysicalResourceId"],
             TemplateBody=json.dumps(template_body),
@@ -322,17 +340,31 @@ def update_log_ingestion_function(input):
             if input.tags
             else [],
         )
-        client.get_waiter("stack_update_complete").wait(
-            StackName=nested_stack["PhysicalResourceId"]
-        )
 
-        click.echo("Removing outer stack")
+        try:
+            client.get_waiter("stack_update_complete").wait(
+                StackName=nested_stack["PhysicalResourceId"]
+            )
+        except botocore.exceptions.WaiterError as e:
+            failure(e.last_response["Status"]["StatusReason"])
+        else:
+            success("Done")
+
+        click.echo("Removing outer stack... ", nl=False)
+
         # Delete the parent stack, which will delete its child and orphan the
         # ingest function
         client.delete_stack(StackName=INGEST_STACK_NAME)
-        client.get_waiter("stack_delete_complete").wait(StackName=INGEST_STACK_NAME)
+
+        try:
+            client.get_waiter("stack_delete_complete").wait(StackName=INGEST_STACK_NAME)
+        except botocore.exceptions.WaiterError as e:
+            failure(e.last_response["Status"]["StatusReason"])
+        else:
+            success("Done")
 
         click.echo("Starting import")
+
         _import_log_ingestion_function(
             input.session,
             old_nr_license_key,
@@ -342,6 +374,7 @@ def update_log_ingestion_function(input):
             role_name=old_role_name,
             tags=input.tags,
         )
+
         # Now that we've unnested, do the actual update
 
     # Not a nested install; just update
@@ -428,8 +461,12 @@ def remove_integration_role(input):
     click.echo(
         "Waiting for stack deletion to complete, this may take a minute... ", nl=False
     )
-    client.get_waiter("stack_delete_complete").wait(StackName=stack_name)
-    success("Done")
+    try:
+        client.get_waiter("stack_delete_complete").wait(StackName=stack_name)
+    except botocore.exceptions.WaiterError as e:
+        failure(e.last_response["Status"]["StatusReason"])
+    else:
+        success("Done")
 
 
 def validate_linked_account(gql, input):
@@ -634,8 +671,15 @@ def remove_license_key(input):
     click.echo(
         "Waiting for stack deletion to complete, this may take a minute... ", nl=False
     )
-    client.get_waiter("stack_delete_complete").wait(StackName=LICENSE_KEY_STACK_NAME)
-    success("Done")
+
+    try:
+        client.get_waiter("stack_delete_complete").wait(
+            StackName=LICENSE_KEY_STACK_NAME
+        )
+    except botocore.exceptions.WaiterError as e:
+        failure(e.last_response["Status"]["StatusReason"])
+    else:
+        success("Done")
 
 
 def _get_license_key_policy_arn(session):
