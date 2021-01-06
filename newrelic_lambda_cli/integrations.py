@@ -22,11 +22,6 @@ LICENSE_KEY_STACK_NAME = "NewRelicLicenseKeySecret"
 __cached_license_key_policy_arn = None
 
 
-def list_all_regions(session):
-    """Returns all regions where Lambda is currently supported"""
-    return session.get_available_regions("lambda")
-
-
 def _get_role(session, role_name):
     """Returns details about an IAM role"""
     # We only want the role name if an ARN is passed
@@ -115,8 +110,10 @@ def _get_sar_template_url(session):
 
 def _create_log_ingest_parameters(input, nr_license_key, mode="CREATE"):
     assert isinstance(input, (IntegrationInstall, IntegrationUpdate))
+
     update_mode = mode == "UPDATE"
     parameters = []
+
     if input.memory_size is not None:
         parameters.append(
             {"ParameterKey": "MemorySize", "ParameterValue": str(input.memory_size)}
@@ -163,13 +160,13 @@ def _create_log_ingest_parameters(input, nr_license_key, mode="CREATE"):
     return parameters, capabilities
 
 
-def _import_log_ingestion_function(
-    session, nr_license_key, enable_logs, memory_size, timeout, role_name, tags
-):
+def _import_log_ingestion_function(input, nr_license_key):
+    assert isinstance(input, IntegrationUpdate)
+
     parameters, capabilities = _create_log_ingest_parameters(
-        nr_license_key, enable_logs, memory_size, timeout, role_name, "IMPORT"
+        input, nr_license_key, "IMPORT"
     )
-    cf_client = session.client("cloudformation")
+    client = input.session.client("cloudformation")
 
     click.echo("Fetching new CloudFormation template url")
 
@@ -181,12 +178,14 @@ def _import_log_ingestion_function(
         change_set_name = "%s-IMPORT-%d" % (INGEST_STACK_NAME, int(time.time()))
         click.echo("Creating change set: %s" % change_set_name)
 
-        change_set = cf_client.create_change_set(
+        change_set = client.create_change_set(
             StackName=INGEST_STACK_NAME,
             TemplateBody=template.read(),
             Parameters=parameters,
             Capabilities=capabilities,
-            Tags=[{"Key": key, "Value": value} for key, value in tags] if tags else [],
+            Tags=[{"Key": key, "Value": value} for key, value in input.tags]
+            if input.tags
+            else [],
             ChangeSetType="IMPORT",
             ChangeSetName=change_set_name,
             ResourcesToImport=[
@@ -198,7 +197,7 @@ def _import_log_ingestion_function(
             ],
         )
 
-        _exec_change_set(cf_client, change_set, "IMPORT")
+        _exec_change_set(client, change_set, "IMPORT")
 
 
 def _create_log_ingestion_function(
@@ -366,13 +365,13 @@ def update_log_ingestion_function(input):
         click.echo("Starting import")
 
         _import_log_ingestion_function(
-            input.session,
-            old_nr_license_key,
-            old_enable_logs,
-            old_memory_size,
-            old_timeout,
-            role_name=old_role_name,
-            tags=input.tags,
+            input._replace(
+                enable_logs=old_enable_logs,
+                memory_size=old_memory_size,
+                timeout=old_timeout,
+                role_name=old_role_name,
+            ),
+            nr_license_key=old_nr_license_key,
         )
 
         # Now that we've unnested, do the actual update

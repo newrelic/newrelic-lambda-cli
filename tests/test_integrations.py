@@ -2,20 +2,24 @@ from __future__ import absolute_import
 
 import boto3
 import botocore
-from moto import mock_cloudformation
+from moto import mock_cloudformation, mock_iam
+import pytest
 from unittest.mock import call, patch, MagicMock, ANY
 
 from newrelic_lambda_cli.integrations import (
     _check_for_ingest_stack,
     _create_log_ingestion_function,
+    _create_role,
     _get_cf_stack_status,
+    _get_role,
+    _import_log_ingestion_function,
     remove_log_ingestion_function,
     install_license_key,
     remove_license_key,
     _get_license_key_policy_arn,
 )
 
-from .conftest import integration_install, integration_uninstall
+from .conftest import integration_install, integration_uninstall, integration_update
 
 
 def test__check_for_ingest_stack_none_when_not_found():
@@ -263,4 +267,35 @@ def test__get_license_key_policy_arn():
         cf_client.assert_has_calls(
             [call().describe_stacks(StackName="NewRelicLicenseKeySecret")],
             any_order=True,
+        )
+
+
+@mock_cloudformation
+def test__create_role(aws_credentials):
+    session = boto3.Session(region_name="us-east-1")
+    assert (
+        _create_role(integration_install(session=session, nr_account_id=12345)) is None
+    )
+
+
+@mock_iam
+def test__get_role(aws_credentials):
+    session = boto3.Session(region_name="us-east-1")
+    assert _get_role(session, "arn:aws:iam::1234567890:role/foobar") is None
+
+
+@mock_cloudformation
+def test__import_log_ingestion_function(aws_credentials):
+    session = boto3.Session(region_name="us-east-1")
+    # FIXME: For some reason moto raises a "NoCap" KeyError
+    with pytest.raises(KeyError):
+        _import_log_ingestion_function(
+            integration_update(
+                session=session,
+                enable_logs=True,
+                memory_size=1024,
+                timeout=30,
+                role_name="foobar",
+            ),
+            "foobar",
         )
