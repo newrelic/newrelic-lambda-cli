@@ -60,22 +60,20 @@ manual function wrapping is required using the runtime specific New Relic agent.
 ## Installation
 
 ```bash
-pip install newrelic-lambda-cli
+pip3 install newrelic-lambda-cli
 ```
 
 Or clone this repo and run:
 
 ```bash
-python setup.py install
+python3 setup.py install
 ```
 
 To update the CLI, run:
 
 ```
-pip install --upgrade newrelic-lambda-cli
+pip3 install --upgrade newrelic-lambda-cli
 ```
-
-**Note:** You may need to use `python3` and/or `pip3` in the commands above if you have Python 2.7 installed.
 
 ## Usage
 
@@ -282,7 +280,7 @@ python setup.py test
 **Upgrade the CLI**: A good first step, as we push updates frequently.
 
 ```
-pip install --upgrade newrelic-lambda-cli
+pip3 install --upgrade newrelic-lambda-cli
 ```
 
 **UnrecognizedClientException**:

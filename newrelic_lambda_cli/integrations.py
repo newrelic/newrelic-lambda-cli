@@ -346,6 +346,7 @@ def update_log_ingestion_function(input):
             )
         except botocore.exceptions.WaiterError as e:
             failure(e.last_response["Status"]["StatusReason"])
+            raise e
         else:
             success("Done")
 
@@ -359,6 +360,7 @@ def update_log_ingestion_function(input):
             client.get_waiter("stack_delete_complete").wait(StackName=INGEST_STACK_NAME)
         except botocore.exceptions.WaiterError as e:
             failure(e.last_response["Status"]["StatusReason"])
+            raise e
         else:
             success("Done")
 
@@ -546,6 +548,7 @@ def update_log_ingestion(input):
             % input.session.region_name
         )
         return False
+
     stack_status = _check_for_ingest_stack(input.session)
     if stack_status is None:
         failure(
@@ -556,6 +559,7 @@ def update_log_ingestion(input):
             "run 'newrelic-lambda integrations install'." % input.session.region_name
         )
         return False
+
     try:
         update_log_ingestion_function(input)
     except Exception as e:
