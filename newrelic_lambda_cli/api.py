@@ -67,8 +67,6 @@ class NewRelicGQL(object):
                     linkedAccounts {
                       id
                       name
-                      createdAt
-                      updatedAt
                       authLabel
                       externalId
                     }
@@ -116,7 +114,7 @@ class NewRelicGQL(object):
         """
         accounts = self.get_linked_accounts()
         try:
-            return next((a for a in accounts if a["id"] == id), None)
+            return next((a for a in accounts if a["id"] == int(id)), None)
         except KeyError:
             return None
 
@@ -142,6 +140,8 @@ class NewRelicGQL(object):
                 linkedAccounts {
                   id
                   name
+                  authLabel
+                  externalId
                 }
                 errors {
                     message
