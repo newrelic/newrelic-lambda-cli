@@ -130,16 +130,6 @@ class NewRelicGQL(object):
         except KeyError:
             return None
 
-    def get_linked_account_by_name(self, account_name):
-        """
-        return a specific linked account of the New Relic account by name
-        """
-        accounts = self.get_linked_accounts()
-        try:
-            return next((a for a in accounts if a["name"] == account_name), None)
-        except KeyError:
-            return None
-
     def link_account(self, role_arn, account_name):
         """
         create a linked account (cloud integrations account)
