@@ -42,7 +42,7 @@ def test_integrations_install(
             call.validate_gql_credentials(ANY),
             call.retrieve_license_key(ANY),
             call.create_integration_account(ANY, ANY, ANY),
-            call.enable_lambda_integration(ANY, ANY),
+            call.enable_lambda_integration(ANY, ANY, ANY),
         ],
         any_order=True,
     )
