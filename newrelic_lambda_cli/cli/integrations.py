@@ -114,7 +114,7 @@ def install(ctx, **kwargs):
     if not input.linked_account_name:
         input = input._replace(
             linked_account_name=(
-                "New Relic Lambda Integration - %s"
+                "New Relic AWS Integration - %s"
                 % integrations.get_aws_account_id(input.session)
             )
         )
@@ -142,9 +142,13 @@ def install(ctx, **kwargs):
         res = api.create_integration_account(gql_client, input, role)
         install_success = res and install_success
 
-        click.echo("Enabling Lambda integration on the link between New Relic and AWS")
-        res = api.enable_lambda_integration(gql_client, input)
-        install_success = res and install_success
+        linked_account_id = res.get("id")
+        if linked_account_id:
+            click.echo(
+                "Enabling Lambda integration on the link between New Relic and AWS"
+            )
+            res = api.enable_lambda_integration(gql_client, input, linked_account_id)
+            install_success = res and install_success
 
     if input.enable_license_key_secret:
         click.echo("Creating the managed secret for the New Relic License Key")

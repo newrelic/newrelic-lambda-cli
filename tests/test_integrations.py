@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import boto3
 import botocore
-from moto import mock_cloudformation, mock_iam
+from moto import mock_cloudformation, mock_iam, mock_sts
 import pytest
 from unittest.mock import call, patch, MagicMock, ANY
 
@@ -17,6 +17,7 @@ from newrelic_lambda_cli.integrations import (
     install_license_key,
     remove_license_key,
     _get_license_key_policy_arn,
+    get_aws_account_id,
 )
 
 from .conftest import integration_install, integration_uninstall, integration_update
@@ -299,3 +300,9 @@ def test__import_log_ingestion_function(aws_credentials):
             ),
             "foobar",
         )
+
+
+@mock_sts
+def test_get_aws_account_id(aws_credentials):
+    session = boto3.Session(region_name="us-east-1")
+    assert get_aws_account_id(session) == "123456789012"
