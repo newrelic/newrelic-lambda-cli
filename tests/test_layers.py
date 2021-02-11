@@ -1,9 +1,15 @@
 import boto3
 from moto import mock_lambda
+from unittest.mock import MagicMock
 
-from newrelic_lambda_cli.layers import _add_new_relic, _remove_new_relic
+from newrelic_lambda_cli.layers import (
+    _attach_license_key_policy,
+    _detach_license_key_policy,
+    _add_new_relic,
+    _remove_new_relic,
+)
 
-from .conftest import layer_install, layer_uninstall
+from .conftest import integration_install, layer_install, layer_uninstall
 
 
 @mock_lambda
@@ -63,4 +69,38 @@ def test_remove_new_relic(aws_credentials, mock_function_config):
     assert update_kwargs["Handler"] == "original_handler"
     assert not any(
         [k.startswith("NEW_RELIC") for k in update_kwargs["Environment"]["Variables"]]
+    )
+
+
+def test__attach_license_key_policy():
+    mock_session = MagicMock()
+    mock_client = mock_session.client.return_value
+
+    assert (
+        _attach_license_key_policy(
+            mock_session,
+            "arn:aws:iam::123456789:role/FooBar",
+            "arn:aws:iam::123456789:policy/BarBaz",
+        )
+        is True
+    )
+    mock_client.attach_role_policy.assert_called_once_with(
+        RoleName="FooBar", PolicyArn="arn:aws:iam::123456789:policy/BarBaz"
+    )
+
+
+def test__detach_license_key_policy():
+    mock_session = MagicMock()
+    mock_client = mock_session.client.return_value
+
+    assert (
+        _detach_license_key_policy(
+            mock_session,
+            "arn:aws:iam::123456789:role/FooBar",
+            "arn:aws:iam::123456789:policy/BarBaz",
+        )
+        is True
+    )
+    mock_client.detach_role_policy.assert_called_once_with(
+        RoleName="FooBar", PolicyArn="arn:aws:iam::123456789:policy/BarBaz"
     )
