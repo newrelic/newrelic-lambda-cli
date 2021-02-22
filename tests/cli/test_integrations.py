@@ -49,7 +49,6 @@ def test_integrations_install(
 
     integrations_mock.assert_has_calls(
         [
-            call.validate_linked_account(ANY, ANY),
             call.create_integration_role(ANY),
             call.install_log_ingestion(ANY, ANY),
         ],
