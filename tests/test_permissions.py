@@ -1,3 +1,5 @@
+from click import UsageError
+from pytest import raises
 from unittest.mock import ANY, call, MagicMock
 
 from newrelic_lambda_cli.permissions import (
@@ -38,12 +40,24 @@ def test_check_permissions():
         ]
     }
 
-    assert check_permissions(mock_session, ["foo:bar", "bar:baz"]) == ["bar:baz"]
+    assert check_permissions(
+        mock_session, ["foo:bar", "bar:baz"], context={"foobar": ["barbaz"]}
+    ) == ["bar:baz"]
 
 
 def test_ensure_integration_install_permissions():
     mock_session = MagicMock()
-    ensure_integration_install_permissions(integration_install(session=mock_session))
+    mock_session.client.return_value.simulate_principal_policy.return_value = {
+        "EvaluationResults": [
+            {"EvalActionName": "foo:bar", "EvalDecision": "allowed"},
+            {"EvalActionName": "bar:baz", "EvalDecision": "denied"},
+        ]
+    }
+
+    with raises(UsageError):
+        ensure_integration_install_permissions(
+            integration_install(session=mock_session)
+        )
 
     mock_session.assert_has_calls([call.client("iam"), call.client("sts")])
     mock_session.assert_has_calls(
@@ -60,9 +74,17 @@ def test_ensure_integration_install_permissions():
 
 def test_ensure_integration_uninstall_permissions():
     mock_session = MagicMock()
-    ensure_integration_uninstall_permissions(
-        integration_uninstall(session=mock_session)
-    )
+    mock_session.client.return_value.simulate_principal_policy.return_value = {
+        "EvaluationResults": [
+            {"EvalActionName": "foo:bar", "EvalDecision": "allowed"},
+            {"EvalActionName": "bar:baz", "EvalDecision": "denied"},
+        ]
+    }
+
+    with raises(UsageError):
+        ensure_integration_uninstall_permissions(
+            integration_uninstall(session=mock_session)
+        )
 
     mock_session.assert_has_calls([call.client("iam"), call.client("sts")])
     mock_session.assert_has_calls(
@@ -79,7 +101,15 @@ def test_ensure_integration_uninstall_permissions():
 
 def test_ensure_layer_install_permissions():
     mock_session = MagicMock()
-    ensure_layer_install_permissions(layer_install(session=mock_session))
+    mock_session.client.return_value.simulate_principal_policy.return_value = {
+        "EvaluationResults": [
+            {"EvalActionName": "foo:bar", "EvalDecision": "allowed"},
+            {"EvalActionName": "bar:baz", "EvalDecision": "denied"},
+        ]
+    }
+
+    with raises(UsageError):
+        ensure_layer_install_permissions(layer_install(session=mock_session))
 
     mock_session.assert_has_calls([call.client("iam"), call.client("sts")])
     mock_session.assert_has_calls(
@@ -96,7 +126,15 @@ def test_ensure_layer_install_permissions():
 
 def test_ensure_layer_uninstall_permissions():
     mock_session = MagicMock()
-    ensure_layer_uninstall_permissions(layer_uninstall(session=mock_session))
+    mock_session.client.return_value.simulate_principal_policy.return_value = {
+        "EvaluationResults": [
+            {"EvalActionName": "foo:bar", "EvalDecision": "allowed"},
+            {"EvalActionName": "bar:baz", "EvalDecision": "denied"},
+        ]
+    }
+
+    with raises(UsageError):
+        ensure_layer_uninstall_permissions(layer_uninstall(session=mock_session))
 
     mock_session.assert_has_calls([call.client("iam"), call.client("sts")])
     mock_session.assert_has_calls(
@@ -113,7 +151,15 @@ def test_ensure_layer_uninstall_permissions():
 
 def test_ensure_function_list_permissions():
     mock_session = MagicMock()
-    ensure_function_list_permissions(mock_session)
+    mock_session.client.return_value.simulate_principal_policy.return_value = {
+        "EvaluationResults": [
+            {"EvalActionName": "foo:bar", "EvalDecision": "allowed"},
+            {"EvalActionName": "bar:baz", "EvalDecision": "denied"},
+        ]
+    }
+
+    with raises(UsageError):
+        ensure_function_list_permissions(mock_session)
 
     mock_session.assert_has_calls([call.client("iam"), call.client("sts")])
     mock_session.assert_has_calls(
@@ -130,7 +176,17 @@ def test_ensure_function_list_permissions():
 
 def test_ensure_subscription_install_permissions():
     mock_session = MagicMock()
-    ensure_subscription_install_permissions(subscription_install(session=mock_session))
+    mock_session.client.return_value.simulate_principal_policy.return_value = {
+        "EvaluationResults": [
+            {"EvalActionName": "foo:bar", "EvalDecision": "allowed"},
+            {"EvalActionName": "bar:baz", "EvalDecision": "denied"},
+        ]
+    }
+
+    with raises(UsageError):
+        ensure_subscription_install_permissions(
+            subscription_install(session=mock_session)
+        )
 
     mock_session.assert_has_calls([call.client("iam"), call.client("sts")])
     mock_session.assert_has_calls(
@@ -147,9 +203,17 @@ def test_ensure_subscription_install_permissions():
 
 def test_ensure_subscription_uninstall_permissions():
     mock_session = MagicMock()
-    ensure_subscription_uninstall_permissions(
-        subscription_uninstall(session=mock_session)
-    )
+    mock_session.client.return_value.simulate_principal_policy.return_value = {
+        "EvaluationResults": [
+            {"EvalActionName": "foo:bar", "EvalDecision": "allowed"},
+            {"EvalActionName": "bar:baz", "EvalDecision": "denied"},
+        ]
+    }
+
+    with raises(UsageError):
+        ensure_subscription_uninstall_permissions(
+            subscription_uninstall(session=mock_session)
+        )
 
     mock_session.assert_has_calls([call.client("iam"), call.client("sts")])
     mock_session.assert_has_calls(
