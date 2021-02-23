@@ -8,6 +8,7 @@ from newrelic_lambda_cli.layers import (
     _add_new_relic,
     _remove_new_relic,
 )
+from newrelic_lambda_cli.utils import get_arn_prefix
 
 from .conftest import integration_install, layer_install, layer_uninstall
 
@@ -48,6 +49,39 @@ def test_add_new_relic(aws_credentials, mock_function_config):
             "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
         ]
         == "true"
+    )
+
+    config = mock_function_config("not.a.runtime")
+    assert (
+        _add_new_relic(
+            layer_install(
+                session=session,
+                aws_region="us-east-1",
+                nr_account_id=12345,
+                enable_extension=True,
+                enable_extension_function_logs=True,
+            ),
+            config,
+            nr_license_key=None,
+        )
+        is True
+    )
+
+    config = mock_function_config("python3.6")
+    config["Configuration"]["Layers"] = [{"Arn": get_arn_prefix("us-east-1")}]
+    assert (
+        _add_new_relic(
+            layer_install(
+                session=session,
+                aws_region="us-east-1",
+                nr_account_id=12345,
+                enable_extension=True,
+                enable_extension_function_logs=True,
+            ),
+            config,
+            nr_license_key=None,
+        )
+        is True
     )
 
 

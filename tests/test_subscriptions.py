@@ -1,9 +1,11 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from newrelic_lambda_cli.subscriptions import (
     _get_log_group_name,
     create_log_subscription,
     remove_log_subscription,
+    _create_subscription_filter,
+    _remove_subscription_filter,
 )
 
 from .conftest import subscription_install, subscription_uninstall
@@ -76,4 +78,22 @@ def test_remove_log_subscription(
     assert remove_log_subscription(subscription_uninstall(), "FooBarBaz") is True
     mock_remove_subscription_filter.assert_called_once_with(
         None, "FooBarBaz", "NewRelicLogStreaming"
+    )
+
+
+def test__create_subscription_filter(aws_credentials):
+    mock_session = MagicMock()
+    assert (
+        _create_subscription_filter(
+            mock_session, "foobar", "arn:aws:logs::123456789:foobar", ""
+        )
+        is True
+    )
+
+
+def test__remove_subscription_filter(aws_credentials):
+    mock_session = MagicMock()
+    assert (
+        _remove_subscription_filter(mock_session, "foobar", "NewRelicLogIngestion")
+        is True
     )

@@ -1,8 +1,15 @@
 import pytest
 
-from click.exceptions import Exit
+from botocore.exceptions import BotoCoreError, NoCredentialsError, NoRegionError
+from click.exceptions import BadParameter, Exit
 
-from newrelic_lambda_cli.utils import error, is_valid_handler, parse_arn
+from newrelic_lambda_cli.utils import (
+    error,
+    is_valid_handler,
+    parse_arn,
+    validate_aws_profile,
+    catch_boto_errors,
+)
 
 
 def test_error():
@@ -34,3 +41,31 @@ def test_parse_arn():
 
     assert result["resourcetype"] == "Foo"
     assert result["resource"] == "Bar"
+
+
+def test_validate_aws_profile(aws_credentials):
+    with pytest.raises(BadParameter):
+        validate_aws_profile(None, "foo", "foobarbaz")
+
+
+def test_catch_boto_errors():
+    @catch_boto_errors
+    def _boto_core_error():
+        raise BotoCoreError()
+
+    with pytest.raises(Exit):
+        _boto_core_error()
+
+    @catch_boto_errors
+    def _no_credentials_error():
+        raise NoCredentialsError()
+
+    with pytest.raises(Exit):
+        _no_credentials_error()
+
+    @catch_boto_errors
+    def _no_region_error():
+        raise NoRegionError()
+
+    with pytest.raises(Exit):
+        _no_region_error()

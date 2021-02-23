@@ -2,7 +2,12 @@ from __future__ import absolute_import
 
 import boto3
 import botocore
-from moto import mock_cloudformation, mock_iam, mock_sts
+from moto import (
+    mock_cloudformation,
+    mock_iam,
+    mock_lambda,
+    mock_sts,
+)
 import pytest
 from unittest.mock import call, patch, MagicMock, ANY
 
@@ -18,6 +23,7 @@ from newrelic_lambda_cli.integrations import (
     remove_license_key,
     _get_license_key_policy_arn,
     get_aws_account_id,
+    update_log_ingestion_function,
 )
 
 from .conftest import integration_install, integration_uninstall, integration_update
@@ -306,3 +312,16 @@ def test__import_log_ingestion_function(aws_credentials):
 def test_get_aws_account_id(aws_credentials):
     session = boto3.Session(region_name="us-east-1")
     assert get_aws_account_id(session) == "123456789012"
+
+
+@mock_cloudformation
+@mock_lambda
+@patch("newrelic_lambda_cli.integrations._get_sar_template_url", autospec=True)
+@patch("newrelic_lambda_cli.integrations._create_log_ingestion_function", autospec=True)
+def test_update_log_ingestion_function(
+    mock_create_log_function, mock_get_sar_url, aws_credentials
+):
+    mock_get_sar_url.return_value = "https://amazonaws.com/blah"
+    session = boto3.Session(region_name="us-east-1")
+
+    assert update_log_ingestion_function(integration_update(session=session)) is None
