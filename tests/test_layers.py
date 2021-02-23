@@ -2,7 +2,7 @@ import boto3
 from click import UsageError
 from moto import mock_lambda
 import pytest
-from unittest.mock import call, MagicMock, patch
+from unittest.mock import ANY, call, MagicMock, patch
 
 from newrelic_lambda_cli.layers import (
     _attach_license_key_policy,
@@ -231,6 +231,48 @@ def test__detach_license_key_policy():
     )
 
 
+def test_install(aws_credentials, mock_function_config):
+    mock_session = MagicMock()
+    mock_session.region_name = "us-east-1"
+    mock_client = mock_session.client.return_value
+    mock_client.get_function.return_value = None
+    assert install(layer_install(session=mock_session), "foobarbaz") is False
+
+    mock_client.get_function.reset_mock(return_value=True)
+    config = mock_function_config("not.a.runtime")
+    mock_client.get_function.return_value = config
+    assert install(layer_install(session=mock_session), "foobarbaz") is True
+
+    mock_client.get_function.reset_mock(return_value=True)
+    config = mock_function_config("python3.6")
+    mock_client.get_function.return_value = config
+    assert (
+        install(
+            layer_install(nr_account_id=123456789, session=mock_session), "foobarbaz"
+        )
+        is True
+    )
+
+    mock_client.assert_has_calls([call.get_function(FunctionName="foobarbaz")])
+    mock_client.assert_has_calls(
+        [
+            call.update_function_configuration(
+                FunctionName="arn:aws:lambda:us-east-1:5558675309:function:aws-python3-dev-hello",  # noqa
+                Environment={
+                    "Variables": {
+                        "EXISTING_ENV_VAR": "Hello World",
+                        "NEW_RELIC_ACCOUNT_ID": "123456789",
+                        "NEW_RELIC_LAMBDA_HANDLER": "original_handler",
+                        "NEW_RELIC_LAMBDA_EXTENSION_ENABLED": "false",
+                    }
+                },
+                Layers=ANY,
+                Handler="newrelic_lambda_wrapper.handler",
+            )
+        ]
+    )
+
+
 def test_uninstall(aws_credentials, mock_function_config):
     mock_session = MagicMock()
     mock_session.region_name = "us-east-1"
@@ -259,7 +301,7 @@ def test_uninstall(aws_credentials, mock_function_config):
     mock_client.assert_has_calls(
         [
             call.update_function_configuration(
-                FunctionName="arn:aws:lambda:us-east-1:5558675309:function:aws-python3-dev-hello",
+                FunctionName="arn:aws:lambda:us-east-1:5558675309:function:aws-python3-dev-hello",  # noqa
                 Handler="foobar.handler",
                 Environment={"Variables": {"EXISTING_ENV_VAR": "Hello World"}},
                 Layers=[],

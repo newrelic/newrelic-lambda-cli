@@ -177,9 +177,8 @@ def install(input, function_arn):
         nr_license_key = api.retrieve_license_key(gql)
 
     update_kwargs = _add_new_relic(input, config, nr_license_key)
-
-    if not update_kwargs or not isinstance(update_kwargs, dict):
-        return False
+    if isinstance(update_kwargs, bool):
+        return update_kwargs
 
     try:
         res = client.update_function_configuration(**update_kwargs)
