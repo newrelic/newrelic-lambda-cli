@@ -1,16 +1,20 @@
 import boto3
+from click import UsageError
 from moto import mock_lambda
-from unittest.mock import MagicMock
+import pytest
+from unittest.mock import call, MagicMock, patch
 
 from newrelic_lambda_cli.layers import (
     _attach_license_key_policy,
     _detach_license_key_policy,
     _add_new_relic,
     _remove_new_relic,
+    install,
+    uninstall,
 )
 from newrelic_lambda_cli.utils import get_arn_prefix
 
-from .conftest import integration_install, layer_install, layer_uninstall
+from .conftest import layer_install, layer_uninstall
 
 
 @mock_lambda
@@ -84,6 +88,70 @@ def test_add_new_relic(aws_credentials, mock_function_config):
         is True
     )
 
+    with patch("newrelic_lambda_cli.layers.index") as mock_index:
+        mock_index.return_value = []
+        config = mock_function_config("python3.6")
+        assert (
+            _add_new_relic(
+                layer_install(
+                    session=session,
+                    aws_region="us-east-1",
+                    nr_account_id=12345,
+                    enable_extension=True,
+                    enable_extension_function_logs=True,
+                ),
+                config,
+                nr_license_key=None,
+            )
+            is False
+        )
+
+    # This shouldn't happen, but has, so we handle the case
+    with patch("newrelic_lambda_cli.layers.index") as mock_index:
+        mock_index.return_value = [
+            {
+                "LatestMatchingVersion": {
+                    "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/foobar"
+                }
+            },
+            {
+                "LatestMatchingVersion": {
+                    "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/barbaz"
+                }
+            },
+        ]
+        config = mock_function_config("python3.6")
+        with pytest.raises(UsageError):
+            _add_new_relic(
+                layer_install(
+                    session=session,
+                    aws_region="us-east-1",
+                    nr_account_id=12345,
+                    enable_extension=True,
+                    enable_extension_function_logs=True,
+                ),
+                config,
+                nr_license_key=None,
+            )
+
+    config = mock_function_config("python3.6")
+    _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=12345,
+            nr_region="staging",
+            enable_extension=True,
+            enable_extension_function_logs=True,
+        ),
+        config,
+        "foobarbaz",
+    )
+    assert (
+        "NEW_RELIC_TELEMETRY_ENDPOINT"
+        in config["Configuration"]["Environment"]["Variables"]
+    )
+
 
 @mock_lambda
 def test_remove_new_relic(aws_credentials, mock_function_config):
@@ -103,6 +171,29 @@ def test_remove_new_relic(aws_credentials, mock_function_config):
     assert update_kwargs["Handler"] == "original_handler"
     assert not any(
         [k.startswith("NEW_RELIC") for k in update_kwargs["Environment"]["Variables"]]
+    )
+
+    assert update_kwargs["FunctionName"] == config["Configuration"]["FunctionArn"]
+    assert update_kwargs["Handler"] == "original_handler"
+    assert not any(
+        [k.startswith("NEW_RELIC") for k in update_kwargs["Environment"]["Variables"]]
+    )
+
+    config = mock_function_config("not.a.runtime")
+    assert (
+        _remove_new_relic(
+            layer_uninstall(session=session, aws_region="us-east-1"), config
+        )
+        is True
+    )
+
+    config = mock_function_config("python3.6")
+    config["Configuration"]["Handler"] = "what is this?"
+    assert (
+        _remove_new_relic(
+            layer_uninstall(session=session, aws_region="us-east-1"), config
+        )
+        is False
     )
 
 
@@ -137,4 +228,41 @@ def test__detach_license_key_policy():
     )
     mock_client.detach_role_policy.assert_called_once_with(
         RoleName="FooBar", PolicyArn="arn:aws:iam::123456789:policy/BarBaz"
+    )
+
+
+def test_uninstall(aws_credentials, mock_function_config):
+    mock_session = MagicMock()
+    mock_session.region_name = "us-east-1"
+    mock_client = mock_session.client.return_value
+    mock_client.get_function.return_value = None
+    assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is False
+
+    mock_client.get_function.reset_mock(return_value=True)
+    config = mock_function_config("not.a.runtime")
+    mock_client.get_function.return_value = config
+    assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is True
+
+    mock_client.get_function.reset_mock(return_value=True)
+    config = mock_function_config("python3.6")
+    mock_client.get_function.return_value = config
+    assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is False
+
+    config["Configuration"]["Handler"] = "newrelic_lambda_wrapper.handler"
+    config["Configuration"]["Environment"]["Variables"][
+        "NEW_RELIC_LAMBDA_HANDLER"
+    ] = "foobar.handler"
+    config["Configuration"]["Layers"] = [{"Arn": get_arn_prefix("us-east-1")}]
+    assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is True
+
+    mock_client.assert_has_calls([call.get_function(FunctionName="foobarbaz")])
+    mock_client.assert_has_calls(
+        [
+            call.update_function_configuration(
+                FunctionName="arn:aws:lambda:us-east-1:5558675309:function:aws-python3-dev-hello",
+                Handler="foobar.handler",
+                Environment={"Variables": {"EXISTING_ENV_VAR": "Hello World"}},
+                Layers=[],
+            )
+        ]
     )
