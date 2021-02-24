@@ -152,7 +152,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
         in config["Configuration"]["Environment"]["Variables"]
     )
 
-    config = mock_function_config("python3.6")
+    config = mock_function_config("python3.7")
     config["Configuration"]["Environment"]["Variables"]["NEW_RELIC_FOO"] = "bar"
     config["Configuration"]["Layers"] = [{"Arn": get_arn_prefix("us-east-1")}]
     update_kwargs = _add_new_relic(
@@ -169,6 +169,24 @@ def test_add_new_relic(aws_credentials, mock_function_config):
     )
     assert "NEW_RELIC_FOO" in update_kwargs["Environment"]["Variables"]
     assert update_kwargs["Layers"][0] != get_arn_prefix("us-east-1")
+
+    config = mock_function_config("python3.6")
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=12345,
+            enable_extension=True,
+            enable_extension_function_logs=True,
+            upgrade=True,
+        ),
+        config,
+        "foobarbaz",
+    )
+    assert (
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_LAMBDA_EXTENSION_ENABLED"]
+        == "false"
+    )
 
 
 @mock_lambda
