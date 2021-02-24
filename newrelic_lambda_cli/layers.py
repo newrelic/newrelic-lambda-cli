@@ -177,9 +177,8 @@ def install(input, function_arn):
         nr_license_key = api.retrieve_license_key(gql)
 
     update_kwargs = _add_new_relic(input, config, nr_license_key)
-
-    if not update_kwargs or not isinstance(update_kwargs, dict):
-        return False
+    if isinstance(update_kwargs, bool):
+        return update_kwargs
 
     try:
         res = client.update_function_configuration(**update_kwargs)
@@ -236,14 +235,6 @@ def _remove_new_relic(input, config):
         .get("NEW_RELIC_LAMBDA_HANDLER")
     )
 
-    if not env_handler:
-        failure(
-            "New Relic installation (via layers) not auto-detected for the specified "
-            "function '%s'. Environment variable NEW_RELIC_LAMBDA_HANDLER not found."
-            % config["Configuration"]["FunctionArn"]
-        )
-        return False
-
     # Delete New Relic env vars
     config["Configuration"]["Environment"]["Variables"] = {
         key: value
@@ -263,7 +254,7 @@ def _remove_new_relic(input, config):
 
     return {
         "FunctionName": config["Configuration"]["FunctionArn"],
-        "Handler": env_handler,
+        "Handler": env_handler if env_handler else config["Configuration"]["Handler"],
         "Environment": config["Configuration"]["Environment"],
         "Layers": layers,
     }
@@ -281,8 +272,8 @@ def uninstall(input, function_arn):
 
     update_kwargs = _remove_new_relic(input, config)
 
-    if not update_kwargs:
-        return False
+    if isinstance(update_kwargs, bool):
+        return update_kwargs
 
     try:
         res = client.update_function_configuration(**update_kwargs)

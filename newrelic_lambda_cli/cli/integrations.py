@@ -128,9 +128,6 @@ def install(ctx, **kwargs):
     click.echo("Retrieving integration license key")
     nr_license_key = api.retrieve_license_key(gql_client)
 
-    click.echo("Checking for a pre-existing link between New Relic and AWS")
-    integrations.validate_linked_account(gql_client, input)
-
     install_success = True
 
     click.echo("Creating the AWS role for the New Relic AWS Lambda Integration")

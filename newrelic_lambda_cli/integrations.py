@@ -7,7 +7,6 @@ import botocore
 import click
 import json
 
-from newrelic_lambda_cli.api import NewRelicGQL
 from newrelic_lambda_cli.cliutils import failure, success
 from newrelic_lambda_cli.functions import get_function
 from newrelic_lambda_cli.types import (
@@ -468,26 +467,6 @@ def remove_integration_role(input):
         failure(e.last_response["Status"]["StatusReason"])
     else:
         success("Done")
-
-
-def validate_linked_account(gql, input):
-    """
-    Ensure that the aws account associated with the 'provider account',
-    if it exists, is the same as the aws account of the default aws-cli
-    profile configured in the local machine.
-    """
-    assert isinstance(gql, NewRelicGQL)
-    assert isinstance(input, IntegrationInstall)
-
-    account = gql.get_linked_account_by_name(input.linked_account_name)
-    if account is not None:
-        aws_account_id = get_aws_account_id(input.session)
-        if aws_account_id != account["externalId"]:
-            raise click.UsageError(
-                "The selected linked AWS account [%s] does not match "
-                "the AWS account of your AWS profile [%s]."
-                % (account["externalId"], aws_account_id)
-            )
 
 
 def install_log_ingestion(

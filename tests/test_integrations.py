@@ -2,7 +2,12 @@ from __future__ import absolute_import
 
 import boto3
 import botocore
-from moto import mock_cloudformation, mock_iam, mock_sts
+from moto import (
+    mock_cloudformation,
+    mock_iam,
+    mock_lambda,
+    mock_sts,
+)
 import pytest
 from unittest.mock import call, patch, MagicMock, ANY
 
@@ -18,6 +23,10 @@ from newrelic_lambda_cli.integrations import (
     remove_license_key,
     _get_license_key_policy_arn,
     get_aws_account_id,
+    update_log_ingestion_function,
+    remove_integration_role,
+    install_log_ingestion,
+    update_log_ingestion,
 )
 
 from .conftest import integration_install, integration_uninstall, integration_update
@@ -306,3 +315,113 @@ def test__import_log_ingestion_function(aws_credentials):
 def test_get_aws_account_id(aws_credentials):
     session = boto3.Session(region_name="us-east-1")
     assert get_aws_account_id(session) == "123456789012"
+
+
+@mock_cloudformation
+@mock_lambda
+@patch("newrelic_lambda_cli.integrations._get_sar_template_url", autospec=True)
+@patch("newrelic_lambda_cli.integrations._create_log_ingestion_function", autospec=True)
+def test_update_log_ingestion_function(
+    mock_create_log_function, mock_get_sar_url, aws_credentials
+):
+    mock_get_sar_url.return_value = "https://amazonaws.com/blah"
+    session = boto3.Session(region_name="us-east-1")
+
+    assert update_log_ingestion_function(integration_update(session=session)) is None
+
+
+def test_remove_integration_role(aws_credentials):
+    mock_session = MagicMock()
+
+    assert (
+        remove_integration_role(
+            integration_uninstall(nr_account_id=123456789, session=mock_session)
+        )
+        is None
+    )
+
+    mock_client = mock_session.client.return_value
+    mock_client.describe_stacks.return_value = {"Stacks": [{"StackStatus": "peachy"}]}
+
+    assert (
+        remove_integration_role(
+            integration_uninstall(nr_account_id=123456789, session=mock_session)
+        )
+        is None
+    )
+
+    mock_client.assert_has_calls(
+        [call.describe_stacks(StackName="NewRelicLambdaIntegrationRole-123456789")]
+    )
+    mock_client.assert_has_calls(
+        [call.delete_stack(StackName="NewRelicLambdaIntegrationRole-123456789")]
+    )
+
+
+def test_install_log_ingestion(aws_credentials, mock_function_config):
+    mock_session = MagicMock()
+    mock_client = mock_session.client.return_value
+    mock_client.get_function.return_value = mock_function_config("python3.6")
+
+    assert (
+        install_log_ingestion(
+            integration_install(nr_account_id=123456789, session=mock_session),
+            "foobarbaz",
+        )
+        is True
+    )
+
+    mock_client.get_function.reset_mock(return_value=True)
+    mock_client.get_function.return_value = None
+    mock_client.describe_stacks.return_value = {"Stacks": [{"StackStatus": "peachy"}]}
+    assert (
+        install_log_ingestion(
+            integration_install(nr_account_id=123456789, session=mock_session),
+            "foobarbaz",
+        )
+        is False
+    )
+
+    mock_client.describe_stacks.reset_mock(return_value=True)
+    mock_client.describe_stacks.return_value = {"Stacks": [{"StackStatus": None}]}
+    assert (
+        install_log_ingestion(
+            integration_install(nr_account_id=123456789, session=mock_session),
+            "foobarbaz",
+        )
+        is True
+    )
+
+
+def test_update_log_ingestion(aws_credentials, mock_function_config):
+    mock_session = MagicMock()
+    mock_client = mock_session.client.return_value
+    mock_client.get_function.return_value = None
+
+    assert (
+        update_log_ingestion(
+            integration_update(session=mock_session),
+        )
+        is False
+    )
+
+    mock_client.get_function.reset_mock(return_value=True)
+    mock_client.get_function.return_value = mock_function_config("python3.6")
+    mock_client.describe_stacks.return_value = {"Stacks": [{"StackStatus": None}]}
+
+    assert (
+        update_log_ingestion(
+            integration_update(session=mock_session),
+        )
+        is False
+    )
+
+    mock_client.describe_stacks.reset_mock(return_value=True)
+    mock_client.describe_stacks.return_value = {"Stacks": [{"StackStatus": "peachy"}]}
+
+    assert (
+        update_log_ingestion(
+            integration_update(session=mock_session),
+        )
+        is True
+    )

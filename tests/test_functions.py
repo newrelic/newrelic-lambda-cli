@@ -1,7 +1,9 @@
 import boto3
 from unittest import mock
 from moto import mock_lambda
-from newrelic_lambda_cli.functions import get_aliased_functions
+from unittest.mock import MagicMock
+
+from newrelic_lambda_cli.functions import get_aliased_functions, list_functions
 
 from .conftest import layer_install
 
@@ -55,4 +57,21 @@ def test_get_aliased_functions(mock_list_functions, aws_credentials):
         "foo",
         "bar",
         "aliased-func",
+    ]
+
+
+@mock_lambda
+def test_list_functions(aws_credentials):
+    session = boto3.Session(region_name="us-east-1")
+    assert list(list_functions(session)) == []
+
+    mock_session = MagicMock()
+    mock_client = mock_session.client.return_value
+    mock_pager = mock_client.get_paginator.return_value
+    mock_pager.paginate.return_value = [
+        {"Functions": [{"FunctionName": "foobar", "Layers": []}]}
+    ]
+
+    assert list(list_functions(mock_session)) == [
+        {"FunctionName": "foobar", "Layers": [], "x-new-relic-enabled": False}
     ]
