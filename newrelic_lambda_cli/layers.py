@@ -120,14 +120,9 @@ def _add_new_relic(input, config, nr_license_key):
             "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
         ] = "true"
 
-        if input.enable_extension_function_logs:
-            update_kwargs["Environment"]["Variables"][
-                "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
-            ] = "true"
-        else:
-            update_kwargs["Environment"]["Variables"][
-                "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
-            ] = "false"
+        update_kwargs["Environment"]["Variables"][
+            "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
+        ] = ("true" if input.enable_extension_function_logs else "false")
 
         if input.nr_region == "staging":
             update_kwargs["Environment"]["Variables"][
