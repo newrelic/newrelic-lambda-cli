@@ -71,7 +71,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
         is True
     )
 
-    config = mock_function_config("python3.6")
+    config = mock_function_config("python3.7")
     config["Configuration"]["Layers"] = [{"Arn": get_arn_prefix("us-east-1")}]
     assert (
         _add_new_relic(
@@ -90,7 +90,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
 
     with patch("newrelic_lambda_cli.layers.index") as mock_index:
         mock_index.return_value = []
-        config = mock_function_config("python3.6")
+        config = mock_function_config("python3.7")
         assert (
             _add_new_relic(
                 layer_install(
@@ -120,7 +120,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
                 }
             },
         ]
-        config = mock_function_config("python3.6")
+        config = mock_function_config("python3.7")
         with pytest.raises(UsageError):
             _add_new_relic(
                 layer_install(
@@ -134,7 +134,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
                 nr_license_key=None,
             )
 
-    config = mock_function_config("python3.6")
+    config = mock_function_config("python3.7")
     _add_new_relic(
         layer_install(
             session=session,
@@ -205,7 +205,7 @@ def test_remove_new_relic(aws_credentials, mock_function_config):
         is True
     )
 
-    config = mock_function_config("python3.6")
+    config = mock_function_config("python3.7")
     config["Configuration"]["Handler"] = "what is this?"
     assert (
         _remove_new_relic(
@@ -262,7 +262,7 @@ def test_install(aws_credentials, mock_function_config):
     assert install(layer_install(session=mock_session), "foobarbaz") is True
 
     mock_client.get_function.reset_mock(return_value=True)
-    config = mock_function_config("python3.6")
+    config = mock_function_config("python3.7")
     mock_client.get_function.return_value = config
     assert (
         install(
@@ -304,7 +304,7 @@ def test_uninstall(aws_credentials, mock_function_config):
     assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is True
 
     mock_client.get_function.reset_mock(return_value=True)
-    config = mock_function_config("python3.6")
+    config = mock_function_config("python3.7")
     mock_client.get_function.return_value = config
     assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is False
 

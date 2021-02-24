@@ -7,17 +7,39 @@ from click.exceptions import Exit
 
 NEW_RELIC_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:451483290750"
 RUNTIME_CONFIG = {
-    "dotnetcore3.1": {},
-    "java11": {},
-    "java8.al2": {},
-    "nodejs10.x": {"Handler": "newrelic-lambda-wrapper.handler"},
-    "nodejs12.x": {"Handler": "newrelic-lambda-wrapper.handler"},
-    "provided": {},
-    "provided.al2": {},
-    "python2.7": {"Handler": "newrelic_lambda_wrapper.handler"},
-    "python3.6": {"Handler": "newrelic_lambda_wrapper.handler"},
-    "python3.7": {"Handler": "newrelic_lambda_wrapper.handler"},
-    "python3.8": {"Handler": "newrelic_lambda_wrapper.handler"},
+    "dotnetcore3.1": {"LambdaExtension": True},
+    "java11": {"LambdaExtension": True},
+    "java8.al2": {"LambdaExtension": True},
+    "nodejs10.x": {
+        "Handler": "newrelic-lambda-wrapper.handler",
+        "LambdaExtension": True,
+    },
+    "nodejs12.x": {
+        "Handler": "newrelic-lambda-wrapper.handler",
+        "LambdaExtension": True,
+    },
+    "nodejs14.x": {
+        "Handler": "newrelic-lambda-wrapper.handler",
+        "LambdaExtension": True,
+    },
+    "provided": {"LambdaExtension": True},
+    "provided.al2": {"LambdaExtension": True},
+    "python2.7": {
+        "Handler": "newrelic_lambda_wrapper.handler",
+        "LambdaExtension": False,
+    },
+    "python3.6": {
+        "Handler": "newrelic_lambda_wrapper.handler",
+        "LambdaExtension": False,
+    },
+    "python3.7": {
+        "Handler": "newrelic_lambda_wrapper.handler",
+        "LambdaExtension": True,
+    },
+    "python3.8": {
+        "Handler": "newrelic_lambda_wrapper.handler",
+        "LambdaExtension": True,
+    },
 }
 
 
@@ -115,3 +137,7 @@ def parse_arn(arn):
     else:
         result["resourcetype"], result["resource"] = elements[5].split("/")
     return result
+
+
+def supports_lambda_extension(runtime):
+    return RUNTIME_CONFIG.get(runtime, {}).get("LambdaExtension", False)
