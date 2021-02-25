@@ -11,6 +11,16 @@ from newrelic_lambda_cli.functions import get_function
 from newrelic_lambda_cli.integrations import _get_license_key_policy_arn
 from newrelic_lambda_cli.types import LayerInstall, LayerUninstall
 
+NEW_RELIC_ENV_VARS = (
+    "NEW_RELIC_ACCOUNT_ID",
+    "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS",
+    "NEW_RELIC_LAMBDA_EXTENSION_ENABLED",
+    "NEW_RELIC_LAMBDA_HANDLER",
+    "NEW_RELIC_LICENSE_KEY",
+    "NEW_RELIC_LOG_ENDPOINT",
+    "NEW_RELIC_TELEMETRY_ENDPOINT",
+)
+
 
 def index(region, runtime):
     req = requests.get(
@@ -120,14 +130,9 @@ def _add_new_relic(input, config, nr_license_key):
             "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
         ] = "true"
 
-        if input.enable_extension_function_logs:
-            update_kwargs["Environment"]["Variables"][
-                "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
-            ] = "true"
-        else:
-            update_kwargs["Environment"]["Variables"][
-                "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
-            ] = "false"
+        update_kwargs["Environment"]["Variables"][
+            "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
+        ] = ("true" if input.enable_extension_function_logs else "false")
 
         if input.nr_region == "staging":
             update_kwargs["Environment"]["Variables"][
@@ -242,7 +247,7 @@ def _remove_new_relic(input, config):
         .get("Environment", {})
         .get("Variables", {})
         .items()
-        if not key.startswith("NEW_RELIC")
+        if key not in NEW_RELIC_ENV_VARS
     }
 
     # Remove New Relic layers
