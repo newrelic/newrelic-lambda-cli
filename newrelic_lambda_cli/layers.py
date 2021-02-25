@@ -131,7 +131,7 @@ def _add_new_relic(input, config, nr_license_key):
             "CloudWatch Logs based ingestion. Make sure you run `newrelic-lambda "
             "integrations install` command to install the New Relic log ingestion "
             "function and `newrelic-lambda subscriptions install` to create the log "
-            "subscription filter." % (config["Configuration"]["FunctionName"], runtime)
+            "subscription filter." % (runtime, config["Configuration"]["FunctionName"])
         )
 
     if input.enable_extension and utils.supports_lambda_extension(runtime):
