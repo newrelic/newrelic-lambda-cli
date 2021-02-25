@@ -127,11 +127,11 @@ def _add_new_relic(input, config, nr_license_key):
 
     if input.enable_extension and not utils.supports_lambda_extension(runtime):
         warning(
-            "The %s runtime does not support Lambda Extensions, reverting to a "
+            "The %s runtime for %s does not support Lambda Extensions, reverting to a "
             "CloudWatch Logs based ingestion. Make sure you run `newrelic-lambda "
             "integrations install` command to install the New Relic log ingestion "
             "function and `newrelic-lambda subscriptions install` to create the log "
-            "subscription filter." % runtime
+            "subscription filter." % (config["Configuration"]["FunctionName"], runtime)
         )
 
     if input.enable_extension and utils.supports_lambda_extension(runtime):
