@@ -9,6 +9,7 @@ from newrelic_lambda_cli.utils import (
     parse_arn,
     validate_aws_profile,
     catch_boto_errors,
+    supports_lambda_extension,
 )
 
 
@@ -69,3 +70,24 @@ def test_catch_boto_errors():
 
     with pytest.raises(Exit):
         _no_region_error()
+
+
+def test_supports_lambda_extension():
+    assert all(
+        supports_lambda_extension(runtime)
+        for runtime in (
+            "dotnetcore3.1",
+            "java11",
+            "java8.al2",
+            "nodejs10.x",
+            "nodejs12.x",
+            "nodejs14.x",
+            "provided",
+            "provided.al2",
+            "python3.7",
+            "python3.8",
+        )
+    )
+    assert not any(
+        supports_lambda_extension(runtime) for runtime in ("python2.7", "python3.6")
+    )

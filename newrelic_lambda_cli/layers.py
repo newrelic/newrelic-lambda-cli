@@ -6,7 +6,7 @@ import json
 import requests
 
 from newrelic_lambda_cli import api, subscriptions, utils
-from newrelic_lambda_cli.cliutils import failure, success
+from newrelic_lambda_cli.cliutils import failure, success, warning
 from newrelic_lambda_cli.functions import get_function
 from newrelic_lambda_cli.integrations import _get_license_key_policy_arn
 from newrelic_lambda_cli.types import LayerInstall, LayerUninstall
@@ -125,7 +125,16 @@ def _add_new_relic(input, config, nr_license_key):
     if runtime_handler and handler != runtime_handler:
         update_kwargs["Environment"]["Variables"]["NEW_RELIC_LAMBDA_HANDLER"] = handler
 
-    if input.enable_extension:
+    if input.enable_extension and not utils.supports_lambda_extension(runtime):
+        warning(
+            "The %s runtime for %s does not support Lambda Extensions, reverting to a "
+            "CloudWatch Logs based ingestion. Make sure you run `newrelic-lambda "
+            "integrations install` command to install the New Relic log ingestion "
+            "function and `newrelic-lambda subscriptions install` to create the log "
+            "subscription filter." % (runtime, config["Configuration"]["FunctionName"])
+        )
+
+    if input.enable_extension and utils.supports_lambda_extension(runtime):
         update_kwargs["Environment"]["Variables"][
             "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
         ] = "true"
