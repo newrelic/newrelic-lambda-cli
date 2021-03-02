@@ -247,7 +247,7 @@ def test_install_license_key__already_installed(success_mock):
             ],
             any_order=True,
         )
-        success_mock.assert_not_called()
+        success_mock.assert_called()
 
 
 @patch("newrelic_lambda_cli.integrations.success")

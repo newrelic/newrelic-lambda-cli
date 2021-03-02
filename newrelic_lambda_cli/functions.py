@@ -12,6 +12,7 @@ from newrelic_lambda_cli.types import (
 from newrelic_lambda_cli import utils
 
 
+@utils.catch_boto_errors
 def list_functions(session, filter=None):
     client = session.client("lambda")
 

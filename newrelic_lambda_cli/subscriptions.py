@@ -10,6 +10,7 @@ from newrelic_lambda_cli.types import (
     SubscriptionInstall,
     SubscriptionUninstall,
 )
+from newrelic_lambda_cli.utils import catch_boto_errors
 
 
 def _get_log_group_name(function_name):
@@ -79,6 +80,7 @@ def _remove_subscription_filter(session, function_name, filter_name):
         return True
 
 
+@catch_boto_errors
 def create_log_subscription(input, function_name):
     assert isinstance(input, SubscriptionInstall)
     destination = get_function(input.session, "newrelic-log-ingestion")
@@ -126,6 +128,7 @@ def create_log_subscription(input, function_name):
         return True
 
 
+@catch_boto_errors
 def remove_log_subscription(input, function_name):
     assert isinstance(input, (LayerInstall, SubscriptionUninstall))
     subscription_filters = _get_subscription_filters(input.session, function_name)

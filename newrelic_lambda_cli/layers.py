@@ -10,6 +10,8 @@ from newrelic_lambda_cli.cliutils import failure, success, warning
 from newrelic_lambda_cli.functions import get_function
 from newrelic_lambda_cli.integrations import _get_license_key_policy_arn
 from newrelic_lambda_cli.types import LayerInstall, LayerUninstall
+from newrelic_lambda_cli.utils import catch_boto_errors
+
 
 NEW_RELIC_ENV_VARS = (
     "NEW_RELIC_ACCOUNT_ID",
@@ -163,6 +165,7 @@ def _add_new_relic(input, config, nr_license_key):
     return update_kwargs
 
 
+@catch_boto_errors
 def install(input, function_arn):
     assert isinstance(input, LayerInstall)
 
@@ -274,6 +277,7 @@ def _remove_new_relic(input, config):
     }
 
 
+@catch_boto_errors
 def uninstall(input, function_arn):
     assert isinstance(input, LayerUninstall)
 

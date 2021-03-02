@@ -1,7 +1,7 @@
 import pytest
 
 from botocore.exceptions import BotoCoreError, NoCredentialsError, NoRegionError
-from click.exceptions import BadParameter, Exit
+from click.exceptions import BadParameter, UsageError
 
 from newrelic_lambda_cli.utils import (
     error,
@@ -14,7 +14,7 @@ from newrelic_lambda_cli.utils import (
 
 
 def test_error():
-    with pytest.raises(Exit):
+    with pytest.raises(UsageError):
         error("Foo bar")
 
 
@@ -54,21 +54,21 @@ def test_catch_boto_errors():
     def _boto_core_error():
         raise BotoCoreError()
 
-    with pytest.raises(Exit):
+    with pytest.raises(UsageError):
         _boto_core_error()
 
     @catch_boto_errors
     def _no_credentials_error():
         raise NoCredentialsError()
 
-    with pytest.raises(Exit):
+    with pytest.raises(UsageError):
         _no_credentials_error()
 
     @catch_boto_errors
     def _no_region_error():
         raise NoRegionError()
 
-    with pytest.raises(Exit):
+    with pytest.raises(UsageError):
         _no_region_error()
 
 
