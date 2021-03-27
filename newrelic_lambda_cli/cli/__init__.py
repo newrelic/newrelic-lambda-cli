@@ -2,7 +2,6 @@
 
 import click
 
-from newrelic_lambda_cli import utils
 from newrelic_lambda_cli.cli import functions, integrations, layers, subscriptions
 
 
@@ -21,7 +20,6 @@ def register_groups(group):
     subscriptions.register(group)
 
 
-@utils.catch_boto_errors
 def main():
     register_groups(cli)
     cli()

@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import sys
+
 import boto3
 import botocore
 import click
-from click.exceptions import Exit
 
 NEW_RELIC_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:451483290750"
 RUNTIME_CONFIG = {
@@ -95,8 +96,7 @@ def is_valid_handler(runtime, handler):
 
 
 def error(*args, **kwargs):
-    click.echo(*args, err=True, **kwargs)
-    raise Exit(1)
+    raise click.UsageError(*args, **kwargs)
 
 
 def validate_aws_profile(ctx, param, value):
@@ -104,7 +104,7 @@ def validate_aws_profile(ctx, param, value):
     try:
         boto3.Session(profile_name=value)
     except botocore.exceptions.ProfileNotFound as e:
-        raise click.BadParameter(e.fmt)
+        raise click.BadParameter(e.fmt, ctx=ctx, param=param, param_hint="AWS Profile")
     else:
         return value
 

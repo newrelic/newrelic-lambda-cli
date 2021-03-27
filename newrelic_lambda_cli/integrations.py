@@ -14,6 +14,7 @@ from newrelic_lambda_cli.types import (
     IntegrationUninstall,
     IntegrationUpdate,
 )
+from newrelic_lambda_cli.utils import catch_boto_errors
 
 INGEST_STACK_NAME = "NewRelicLogIngestion"
 LICENSE_KEY_STACK_NAME = "NewRelicLicenseKeySecret"
@@ -275,6 +276,7 @@ def _exec_change_set(client, change_set, mode, stack_name=INGEST_STACK_NAME):
         success("Done")
 
 
+@catch_boto_errors
 def update_log_ingestion_function(input):
     assert isinstance(input, IntegrationUpdate)
 
@@ -385,6 +387,7 @@ def update_log_ingestion_function(input):
     )
 
 
+@catch_boto_errors
 def remove_log_ingestion_function(input):
     assert isinstance(input, IntegrationUninstall)
 
@@ -405,6 +408,7 @@ def remove_log_ingestion_function(input):
     success("Done")
 
 
+@catch_boto_errors
 def create_integration_role(input):
     """
     Creates a AWS CloudFormation stack that adds the New Relic AWSLambda Integration
@@ -444,6 +448,7 @@ def create_integration_role(input):
     )
 
 
+@catch_boto_errors
 def remove_integration_role(input):
     """
     Removes the AWS CloudFormation stack that includes the New Relic AWS Integration
@@ -469,6 +474,7 @@ def remove_integration_role(input):
         success("Done")
 
 
+@catch_boto_errors
 def install_log_ingestion(
     input,
     nr_license_key,
@@ -511,6 +517,7 @@ def install_log_ingestion(
     return True
 
 
+@catch_boto_errors
 def update_log_ingestion(input):
     """
     Updates the New Relic AWS Lambda log ingestion function and role.
@@ -548,6 +555,7 @@ def update_log_ingestion(input):
         return True
 
 
+@catch_boto_errors
 def get_log_ingestion_license_key(session):
     """
     Fetches the license key value from the log ingestion function
@@ -558,6 +566,7 @@ def get_log_ingestion_license_key(session):
     return None
 
 
+@catch_boto_errors
 def auto_install_license_key(input):
     """
     If the LK secret is missing, create it, picking up the LK value from the ingest
@@ -578,66 +587,70 @@ def auto_install_license_key(input):
     return True
 
 
+@catch_boto_errors
 def install_license_key(input, nr_license_key, policy_name=None, mode="CREATE"):
     assert isinstance(input, (IntegrationInstall, IntegrationUpdate))
     lk_stack_status = _get_cf_stack_status(input.session, LICENSE_KEY_STACK_NAME)
-    if lk_stack_status is None:
-        click.echo(
-            "Setting up %s stack in region: %s"
-            % (LICENSE_KEY_STACK_NAME, input.session.region_name)
-        )
-        try:
-            client = input.session.client("cloudformation")
+    if lk_stack_status is not None:
+        success("Managed secret already exists")
+        return True
 
-            update_mode = mode == "UPDATE"
-            parameters = []
-            if policy_name is not None:
-                parameters.append(
-                    {"ParameterKey": "PolicyName", "ParameterValue": policy_name}
-                )
-            elif update_mode:
-                parameters.append(
-                    {"ParameterKey": "PolicyName", "UsePreviousValue": True}
-                )
+    click.echo(
+        "Setting up %s stack in region: %s"
+        % (LICENSE_KEY_STACK_NAME, input.session.region_name)
+    )
+    try:
+        client = input.session.client("cloudformation")
 
+        update_mode = mode == "UPDATE"
+        parameters = []
+        if policy_name is not None:
             parameters.append(
-                {"ParameterKey": "LicenseKey", "ParameterValue": nr_license_key}
+                {"ParameterKey": "PolicyName", "ParameterValue": policy_name}
+            )
+        elif update_mode:
+            parameters.append({"ParameterKey": "PolicyName", "UsePreviousValue": True})
+
+        parameters.append(
+            {"ParameterKey": "LicenseKey", "ParameterValue": nr_license_key}
+        )
+
+        change_set_name = "%s-%s-%d" % (
+            LICENSE_KEY_STACK_NAME,
+            mode,
+            int(time.time()),
+        )
+        click.echo("Creating change set: %s" % change_set_name)
+        template_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "templates",
+            "license-key-secret.yaml",
+        )
+
+        with open(template_path) as template:
+            change_set = client.create_change_set(
+                StackName=LICENSE_KEY_STACK_NAME,
+                TemplateBody=template.read(),
+                Parameters=parameters,
+                Capabilities=["CAPABILITY_NAMED_IAM"],
+                Tags=[{"Key": key, "Value": value} for key, value in input.tags]
+                if input.tags
+                else [],
+                ChangeSetType=mode,
+                ChangeSetName=change_set_name,
             )
 
-            change_set_name = "%s-%s-%d" % (
-                LICENSE_KEY_STACK_NAME,
-                mode,
-                int(time.time()),
+            _exec_change_set(
+                client, change_set, mode, stack_name=LICENSE_KEY_STACK_NAME
             )
-            click.echo("Creating change set: %s" % change_set_name)
-            template_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "templates",
-                "license-key-secret.yaml",
-            )
-
-            with open(template_path) as template:
-                change_set = client.create_change_set(
-                    StackName=LICENSE_KEY_STACK_NAME,
-                    TemplateBody=template.read(),
-                    Parameters=parameters,
-                    Capabilities=["CAPABILITY_NAMED_IAM"],
-                    Tags=[{"Key": key, "Value": value} for key, value in input.tags]
-                    if input.tags
-                    else [],
-                    ChangeSetType=mode,
-                    ChangeSetName=change_set_name,
-                )
-
-                _exec_change_set(
-                    client, change_set, mode, stack_name=LICENSE_KEY_STACK_NAME
-                )
-        except Exception as e:
-            failure("Failed to create %s stack: %s" % (LICENSE_KEY_STACK_NAME, e))
-            return False
-    return True
+    except Exception as e:
+        failure("Failed to create %s stack: %s" % (LICENSE_KEY_STACK_NAME, e))
+        return False
+    else:
+        return True
 
 
+@catch_boto_errors
 def remove_license_key(input):
     assert isinstance(input, (IntegrationUninstall, IntegrationUpdate))
     client = input.session.client("cloudformation")
@@ -696,5 +709,6 @@ def _get_license_key_policy_arn(session):
             return None
 
 
+@catch_boto_errors
 def get_aws_account_id(session):
     return session.client("sts").get_caller_identity().get("Account")

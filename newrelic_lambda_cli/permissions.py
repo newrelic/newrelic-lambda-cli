@@ -12,8 +12,10 @@ from newrelic_lambda_cli.types import (
     SubscriptionInstall,
     SubscriptionUninstall,
 )
+from newrelic_lambda_cli.utils import catch_boto_errors
 
 
+@catch_boto_errors
 def check_permissions(session, actions, resources=None, context=None):
     """
     Checks whether an IAM user can perform specified actions. Also optionally checks

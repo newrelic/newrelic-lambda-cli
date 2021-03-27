@@ -135,7 +135,7 @@ class NewRelicGQL(object):
         """
         res = self.query(
             """
-            mutation ($accountId: Int!, $accounts: CloudLinkCloudAccountsInput!){
+            mutation ($accountId: Int!, $accounts: CloudLinkCloudAccountsInput!) {
               cloudLinkAccount (accountId: $accountId, accounts: $accounts) {
                 linkedAccounts {
                   id
@@ -168,8 +168,8 @@ class NewRelicGQL(object):
         """
         res = self.query(
             """
-            mutation ($accountId: Int!, $accounts: CloudUnlinkCloudAccountsInput!) {
-              cloudUnLinkAccount (accountId: $accountId, accounts: $accounts) {
+            mutation ($accountId: Int!, $accounts: [CloudUnlinkAccountsInput!]!) {
+              cloudUnlinkAccount (accountId: $accountId, accounts: $accounts) {
                 unlinkedAccounts {
                   id
                   name
@@ -182,9 +182,9 @@ class NewRelicGQL(object):
             }
             """,
             accountId=self.account_id,
-            accounts={"linkedAccountId": linked_account_id},
+            accounts=[{"linkedAccountId": linked_account_id}],
         )
-        if "errors" in res:
+        if "errors" in res and res["errors"]:
             failure(
                 "Error while unlinking account with New Relic:\n%s"
                 % "\n".join([e["message"] for e in res["errors"] if "message" in e])
@@ -330,7 +330,9 @@ def validate_gql_credentials(input):
         raise click.BadParameter(
             "Could not authenticate with New Relic. Check that your New Relic Account "
             "ID and API Key are valid and try again.",
+            ctx=None,
             param="nr_api_key",
+            param_hint="New Relic User API Key",
         )
 
 
@@ -346,7 +348,9 @@ def retrieve_license_key(gql):
         raise click.BadParameter(
             "Could not retrieve license key from New Relic. Check that your New Relic "
             "Account ID is valid and try again.",
+            ctx=None,
             param="nr_account_id",
+            param_hint="New Relic Account ID",
         )
 
 
