@@ -94,6 +94,15 @@ def register(group):
     show_default=True,
     help="Enable/disable sending Lambda function logs via the Extension",
 )
+@click.option(
+    "--java_handler_method",
+    "-j",
+    default="handleRequest",
+    help="Java runtimes only - Specify aws implementation method: RequestHandler or RequestStreamHandler",
+    metavar="<java_handler>",
+    show_default=True,
+    type=click.Choice(["handleRequest", "handleStreamsRequest"]),
+)
 @click.pass_context
 def install(ctx, **kwargs):
     """Install New Relic AWS Lambda Layers"""

@@ -2,8 +2,11 @@
 
 import botocore
 import click
+import enquiries
 import json
+import re
 import requests
+
 
 from newrelic_lambda_cli import api, subscriptions, utils
 from newrelic_lambda_cli.cliutils import failure, success, warning
@@ -33,6 +36,25 @@ def index(region, runtime):
     return layers_response.get("Layers", [])
 
 
+def layer_selection(available_layers, runtime):
+    selected_layer = []
+    if len(available_layers) > 1:
+        layerOptions = []
+        for layer in available_layers:
+            layerOptions.append(layer["LatestMatchingVersion"]["LayerVersionArn"])
+
+        response = enquiries.choose(
+            "Discovered layers for runtime {0}".format(runtime), layerOptions
+        )
+        success("Layer {0} selected".format(response))
+        selected_layer.append(response)
+    else:
+        selected_layer.append(
+            available_layers[0]["LatestMatchingVersion"]["LayerVersionArn"]
+        )
+    return selected_layer
+
+
 def _add_new_relic(input, config, nr_license_key):
     assert isinstance(input, LayerInstall)
 
@@ -48,6 +70,10 @@ def _add_new_relic(input, config, nr_license_key):
 
     handler = config["Configuration"]["Handler"]
     runtime_handler = utils.RUNTIME_CONFIG.get(runtime, {}).get("Handler")
+
+    if "java" in runtime:
+        postfix = input.java_handler_method or "handleRequest"
+        runtime_handler = runtime_handler + postfix
 
     existing_newrelic_layer = [
         layer["Arn"]
@@ -69,10 +95,10 @@ def _add_new_relic(input, config, nr_license_key):
         if not layer["Arn"].startswith(utils.get_arn_prefix(aws_region))
     ]
 
-    new_relic_layers = []
+    new_relic_layer = []
 
     if input.layer_arn:
-        new_relic_layers = [input.layer_arn]
+        new_relic_layer = [input.layer_arn]
     else:
         # discover compatible layers...
         available_layers = index(aws_region, runtime)
@@ -84,25 +110,7 @@ def _add_new_relic(input, config, nr_license_key):
             )
             return False
 
-        # TODO: MAke this a layer selection screen
-        if len(available_layers) > 1:
-            message = ["Discovered layers for runtime (%s)" % runtime]
-            for layer in available_layers:
-                message.append(
-                    "%s\t%s"
-                    % (
-                        layer["LatestMatchingVersion"]["LayerVersionArn"],
-                        layer.get("Description", ""),
-                    )
-                )
-            message.append(
-                "\nMultiple layers found. Pass --layer-arn to specify layer ARN"
-            )
-            raise click.UsageError("\n".join(message))
-
-        new_relic_layers = [
-            available_layers[0]["LatestMatchingVersion"]["LayerVersionArn"]
-        ]
+        new_relic_layer = layer_selection(available_layers, runtime)
 
     update_kwargs = {
         "FunctionName": config["Configuration"]["FunctionArn"],
@@ -111,10 +119,14 @@ def _add_new_relic(input, config, nr_license_key):
             .get("Environment", {})
             .get("Variables", {})
         },
-        "Layers": new_relic_layers + existing_layers,
+        "Layers": new_relic_layer + existing_layers,
     }
 
-    # Only used by Python and Node.js runtimes
+    # We don't want to modify the handler if the NewRelicLambdaExtension layer has been selected
+    if any("NewRelicLambdaExtension" in s for s in new_relic_layer):
+        runtime_handler = None
+
+    # Only used by Python, Node.js and Java runtimes not using the NewRelicLambdaExtension layer
     if runtime_handler:
         update_kwargs["Handler"] = runtime_handler
 
@@ -235,6 +247,11 @@ def _remove_new_relic(input, config):
         return True
 
     handler = config["Configuration"]["Handler"]
+
+    # For java runtimes we need to remove the method name before
+    # validating because method names are variable
+    if "java" in runtime:
+        handler = handler.split("::", 1)[0] + "::"
 
     # Detect non-New Relic handler and error if necessary.
     if not utils.is_valid_handler(runtime, handler):
