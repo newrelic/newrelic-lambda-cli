@@ -9,8 +9,14 @@ import click
 NEW_RELIC_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:451483290750"
 RUNTIME_CONFIG = {
     "dotnetcore3.1": {"LambdaExtension": True},
-    "java11": {"LambdaExtension": True},
-    "java8.al2": {"LambdaExtension": True},
+    "java11": {
+        "Handler": "com.newrelic.java.HandlerWrapper::",
+        "LambdaExtension": True,
+    },
+    "java8.al2": {
+        "Handler": "com.newrelic.java.HandlerWrapper::",
+        "LambdaExtension": True,
+    },
     "nodejs10.x": {
         "Handler": "newrelic-lambda-wrapper.handler",
         "LambdaExtension": True,

@@ -58,6 +58,7 @@ LAYER_INSTALL_KEYS = [
     "upgrade",
     "enable_extension",
     "enable_extension_function_logs",
+    "java_handler_method",
 ]
 
 LAYER_UNINSTALL_KEYS = [

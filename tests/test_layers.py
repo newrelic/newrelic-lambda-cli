@@ -11,6 +11,7 @@ from newrelic_lambda_cli.layers import (
     _remove_new_relic,
     install,
     uninstall,
+    layer_selection,
 )
 from newrelic_lambda_cli.utils import get_arn_prefix
 
@@ -106,22 +107,27 @@ def test_add_new_relic(aws_credentials, mock_function_config):
             is False
         )
 
-    # This shouldn't happen, but has, so we handle the case
     with patch("newrelic_lambda_cli.layers.index") as mock_index:
-        mock_index.return_value = [
-            {
-                "LatestMatchingVersion": {
-                    "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/foobar"
-                }
-            },
-            {
-                "LatestMatchingVersion": {
-                    "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/barbaz"
-                }
-            },
-        ]
-        config = mock_function_config("python3.7")
-        with pytest.raises(UsageError):
+        with patch(
+            "newrelic_lambda_cli.layers.layer_selection"
+        ) as layer_selection_mock:
+            mock_index.return_value = [
+                {
+                    "LatestMatchingVersion": {
+                        "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/javajava"
+                    }
+                },
+                {
+                    "LatestMatchingVersion": {
+                        "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/NewRelicLambdaExtension"
+                    }
+                },
+            ]
+            layer_selection_mock.return_value = [
+                "arn:aws:lambda:us-east-1:123456789:layer/NewRelicLambdaExtension"
+            ]
+
+            config = mock_function_config("java11")
             _add_new_relic(
                 layer_install(
                     session=session,
@@ -133,6 +139,54 @@ def test_add_new_relic(aws_credentials, mock_function_config):
                 config,
                 nr_license_key=None,
             )
+
+            layer_selection_mock.assert_called_with(mock_index.return_value, "java11")
+            assert "original_handler" in config["Configuration"]["Handler"]
+
+            # Java handler testing
+            layer_selection_mock.return_value = [
+                "arn:aws:lambda:us-east-1:123456789:layer/javajava"
+            ]
+
+            update_kwargs = _add_new_relic(
+                layer_install(
+                    session=session,
+                    aws_region="us-east-1",
+                    nr_account_id=12345,
+                    enable_extension=True,
+                    enable_extension_function_logs=True,
+                ),
+                config,
+                nr_license_key=None,
+            )
+            assert (
+                "com.newrelic.java.HandlerWrapper::handleRequest"
+                in update_kwargs["Handler"]
+            )
+            assert (
+                "original_handler"
+                in update_kwargs["Environment"]["Variables"]["NEW_RELIC_LAMBDA_HANDLER"]
+            )
+
+    with patch("newrelic_lambda_cli.layers.enquiries.choose") as mock_enquiries:
+        mock_layers = [
+            {
+                "LatestMatchingVersion": {
+                    "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/javajava"
+                }
+            },
+            {
+                "LatestMatchingVersion": {
+                    "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/NewRelicLambdaExtension"
+                }
+            },
+        ]
+        mock_enquiries.return_value = (
+            "arn:aws:lambda:us-east-1:123456789:layer/javajava"
+        )
+
+        result = layer_selection(mock_layers, "python3.7")
+        assert result == [mock_enquiries.return_value]
 
     config = mock_function_config("python3.7")
     _add_new_relic(
@@ -209,12 +263,6 @@ def test_remove_new_relic(aws_credentials, mock_function_config):
         [k.startswith("NEW_RELIC") for k in update_kwargs["Environment"]["Variables"]]
     )
 
-    assert update_kwargs["FunctionName"] == config["Configuration"]["FunctionArn"]
-    assert update_kwargs["Handler"] == "original_handler"
-    assert not any(
-        [k.startswith("NEW_RELIC") for k in update_kwargs["Environment"]["Variables"]]
-    )
-
     config = mock_function_config("not.a.runtime")
     assert (
         _remove_new_relic(
@@ -230,6 +278,24 @@ def test_remove_new_relic(aws_credentials, mock_function_config):
             layer_uninstall(session=session, aws_region="us-east-1"), config
         )
         is False
+    )
+
+    config = mock_function_config("java11")
+    config["Configuration"][
+        "Handler"
+    ] = "com.newrelic.java.HandlerWrapper::handleStreamsRequest"
+    config["Configuration"]["Environment"]["Variables"][
+        "NEW_RELIC_LAMBDA_HANDLER"
+    ] = "original_handler"
+
+    update_kwargs = _remove_new_relic(
+        layer_uninstall(session=session, aws_region="us-east-1"), config
+    )
+
+    assert update_kwargs["FunctionName"] == config["Configuration"]["FunctionArn"]
+    assert update_kwargs["Handler"] == "original_handler"
+    assert not any(
+        [k.startswith("NEW_RELIC") for k in update_kwargs["Environment"]["Variables"]]
     )
 
 
