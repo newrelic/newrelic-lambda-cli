@@ -288,6 +288,8 @@ def test_remove_new_relic(aws_credentials, mock_function_config):
         "NEW_RELIC_LAMBDA_HANDLER"
     ] = "original_handler"
 
+    config["Configuration"]["Environment"]["Variables"]["NEW_RELIC_ACCOUNT_ID"] = 123
+
     update_kwargs = _remove_new_relic(
         layer_uninstall(session=session, aws_region="us-east-1"), config
     )
@@ -396,6 +398,7 @@ def test_uninstall(aws_credentials, mock_function_config):
     config["Configuration"]["Environment"]["Variables"][
         "NEW_RELIC_LAMBDA_HANDLER"
     ] = "foobar.handler"
+    config["Configuration"]["Environment"]["Variables"]["NEW_RELIC_ACCOUNT_ID"] = 123
     config["Configuration"]["Layers"] = [{"Arn": get_arn_prefix("us-east-1")}]
     assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is True
 

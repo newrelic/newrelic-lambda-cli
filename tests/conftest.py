@@ -26,7 +26,12 @@ def _mock_function_config(runtime):
             "Layers": [{"Arn": "existing_layer_arn"}],
             "FunctionName": "aws-python3-dev-hello",
             "FunctionArn": "arn:aws:lambda:us-east-1:5558675309:function:aws-python3-dev-hello",  # noqa
-            "Environment": {"Variables": {"EXISTING_ENV_VAR": "Hello World"}},
+            "Environment": {
+                "Variables": {
+                    "EXISTING_ENV_VAR": "Hello World",
+                    "NEW_RELIC_ACCOUNT_ID": 123,
+                }
+            },
             "Handler": "original_handler",
             "Runtime": runtime,
         }

@@ -202,17 +202,26 @@ def test_install_license_key(success_mock):
         }
         cf_client = MagicMock(name="cloudformation", **cf_mocks)
         mock_client_factory.side_effect = [cf_client, cf_client]
-
-        result = install_license_key(integration_install(session=session), "1234abcd")
+        result = install_license_key(
+            integration_install(nr_account_id=123456789, session=session), "1234abcd"
+        )
         assert result is True
 
         cf_client.assert_has_calls(
             [
                 call.create_change_set(
-                    StackName="NewRelicLicenseKeySecret",
+                    StackName="NewRelicLicenseKeySecret-123456789",
                     TemplateBody=ANY,
                     Parameters=[
+                        {
+                            "ParameterKey": "PolicyName",
+                            "ParameterValue": "ViewNewRelicLicenseKeyPolicy-123456789",
+                        },
                         {"ParameterKey": "LicenseKey", "ParameterValue": "1234abcd"},
+                        {
+                            "ParameterKey": "SecretName",
+                            "ParameterValue": "NEW_RELIC_LICENSE_KEY-123456789",
+                        },
                     ],
                     Capabilities=["CAPABILITY_NAMED_IAM"],
                     Tags=[],
@@ -238,12 +247,14 @@ def test_install_license_key__already_installed(success_mock):
         cf_client = MagicMock(name="cloudformation", **cf_mocks)
         mock_client_factory.side_effect = [cf_client, cf_client]
 
-        result = install_license_key(integration_install(session=session), "1234abcd")
+        result = install_license_key(
+            integration_install(nr_account_id=123456789, session=session), "1234abcd"
+        )
         assert result is True
 
         cf_client.assert_has_calls(
             [
-                call.describe_stacks(StackName="NewRelicLicenseKeySecret"),
+                call.describe_stacks(StackName="NewRelicLicenseKeySecret-123456789"),
             ],
             any_order=True,
         )
@@ -257,25 +268,29 @@ def test_remove_license_key(success_mock):
         cf_client = MagicMock(name="cloudformation")
         mock_client_factory.side_effect = cf_client
 
-        remove_license_key(integration_uninstall(session=session))
+        remove_license_key(
+            integration_uninstall(nr_account_id=123456789, session=session)
+        )
 
         cf_client.assert_has_calls(
-            [call().delete_stack(StackName="NewRelicLicenseKeySecret")],
+            [call().delete_stack(StackName="NewRelicLicenseKeySecret-123456789")],
             any_order=True,
         )
         success_mock.assert_called_once()
 
 
-def test__get_license_key_policy_arn():
+def test_get_license_key_policy_arn():
     session = MagicMock()
     with patch.object(session, "client") as mock_client_factory:
         cf_client = MagicMock(name="cloudformation")
         mock_client_factory.side_effect = cf_client
 
-        _get_license_key_policy_arn(session)
+        _get_license_key_policy_arn(
+            integration_install(nr_account_id=123456789, session=session)
+        )
 
         cf_client.assert_has_calls(
-            [call().describe_stacks(StackName="NewRelicLicenseKeySecret")],
+            [call().describe_stacks(StackName="NewRelicLicenseKeySecret-123456789")],
             any_order=True,
         )
 

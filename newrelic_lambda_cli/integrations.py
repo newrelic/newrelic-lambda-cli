@@ -61,7 +61,6 @@ def _get_cf_stack_status(session, stack_name):
             return None
         raise click.UsageError(str(e))
     else:
-        print(res)
         return res["Stacks"][0]["StackStatus"]
 
 
@@ -602,18 +601,17 @@ def auto_install_license_key(input):
 @catch_boto_errors
 def install_license_key(input, nr_license_key, policy_name=None, mode="CREATE"):
     assert isinstance(input, (IntegrationInstall, IntegrationUpdate))
-    stackName = format_account_id_string(LICENSE_KEY_STACK_NAME, input.nr_account_id)
-    lk_stack_status = _get_cf_stack_status(input.session, stackName)
+    stack_name = format_account_id_string(LICENSE_KEY_STACK_NAME, input.nr_account_id)
+    lk_stack_status = _get_cf_stack_status(input.session, stack_name)
     if lk_stack_status is not None:
         success("Managed secret already exists")
         return True
 
     click.echo(
-        "Setting up %s stack in region: %s" % (stackName, input.session.region_name)
+        "Setting up %s stack in region: %s" % (stack_name, input.session.region_name)
     )
     try:
         client = input.session.client("cloudformation")
-
         update_mode = mode == "UPDATE"
 
         if policy_name is None:
@@ -639,7 +637,7 @@ def install_license_key(input, nr_license_key, policy_name=None, mode="CREATE"):
             parameters.append({"ParameterKey": "PolicyName", "UsePreviousValue": True})
 
         change_set_name = "%s-%s-%d" % (
-            stackName,
+            stack_name,
             mode,
             int(time.time()),
         )
@@ -652,7 +650,7 @@ def install_license_key(input, nr_license_key, policy_name=None, mode="CREATE"):
 
         with open(template_path) as template:
             change_set = client.create_change_set(
-                StackName=stackName,
+                StackName=stack_name,
                 TemplateBody=template.read(),
                 Parameters=parameters,
                 Capabilities=["CAPABILITY_NAMED_IAM"],
@@ -663,9 +661,9 @@ def install_license_key(input, nr_license_key, policy_name=None, mode="CREATE"):
                 ChangeSetName=change_set_name,
             )
 
-            _exec_change_set(client, change_set, mode, stack_name=stackName)
+            _exec_change_set(client, change_set, mode, stack_name=stack_name)
     except Exception as e:
-        failure("Failed to create %s stack: %s" % (stackName, e))
+        failure("Failed to create %s stack: %s" % (stack_name, e))
         return False
     else:
         return True
@@ -675,7 +673,7 @@ def install_license_key(input, nr_license_key, policy_name=None, mode="CREATE"):
 def remove_license_key(input):
     assert isinstance(input, (IntegrationUninstall, IntegrationUpdate))
     client = input.session.client("cloudformation")
-    stackName = format_account_id_string(policy_name, input.nr_account_id)
+    stack_name = format_account_id_string(LICENSE_KEY_STACK_NAME, input.nr_account_id)
     stack_status = _get_cf_stack_status(input.session, LICENSE_KEY_STACK_NAME)
     if stack_status is None:
         click.echo(
@@ -683,14 +681,14 @@ def remove_license_key(input):
             % input.session.region_name
         )
         return
-    click.echo("Deleting stack '%s'" % stackName)
-    client.delete_stack(StackName=stackName)
+    click.echo("Deleting stack '%s'" % stack_name)
+    client.delete_stack(StackName=stack_name)
     click.echo(
         "Waiting for stack deletion to complete, this may take a minute... ", nl=False
     )
 
     try:
-        client.get_waiter("stack_delete_complete").wait(StackName=stackName)
+        client.get_waiter("stack_delete_complete").wait(StackName=stack_name)
     except botocore.exceptions.WaiterError as e:
         failure(e.last_response["Status"]["StatusReason"])
     else:
@@ -698,7 +696,6 @@ def remove_license_key(input):
 
 
 def _get_license_key_policy_arn(input):
-    print(format_account_id_string(LICENSE_KEY_STACK_NAME, input.nr_account_id))
     session = input.session
     """Returns the policy ARN for the license key secret if it exists"""
     global __cached_license_key_policy_arn
