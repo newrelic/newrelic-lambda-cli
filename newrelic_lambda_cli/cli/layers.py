@@ -174,6 +174,15 @@ def install(ctx, **kwargs):
     metavar="<name>",
     multiple=True,
 )
+@click.option(
+    "--nr-account-id",
+    "-a",
+    envvar="NEW_RELIC_ACCOUNT_ID",
+    help="New Relic Account ID",
+    metavar="<account_id>",
+    required=False,
+    type=click.INT,
+)
 @click.pass_context
 def uninstall(ctx, **kwargs):
     """Uninstall New Relic AWS Lambda Layers"""

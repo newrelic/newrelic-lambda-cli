@@ -14,7 +14,10 @@ from newrelic_lambda_cli.types import (
     IntegrationUninstall,
     IntegrationUpdate,
 )
-from newrelic_lambda_cli.utils import catch_boto_errors
+from newrelic_lambda_cli.utils import (
+    catch_boto_errors,
+    format_account_id_string,
+)
 
 INGEST_STACK_NAME = "NewRelicLogIngestion"
 LICENSE_KEY_STACK_NAME = "NewRelicLicenseKeySecret"
@@ -58,6 +61,7 @@ def _get_cf_stack_status(session, stack_name):
             return None
         raise click.UsageError(str(e))
     else:
+        print(res)
         return res["Stacks"][0]["StackStatus"]
 
 
@@ -456,7 +460,10 @@ def remove_integration_role(input):
     """
     assert isinstance(input, IntegrationUninstall)
     client = input.session.client("cloudformation")
-    stack_name = "NewRelicLambdaIntegrationRole-%s" % input.nr_account_id
+    stack_name = format_account_id_string(
+        "NewRelicLambdaIntegrationRole", input.nr_account_id
+    )
+
     stack_status = _get_cf_stack_status(input.session, stack_name)
     if stack_status is None:
         click.echo("No New Relic AWS Lambda Integration found, skipping")
@@ -573,7 +580,12 @@ def auto_install_license_key(input):
     lambda's configuration.
     """
     assert isinstance(input, (IntegrationInstall, IntegrationUpdate))
-    lk_stack_status = _get_cf_stack_status(input.session, LICENSE_KEY_STACK_NAME)
+    lk_stack_status = _get_cf_stack_status(
+        input.session,
+        format_account_id_string(LICENSE_KEY_STACK_NAME, input.nr_account_id),
+    )
+    if lk_stack_status is not None:
+        return True
     if lk_stack_status is None:
         click.echo("Creating the managed secret for the New Relic License Key")
         lk = get_log_ingestion_license_key(input.session)
@@ -590,33 +602,44 @@ def auto_install_license_key(input):
 @catch_boto_errors
 def install_license_key(input, nr_license_key, policy_name=None, mode="CREATE"):
     assert isinstance(input, (IntegrationInstall, IntegrationUpdate))
-    lk_stack_status = _get_cf_stack_status(input.session, LICENSE_KEY_STACK_NAME)
+    stackName = format_account_id_string(LICENSE_KEY_STACK_NAME, input.nr_account_id)
+    lk_stack_status = _get_cf_stack_status(input.session, stackName)
     if lk_stack_status is not None:
         success("Managed secret already exists")
         return True
 
     click.echo(
-        "Setting up %s stack in region: %s"
-        % (LICENSE_KEY_STACK_NAME, input.session.region_name)
+        "Setting up %s stack in region: %s" % (stackName, input.session.region_name)
     )
     try:
         client = input.session.client("cloudformation")
 
         update_mode = mode == "UPDATE"
-        parameters = []
-        if policy_name is not None:
-            parameters.append(
-                {"ParameterKey": "PolicyName", "ParameterValue": policy_name}
-            )
-        elif update_mode:
+
+        if policy_name is None:
+            policy_name = "ViewNewRelicLicenseKeyPolicy"
+
+        parameters = [
+            {
+                "ParameterKey": "PolicyName",
+                "ParameterValue": format_account_id_string(
+                    policy_name, input.nr_account_id
+                ),
+            },
+            {"ParameterKey": "LicenseKey", "ParameterValue": nr_license_key},
+            {
+                "ParameterKey": "SecretName",
+                "ParameterValue": format_account_id_string(
+                    "NEW_RELIC_LICENSE_KEY", input.nr_account_id
+                ),
+            },
+        ]
+
+        if update_mode:
             parameters.append({"ParameterKey": "PolicyName", "UsePreviousValue": True})
 
-        parameters.append(
-            {"ParameterKey": "LicenseKey", "ParameterValue": nr_license_key}
-        )
-
         change_set_name = "%s-%s-%d" % (
-            LICENSE_KEY_STACK_NAME,
+            stackName,
             mode,
             int(time.time()),
         )
@@ -629,7 +652,7 @@ def install_license_key(input, nr_license_key, policy_name=None, mode="CREATE"):
 
         with open(template_path) as template:
             change_set = client.create_change_set(
-                StackName=LICENSE_KEY_STACK_NAME,
+                StackName=stackName,
                 TemplateBody=template.read(),
                 Parameters=parameters,
                 Capabilities=["CAPABILITY_NAMED_IAM"],
@@ -640,11 +663,9 @@ def install_license_key(input, nr_license_key, policy_name=None, mode="CREATE"):
                 ChangeSetName=change_set_name,
             )
 
-            _exec_change_set(
-                client, change_set, mode, stack_name=LICENSE_KEY_STACK_NAME
-            )
+            _exec_change_set(client, change_set, mode, stack_name=stackName)
     except Exception as e:
-        failure("Failed to create %s stack: %s" % (LICENSE_KEY_STACK_NAME, e))
+        failure("Failed to create %s stack: %s" % (stackName, e))
         return False
     else:
         return True
@@ -654,6 +675,7 @@ def install_license_key(input, nr_license_key, policy_name=None, mode="CREATE"):
 def remove_license_key(input):
     assert isinstance(input, (IntegrationUninstall, IntegrationUpdate))
     client = input.session.client("cloudformation")
+    stackName = format_account_id_string(policy_name, input.nr_account_id)
     stack_status = _get_cf_stack_status(input.session, LICENSE_KEY_STACK_NAME)
     if stack_status is None:
         click.echo(
@@ -661,32 +683,34 @@ def remove_license_key(input):
             % input.session.region_name
         )
         return
-    click.echo("Deleting stack '%s'" % LICENSE_KEY_STACK_NAME)
-    client.delete_stack(StackName=LICENSE_KEY_STACK_NAME)
+    click.echo("Deleting stack '%s'" % stackName)
+    client.delete_stack(StackName=stackName)
     click.echo(
         "Waiting for stack deletion to complete, this may take a minute... ", nl=False
     )
 
     try:
-        client.get_waiter("stack_delete_complete").wait(
-            StackName=LICENSE_KEY_STACK_NAME
-        )
+        client.get_waiter("stack_delete_complete").wait(StackName=stackName)
     except botocore.exceptions.WaiterError as e:
         failure(e.last_response["Status"]["StatusReason"])
     else:
         success("Done")
 
 
-def _get_license_key_policy_arn(session):
+def _get_license_key_policy_arn(input):
+    print(format_account_id_string(LICENSE_KEY_STACK_NAME, input.nr_account_id))
+    session = input.session
     """Returns the policy ARN for the license key secret if it exists"""
     global __cached_license_key_policy_arn
     if __cached_license_key_policy_arn:
         return __cached_license_key_policy_arn
     client = session.client("cloudformation")
     try:
-        stacks = client.describe_stacks(StackName=LICENSE_KEY_STACK_NAME).get(
-            "Stacks", []
-        )
+        stacks = client.describe_stacks(
+            StackName=format_account_id_string(
+                LICENSE_KEY_STACK_NAME, input.nr_account_id
+            )
+        ).get("Stacks", [])
     except botocore.exceptions.ClientError as e:
         if (
             e.response

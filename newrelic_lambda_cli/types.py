@@ -69,6 +69,7 @@ LAYER_UNINSTALL_KEYS = [
     "aws_permissions_check",
     "functions",
     "excludes",
+    "nr_account_id",
 ]
 
 SUBSCRIPTION_INSTALL_KEYS = [

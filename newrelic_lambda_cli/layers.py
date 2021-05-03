@@ -188,7 +188,7 @@ def install(input, function_arn):
         failure("Could not find function: %s" % function_arn)
         return False
 
-    policy_arn = _get_license_key_policy_arn(input.session)
+    policy_arn = _get_license_key_policy_arn(input)
     if input.enable_extension and not policy_arn and not input.nr_api_key:
         raise click.UsageError(
             "In order to use `--enable-extension`, you must first run "
@@ -305,6 +305,9 @@ def uninstall(input, function_arn):
         failure("Could not find function: %s" % function_arn)
         return False
 
+    nr_account_id = config["Configuration"]["Environment"]["Variables"][
+        "NEW_RELIC_ACCOUNT_ID"
+    ]
     update_kwargs = _remove_new_relic(input, config)
 
     if isinstance(update_kwargs, bool):
@@ -319,7 +322,12 @@ def uninstall(input, function_arn):
         )
         return False
     else:
-        policy_arn = _get_license_key_policy_arn(input.session)
+        # Using the NR account id from the function variables and setting
+        # it into our input so that we can query for the correct managed secret
+        policy_arn = _get_license_key_policy_arn(
+            input._replace(nr_account_id=nr_account_id)
+        )
+
         if policy_arn:
             _detach_license_key_policy(
                 input.session, config["Configuration"]["Role"], policy_arn

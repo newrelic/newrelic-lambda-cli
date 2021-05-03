@@ -147,3 +147,7 @@ def parse_arn(arn):
 
 def supports_lambda_extension(runtime):
     return RUNTIME_CONFIG.get(runtime, {}).get("LambdaExtension", False)
+
+
+def format_account_id_string(stack_name, account_id):
+    return "{0}-{1}".format(stack_name, str(account_id))
