@@ -68,7 +68,11 @@ def test_enable_lambda_integration():
     )
     input = integration_install(nr_account_id=123456789, linked_account_name="Foo Bar")
 
-    assert enable_lambda_integration(mock_gql, input, 123456789) is False
+    lambda_enabled = enable_lambda_integration(mock_gql, input, 123456789)
+    assert (
+        lambda_enabled is False
+    ), "Account should be linked to enable the lambda integration"
+    assert mock_gql.query.call_count == 1
 
     mock_gql.query = Mock(
         side_effect=(
@@ -82,6 +86,35 @@ def test_enable_lambda_integration():
                                     "externalId": "123456789",
                                     "id": 123456789,
                                     "name": "Foo Bar",
+                                    "metricCollectionMode": "PUSH",
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+        )
+    )
+
+    lambda_enabled = enable_lambda_integration(mock_gql, input, 123456789)
+    assert mock_gql.query.call_count == 1
+    assert (
+        lambda_enabled is True
+    ), "Accounts in PUSH mode (using Cloudwatch Metrics stream) should already have the Lambda integration enabled"
+
+    mock_gql.query = Mock(
+        side_effect=(
+            {
+                "actor": {
+                    "account": {
+                        "cloud": {
+                            "linkedAccounts": [
+                                {
+                                    "authLabel": "arn:aws:iam::123456789:role/FooBar",
+                                    "externalId": "123456789",
+                                    "id": 123456789,
+                                    "name": "Foo Bar",
+                                    "metricCollectionMode": "PULL",
                                 }
                             ]
                         }
@@ -104,7 +137,11 @@ def test_enable_lambda_integration():
         )
     )
 
-    assert enable_lambda_integration(mock_gql, input, 123456789) is True
+    lambda_enabled = enable_lambda_integration(mock_gql, input, 123456789)
+    assert mock_gql.query.call_count == 2
+    assert (
+        lambda_enabled is True
+    ), "Account is linked and already has the lambda integration enabled"
 
     mock_gql.query = Mock(
         side_effect=(
@@ -118,6 +155,7 @@ def test_enable_lambda_integration():
                                     "externalId": "123456789",
                                     "id": 123456789,
                                     "name": "Foo Bar",
+                                    "metricCollectionMode": "PULL",
                                 }
                             ]
                         }
@@ -143,4 +181,8 @@ def test_enable_lambda_integration():
         )
     )
 
-    assert enable_lambda_integration(mock_gql, input, 123456789) is True
+    lambda_enabled = enable_lambda_integration(mock_gql, input, 123456789)
+    assert mock_gql.query.call_count == 3
+    assert (
+        lambda_enabled is True
+    ), "Account is linked but didn't have the lambda integration enabled, so it should be configured"
