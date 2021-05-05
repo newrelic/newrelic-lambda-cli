@@ -2,6 +2,7 @@ import boto3
 from click import UsageError
 from moto import mock_lambda
 import pytest
+
 from unittest.mock import ANY, call, MagicMock, patch
 
 from newrelic_lambda_cli.layers import (
@@ -333,80 +334,133 @@ def test__detach_license_key_policy():
     )
 
 
-def test_install(aws_credentials, mock_function_config):
+def test_install_failure(aws_credentials, mock_function_config):
     mock_session = MagicMock()
     mock_session.region_name = "us-east-1"
     mock_client = mock_session.client.return_value
-    mock_client.get_function.return_value = None
-    assert install(layer_install(session=mock_session), "foobarbaz") is False
-
     mock_client.get_function.reset_mock(return_value=True)
-    config = mock_function_config("not.a.runtime")
-    mock_client.get_function.return_value = config
-    assert install(layer_install(session=mock_session), "foobarbaz") is True
-
-    mock_client.get_function.reset_mock(return_value=True)
-    config = mock_function_config("python3.7")
-    mock_client.get_function.return_value = config
-    assert (
-        install(
-            layer_install(nr_account_id=123456789, session=mock_session), "foobarbaz"
-        )
-        is True
-    )
-
-    mock_client.assert_has_calls([call.get_function(FunctionName="foobarbaz")])
-    mock_client.assert_has_calls(
-        [
-            call.update_function_configuration(
-                FunctionName="arn:aws:lambda:us-east-1:5558675309:function:aws-python3-dev-hello",  # noqa
-                Environment={
-                    "Variables": {
-                        "EXISTING_ENV_VAR": "Hello World",
-                        "NEW_RELIC_ACCOUNT_ID": "123456789",
-                        "NEW_RELIC_LAMBDA_HANDLER": "original_handler",
-                        "NEW_RELIC_LAMBDA_EXTENSION_ENABLED": "false",
-                    }
-                },
-                Layers=ANY,
-                Handler="newrelic_lambda_wrapper.handler",
+    with patch(
+        "newrelic_lambda_cli.layers._get_license_key_outputs"
+    ) as mock_get_license_key_outputs:
+        mock_get_license_key_outputs.return_value = ["12345", "policy"]
+        config = mock_function_config("python3.7")
+        mock_client.get_function.return_value = config
+        with pytest.raises(UsageError):
+            install(
+                layer_install(nr_account_id=9876543, session=mock_session), "foobarbaz"
             )
-        ]
-    )
+
+
+def test_install(aws_credentials, mock_function_config):
+    mock_session = MagicMock()
+    mock_session.region_name = "us-east-1"
+
+    with patch(
+        "newrelic_lambda_cli.layers._get_license_key_outputs"
+    ) as mock_get_license_key_outputs:
+        mock_client = mock_session.client.return_value
+        mock_client.get_function.reset_mock(return_value=True)
+        mock_get_license_key_outputs.return_value = ["12345", "policy"]
+        config = mock_function_config("python3.7")
+        mock_client.get_function.return_value = config
+        with pytest.raises(UsageError):
+            install(
+                layer_install(nr_account_id=9876543, session=mock_session), "foobarbaz"
+            )
+
+        mock_client = mock_session.client.return_value
+        mock_client.get_function.return_value = None
+        assert (
+            install(
+                layer_install(nr_account_id=12345, session=mock_session), "foobarbaz"
+            )
+            is False
+        )
+
+        mock_client.get_function.reset_mock(return_value=True)
+        config = mock_function_config("not.a.runtime")
+        mock_client.get_function.return_value = config
+        assert (
+            install(
+                layer_install(nr_account_id=12345, session=mock_session), "foobarbaz"
+            )
+            is True
+        )
+
+        mock_client.get_function.reset_mock(return_value=True)
+        config = mock_function_config("python3.7")
+        mock_client.get_function.return_value = config
+        assert (
+            install(
+                layer_install(nr_account_id=12345, session=mock_session), "foobarbaz"
+            )
+            is True
+        )
+
+        mock_client.assert_has_calls([call.get_function(FunctionName="foobarbaz")])
+        mock_client.assert_has_calls(
+            [
+                call.update_function_configuration(
+                    FunctionName="arn:aws:lambda:us-east-1:5558675309:function:aws-python3-dev-hello",  # noqa
+                    Environment={
+                        "Variables": {
+                            "EXISTING_ENV_VAR": "Hello World",
+                            "NEW_RELIC_ACCOUNT_ID": "12345",
+                            "NEW_RELIC_LAMBDA_HANDLER": "original_handler",
+                            "NEW_RELIC_LAMBDA_EXTENSION_ENABLED": "false",
+                        }
+                    },
+                    Layers=ANY,
+                    Handler="newrelic_lambda_wrapper.handler",
+                )
+            ]
+        )
 
 
 def test_uninstall(aws_credentials, mock_function_config):
     mock_session = MagicMock()
     mock_session.region_name = "us-east-1"
-    mock_client = mock_session.client.return_value
-    mock_client.get_function.return_value = None
-    assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is False
+    with patch(
+        "newrelic_lambda_cli.layers._get_license_key_outputs"
+    ) as mock_get_license_key_outputs:
+        mock_get_license_key_outputs.return_value = ["12345", "policy"]
+        mock_client = mock_session.client.return_value
+        mock_client.get_function.return_value = None
+        assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is False
 
-    mock_client.get_function.reset_mock(return_value=True)
-    config = mock_function_config("not.a.runtime")
-    mock_client.get_function.return_value = config
-    assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is True
+        mock_client.get_function.reset_mock(return_value=True)
+        config = mock_function_config("not.a.runtime")
+        mock_client.get_function.return_value = config
+        assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is True
 
-    mock_client.get_function.reset_mock(return_value=True)
-    config = mock_function_config("python3.7")
-    mock_client.get_function.return_value = config
-    assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is False
+        mock_client.get_function.reset_mock(return_value=True)
+        config = mock_function_config("python3.7")
+        mock_client.get_function.return_value = config
+        assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is False
 
-    config["Configuration"]["Handler"] = "newrelic_lambda_wrapper.handler"
-    config["Configuration"]["Environment"]["Variables"][
-        "NEW_RELIC_LAMBDA_HANDLER"
-    ] = "foobar.handler"
-    config["Configuration"]["Layers"] = [{"Arn": get_arn_prefix("us-east-1")}]
-    assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is True
+        config["Configuration"]["Handler"] = "newrelic_lambda_wrapper.handler"
+        config["Configuration"]["Environment"]["Variables"][
+            "NEW_RELIC_LAMBDA_HANDLER"
+        ] = "foobar.handler"
+        config["Configuration"]["Role"] = "role_handler"
+        config["Configuration"]["Layers"] = [{"Arn": get_arn_prefix("us-east-1")}]
+        with patch(
+            "newrelic_lambda_cli.layers._detach_license_key_policy"
+        ) as mock_detach_license_key_policy:
+            mock_detach_license_key_policy.return_value = True
 
-    mock_client.assert_has_calls([call.get_function(FunctionName="foobarbaz")])
-    mock_client.assert_has_calls(
-        [
-            call.update_function_configuration(
-                FunctionName="arn:aws:lambda:us-east-1:5558675309:function:aws-python3-dev-hello",  # noqa
-                Handler="foobar.handler",
-                Environment={"Variables": {"EXISTING_ENV_VAR": "Hello World"}},
-                Layers=[],
+            assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is True
+            mock_detach_license_key_policy.assert_called_once_with(
+                mock_session, "role_handler", "policy"
             )
-        ]
-    )
+            mock_client.assert_has_calls([call.get_function(FunctionName="foobarbaz")])
+            mock_client.assert_has_calls(
+                [
+                    call.update_function_configuration(
+                        FunctionName="arn:aws:lambda:us-east-1:5558675309:function:aws-python3-dev-hello",  # noqa
+                        Handler="foobar.handler",
+                        Environment={"Variables": {"EXISTING_ENV_VAR": "Hello World"}},
+                        Layers=[],
+                    )
+                ]
+            )
