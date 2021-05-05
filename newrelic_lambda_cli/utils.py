@@ -6,6 +6,7 @@ import boto3
 import botocore
 import click
 
+NR_DOCS_ACT_LINKING_URL = "https://docs.newrelic.com/docs/serverless-function-monitoring/aws-lambda-monitoring/enable-lambda-monitoring/account-linking/#manually-configuring-the-license-key-secret"
 NEW_RELIC_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:451483290750"
 RUNTIME_CONFIG = {
     "dotnetcore3.1": {"LambdaExtension": True},

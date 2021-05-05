@@ -11,7 +11,7 @@ import requests
 from newrelic_lambda_cli import api, subscriptions, utils
 from newrelic_lambda_cli.cliutils import failure, success, warning
 from newrelic_lambda_cli.functions import get_function
-from newrelic_lambda_cli.integrations import _get_license_key_policy_arn
+from newrelic_lambda_cli.integrations import _get_license_key_outputs
 from newrelic_lambda_cli.types import LayerInstall, LayerUninstall
 from newrelic_lambda_cli.utils import catch_boto_errors
 
@@ -188,7 +188,24 @@ def install(input, function_arn):
         failure("Could not find function: %s" % function_arn)
         return False
 
-    policy_arn = _get_license_key_policy_arn(input.session)
+    nr_account_id, policy_arn = _get_license_key_outputs(input.session)
+    # If a managed secret exists but it was created with a different NR account id and license key
+    # We want to notify the user and point them to documentation on how to proceed.
+    if (
+        policy_arn
+        and nr_account_id != str(input.nr_account_id)
+        and not input.nr_api_key
+    ):
+        raise click.UsageError(
+            "A managed secret already exists in this region for New Relic account {0}. "
+            "Creating one managed secret per region is currently supported via the cli.\n"
+            "To set up an additional secret for New Relic account {1} see our docs:\n{2}.\n"
+            "Or you can re-run this command with "
+            "`--nr-api-key` argument with your New Relic API key to set your license "
+            "key in a NEW_RELIC_LICENSE_KEY environment variable instead.".format(
+                nr_account_id, input.nr_account_id, utils.NR_DOCS_ACT_LINKING_URL
+            )
+        )
     if input.enable_extension and not policy_arn and not input.nr_api_key:
         raise click.UsageError(
             "In order to use `--enable-extension`, you must first run "
@@ -201,7 +218,12 @@ def install(input, function_arn):
         )
 
     nr_license_key = None
-    if not policy_arn and input.nr_api_key and input.nr_region:
+    if (
+        not policy_arn
+        or nr_account_id != str(input.nr_account_id)
+        and input.nr_api_key
+        and input.nr_region
+    ):
         gql = api.validate_gql_credentials(input)
         nr_license_key = api.retrieve_license_key(gql)
 
@@ -319,7 +341,7 @@ def uninstall(input, function_arn):
         )
         return False
     else:
-        policy_arn = _get_license_key_policy_arn(input.session)
+        _, policy_arn = _get_license_key_outputs(input.session)
         if policy_arn:
             _detach_license_key_policy(
                 input.session, config["Configuration"]["Role"], policy_arn
