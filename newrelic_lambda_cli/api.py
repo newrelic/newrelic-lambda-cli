@@ -69,6 +69,7 @@ class NewRelicGQL(object):
                       name
                       authLabel
                       externalId
+                      metricCollectionMode
                     }
                   }
                 }
@@ -401,6 +402,16 @@ def enable_lambda_integration(gql, input, linked_account_id):
             "[%d] in New Relic account [%d]." % (linked_account_id, input.nr_account_id)
         )
         return False
+
+    metric_collection_mode = account["metricCollectionMode"]
+
+    if metric_collection_mode == "PUSH":
+        success(
+            "Cloud integrations account [%s] is using CloudWatch Metric Streams"
+            % (input.nr_account_id)
+        )
+        return True
+
     is_lambda_enabled = gql.is_integration_enabled(linked_account_id, "lambda")
     if is_lambda_enabled:
         success(
