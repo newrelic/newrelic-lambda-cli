@@ -50,14 +50,19 @@ def _get_cf_stack_status(session, stack_name, nr_account_id=None):
     try:
         res = session.client("cloudformation").describe_stacks(StackName=stack_name)
         if nr_account_id is not None:
-            (stack_nr_account_id,) = _get_stack_output_value(session, ["NrAccountId"])
-            if str(nr_account_id) not in stack_nr_account_id:
+            stack_output_account_id = _get_stack_output_value(session, ["NrAccountId"])
+            # Checking length of outputs here to protect against installs done with older CLI versions.
+            # We don't want to constantly warn users who installed on previous versions with no outputs.
+            if (
+                len(stack_output_account_id) > 0
+                and str(nr_account_id) not in stack_output_account_id
+            ):
                 warning(
                     "WARNING: Managed secret already exists in this region for New Relic account {0}.\n"
                     "Current CLI behavior limits the setup of one managed secret per region.\n"
                     "To set up an additional secret for New Relic account {1} see our docs:\n{2}.\n"
                     "Or run this command with --disable-license-key-secret to avoid attemping to create a new managed secret.".format(
-                        stack_nr_account_id, nr_account_id, NR_DOCS_ACT_LINKING_URL
+                        stack_output_account_id, nr_account_id, NR_DOCS_ACT_LINKING_URL
                     )
                 )
 
