@@ -21,7 +21,8 @@ from newrelic_lambda_cli.integrations import (
     remove_log_ingestion_function,
     install_license_key,
     remove_license_key,
-    _get_license_key_policy_arn,
+    _get_license_key_outputs,
+    _get_stack_output_value,
     get_aws_account_id,
     update_log_ingestion_function,
     remove_integration_role,
@@ -203,7 +204,9 @@ def test_install_license_key(success_mock):
         cf_client = MagicMock(name="cloudformation", **cf_mocks)
         mock_client_factory.side_effect = [cf_client, cf_client]
 
-        result = install_license_key(integration_install(session=session), "1234abcd")
+        result = install_license_key(
+            integration_install(session=session, nr_account_id=12345), "1234abcd"
+        )
         assert result is True
 
         cf_client.assert_has_calls(
@@ -213,6 +216,7 @@ def test_install_license_key(success_mock):
                     TemplateBody=ANY,
                     Parameters=[
                         {"ParameterKey": "LicenseKey", "ParameterValue": "1234abcd"},
+                        {"ParameterKey": "NrAccountId", "ParameterValue": "12345"},
                     ],
                     Capabilities=["CAPABILITY_NAMED_IAM"],
                     Tags=[],
@@ -266,13 +270,26 @@ def test_remove_license_key(success_mock):
         success_mock.assert_called_once()
 
 
-def test__get_license_key_policy_arn():
+def test__get_license_key_outputs():
+    with patch(
+        "newrelic_lambda_cli.integrations._get_stack_output_value"
+    ) as mock_get_stack_output:
+        mock_get_stack_output.return_value = [12345, "policy_arn"]
+        session = MagicMock()
+        result = _get_license_key_outputs(session)
+        assert result == mock_get_stack_output.return_value
+        mock_get_stack_output.assert_called_once_with(
+            session, ["NrAccountId", "ViewPolicyARN"]
+        )
+
+
+def test__get_stack_output_value():
     session = MagicMock()
     with patch.object(session, "client") as mock_client_factory:
         cf_client = MagicMock(name="cloudformation")
         mock_client_factory.side_effect = cf_client
 
-        _get_license_key_policy_arn(session)
+        _get_stack_output_value(session, ["NrAccountId", "ViewPolicyARN"])
 
         cf_client.assert_has_calls(
             [call().describe_stacks(StackName="NewRelicLicenseKeySecret")],
