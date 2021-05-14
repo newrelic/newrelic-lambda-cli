@@ -6,7 +6,7 @@ README = open(os.path.join(os.path.dirname(__file__), "README.md"), "r").read()
 
 setup(
     name="newrelic-lambda-cli",
-    version="0.6.0",
+    version="0.6.1",
     python_requires=">=3.3",
     description="A CLI to install the New Relic AWS Lambda integration and layers.",
     long_description=README,
@@ -20,6 +20,7 @@ setup(
         "click>=7.1.2",
         "colorama",
         "emoji",
+        "enquiries",
         "gql",
         "requests",
         "tabulate",
