@@ -50,22 +50,27 @@ def _get_cf_stack_status(session, stack_name, nr_account_id=None):
     try:
         res = session.client("cloudformation").describe_stacks(StackName=stack_name)
         if nr_account_id is not None:
-            stack_output_account_id = _get_stack_output_value(session, ["NrAccountId"])
-            # Checking length of outputs here to protect against installs done with older CLI versions.
-            # We don't want to constantly warn users who installed on previous versions with no outputs.
-            if (
-                len(stack_output_account_id) > 0
-                and str(nr_account_id) not in stack_output_account_id
+            stack_output_account_id = _get_stack_output_value(
+                session, ["NrAccountId"]
+            ).get("NrAccountId")
+            # Checking outputs here to protect against installs done
+            # with older CLI versions. We don't want to constantly warn users
+            # who installed on previous versions with no outputs.
+            if stack_output_account_id and stack_output_account_id != str(
+                nr_account_id
             ):
                 warning(
-                    "WARNING: Managed secret already exists in this region for New Relic account {0}.\n"
-                    "Current CLI behavior limits the setup of one managed secret per region.\n"
-                    "To set up an additional secret for New Relic account {1} see our docs:\n{2}.\n"
-                    "Or run this command with --disable-license-key-secret to avoid attemping to create a new managed secret.".format(
+                    "WARNING: Managed secret already exists in this region for "
+                    "New Relic account {0}.\n"
+                    "Current CLI behavior limits the setup of one managed "
+                    "secret per region.\n"
+                    "To set up an additional secret for New Relic account {1} "
+                    "see our docs:\n{2}.\n"
+                    "Or run this command with --disable-license-key-secret to "
+                    "avoid attempting to create a new managed secret.".format(
                         stack_output_account_id, nr_account_id, NR_DOCS_ACT_LINKING_URL
                     )
                 )
-
     except botocore.exceptions.ClientError as e:
         if (
             e.response
@@ -708,16 +713,11 @@ def _get_license_key_outputs(session):
     global __cached_license_key_nr_account_id
     global __cached_license_key_policy_arn
     if __cached_license_key_nr_account_id and __cached_license_key_policy_arn:
-        return [__cached_license_key_nr_account_id, __cached_license_key_policy_arn]
-
-    account_id, policy_arn = _get_stack_output_value(
-        session, ["NrAccountId", "ViewPolicyARN"]
-    )
-    if account_id is not None:
-        __cached_license_key_nr_account_id = account_id
-    if policy_arn is not None:
-        __cached_license_key_policy_arn = policy_arn
-    return [account_id, policy_arn]
+        return __cached_license_key_nr_account_id, __cached_license_key_policy_arn
+    output_values = _get_stack_output_value(session, ["NrAccountId", "ViewPolicyARN"])
+    __cached_license_key_nr_account_id = output_values.get("NrAccountId")
+    __cached_license_key_policy_arn = output_values.get("ViewPolicyARN")
+    return __cached_license_key_nr_account_id, __cached_license_key_policy_arn
 
 
 def _get_stack_output_value(session, output_keys):
@@ -733,19 +733,17 @@ def _get_stack_output_value(session, output_keys):
             and "HTTPStatusCode" in e.response["ResponseMetadata"]
             and e.response["ResponseMetadata"]["HTTPStatusCode"] in (400, 404)
         ):
-            return None
+            return {}
         raise e
     else:
         if not stacks:
-            return None
+            return {}
         stack = stacks[0]
-        output_values = []
-        for output_key in output_keys:
-            for output in stack.get("Outputs", []):
-                if output["OutputKey"] == output_key:
-                    value = output["OutputValue"] or None
-                    output_values.append(value)
-        return output_values
+        return {
+            output["OutputKey"]: output["OutputValue"]
+            for output in stack.get("Outputs", [])
+            if output["OutputKey"] in output_keys
+        }
 
 
 @catch_boto_errors
