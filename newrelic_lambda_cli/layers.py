@@ -4,7 +4,6 @@ import botocore
 import click
 import enquiries
 import json
-import re
 import requests
 
 
@@ -122,11 +121,13 @@ def _add_new_relic(input, config, nr_license_key):
         "Layers": new_relic_layer + existing_layers,
     }
 
-    # We don't want to modify the handler if the NewRelicLambdaExtension layer has been selected
+    # We don't want to modify the handler if the NewRelicLambdaExtension layer
+    # has been selected
     if any("NewRelicLambdaExtension" in s for s in new_relic_layer):
         runtime_handler = None
 
-    # Only used by Python, Node.js and Java runtimes not using the NewRelicLambdaExtension layer
+    # Only used by Python, Node.js and Java runtimes not using the
+    # NewRelicLambdaExtension layer
     if runtime_handler:
         update_kwargs["Handler"] = runtime_handler
 
@@ -189,17 +190,20 @@ def install(input, function_arn):
         return False
 
     nr_account_id, policy_arn = _get_license_key_outputs(input.session)
-    # If a managed secret exists but it was created with a different NR account id and license key
-    # We want to notify the user and point them to documentation on how to proceed.
+    # If a managed secret exists but it was created with a different NR account
+    # id and license key We want to notify the user and point them to
+    # documentation on how to proceed.
     if (
         policy_arn
+        and nr_account_id
         and nr_account_id != str(input.nr_account_id)
         and not input.nr_api_key
     ):
         raise click.UsageError(
             "A managed secret already exists in this region for New Relic account {0}. "
-            "Creating one managed secret per region is currently supported via the cli.\n"
-            "To set up an additional secret for New Relic account {1} see our docs:\n{2}.\n"
+            "Creating one managed secret per region is currently supported via "
+            "the cli. To set up an additional secret for New Relic account {1} "
+            "see our docs:\n{2}.\n"
             "Or you can re-run this command with "
             "`--nr-api-key` argument with your New Relic API key to set your license "
             "key in a NEW_RELIC_LICENSE_KEY environment variable instead.".format(

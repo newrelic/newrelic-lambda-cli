@@ -274,10 +274,13 @@ def test__get_license_key_outputs():
     with patch(
         "newrelic_lambda_cli.integrations._get_stack_output_value"
     ) as mock_get_stack_output:
-        mock_get_stack_output.return_value = [12345, "policy_arn"]
+        mock_get_stack_output.return_value = {
+            "NrAccountId": 12345,
+            "ViewPolicyARN": "policy_arn",
+        }
         session = MagicMock()
         result = _get_license_key_outputs(session)
-        assert result == mock_get_stack_output.return_value
+        assert result == (12345, "policy_arn")
         mock_get_stack_output.assert_called_once_with(
             session, ["NrAccountId", "ViewPolicyARN"]
         )
