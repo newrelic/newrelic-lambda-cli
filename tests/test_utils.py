@@ -20,7 +20,7 @@ def test_error():
 
 def test_is_valid_handler():
     assert is_valid_handler("fakeruntime", "not.a.valid.handler") is False
-    assert is_valid_handler("python3.8", "newrelic_lambda_wrapper.handler") is True
+    assert is_valid_handler("python3.9", "newrelic_lambda_wrapper.handler") is True
 
 
 def test_parse_arn():
@@ -86,6 +86,7 @@ def test_supports_lambda_extension():
             "provided.al2",
             "python3.7",
             "python3.8",
+            "python3.9",
         )
     )
     assert not any(
