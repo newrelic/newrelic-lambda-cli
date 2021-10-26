@@ -173,7 +173,7 @@ def install(ctx, **kwargs):
                 "--function",
                 "all",
                 "--nr-account-id",
-                input.nr_account_id,
+                str(input.nr_account_id),
             ]
             if input.aws_profile:
                 command.append("--aws-profile %s" % input.aws_profile)
