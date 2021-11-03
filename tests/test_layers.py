@@ -141,7 +141,9 @@ def test_add_new_relic(aws_credentials, mock_function_config):
                 nr_license_key=None,
             )
 
-            layer_selection_mock.assert_called_with(mock_index.return_value, "java11")
+            layer_selection_mock.assert_called_with(
+                mock_index.return_value, "java11", "x86_64"
+            )
             assert "original_handler" in config["Configuration"]["Handler"]
 
             # Java handler testing
@@ -186,7 +188,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
             "arn:aws:lambda:us-east-1:123456789:layer/javajava"
         )
 
-        result = layer_selection(mock_layers, "python3.7")
+        result = layer_selection(mock_layers, "python3.7", "x86_64")
         assert result == [mock_enquiries.return_value]
 
     config = mock_function_config("python3.7")
