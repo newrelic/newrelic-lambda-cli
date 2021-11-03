@@ -318,5 +318,5 @@ This CLI manages a AWS Secrets Manager secret with the name `NEW_RELIC_LICENSE_K
 you run into a CloudFormation error reporting that this secret already exists, make
 sure that you delete any existing secrets and try again. Keep in mind, by default in the
 AWS console when you delete a secret from AWS Secrets Manager that it will not delete
-the secret permnantly for several days. You will need to perform a "force delete without
+the secret permanently for several days. You will need to perform a "force delete without
 recovery" when deleting the secret to avoid this naming conflict.
