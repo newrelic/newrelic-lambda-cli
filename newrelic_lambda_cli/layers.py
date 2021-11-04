@@ -26,16 +26,22 @@ NEW_RELIC_ENV_VARS = (
 )
 
 
-def index(region, runtime):
+def index(region, runtime, architecture):
     req = requests.get(
-        "https://%s.layers.newrelic-external.com/get-layers?CompatibleRuntime=%s"
-        % (region, runtime)
+        "https://%s.layers.newrelic-external.com/get-layers"
+        "?CompatibleRuntime=%s" % (region, runtime)
     )
     layers_response = req.json()
-    return layers_response.get("Layers", [])
+    return [
+        layer
+        for layer in layers_response.get("Layers", [])
+        if "CompatibleArchitectures" not in layer
+        and architecture == "x86_64"
+        or architecture in layer["CompatibleArchitectures"]
+    ]
 
 
-def layer_selection(available_layers, runtime):
+def layer_selection(available_layers, runtime, architecture):
     selected_layer = []
     if len(available_layers) > 1:
         layerOptions = []
@@ -43,9 +49,10 @@ def layer_selection(available_layers, runtime):
             layerOptions.append(layer["LatestMatchingVersion"]["LayerVersionArn"])
 
         response = enquiries.choose(
-            "Discovered layers for runtime {0}".format(runtime), layerOptions
+            "Discovered layers for runtime %s (%s)" % (runtime, architecture),
+            layerOptions,
         )
-        success("Layer {0} selected".format(response))
+        success("Layer %s selected" % response)
         selected_layer.append(response)
     else:
         selected_layer.append(
@@ -66,6 +73,9 @@ def _add_new_relic(input, config, nr_license_key):
             % (config["Configuration"]["FunctionArn"], runtime)
         )
         return True
+
+    architectures = config["Configuration"].get("Architectures", ["x86_64"])
+    architecture = architectures[0]
 
     handler = config["Configuration"]["Handler"]
     runtime_handler = utils.RUNTIME_CONFIG.get(runtime, {}).get("Handler")
@@ -100,16 +110,16 @@ def _add_new_relic(input, config, nr_license_key):
         new_relic_layer = [input.layer_arn]
     else:
         # discover compatible layers...
-        available_layers = index(aws_region, runtime)
+        available_layers = index(aws_region, runtime, architecture)
 
         if not available_layers:
             failure(
-                "No Lambda layers published for '%s' runtime: %s"
-                % (config["Configuration"]["FunctionArn"], runtime)
+                "No Lambda layers published for %s (%s) runtime: %s"
+                % (config["Configuration"]["FunctionArn"], runtime, architecture)
             )
             return False
 
-        new_relic_layer = layer_selection(available_layers, runtime)
+        new_relic_layer = layer_selection(available_layers, runtime, architecture)
 
     update_kwargs = {
         "FunctionName": config["Configuration"]["FunctionArn"],
