@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+#
+import sys  #
 
 import botocore
 import click
@@ -44,16 +46,25 @@ def index(region, runtime, architecture):
 def layer_selection(available_layers, runtime, architecture):
     selected_layer = []
     if len(available_layers) > 1:
-        layerOptions = []
-        for layer in available_layers:
-            layerOptions.append(layer["LatestMatchingVersion"]["LayerVersionArn"])
+        layer_options = [
+            layer["LatestMatchingVersion"]["LayerVersionArn"]
+            for layer in available_layers
+        ]
 
-        response = enquiries.choose(
-            "Discovered layers for runtime %s (%s)" % (runtime, architecture),
-            layerOptions,
-        )
-        success("Layer %s selected" % response)
-        selected_layer.append(response)
+        if sys.stdout.isatty():
+            response = enquiries.choose(
+                "Discovered multiple layers for runtime %s (%s)"
+                % (runtime, architecture),
+                layer_options,
+            )
+            success("Layer %s selected" % response)
+            selected_layer.append(response)
+        else:
+            raise click.UsageError(
+                "Discovered multiple layers for runtime %s (%s):\n%s\n"
+                "Pass --layer-arn to specify a layer ARN"
+                % (runtime, architecture, "\n".join(layer_options))
+            )
     else:
         selected_layer.append(
             available_layers[0]["LatestMatchingVersion"]["LayerVersionArn"]
