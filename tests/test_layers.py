@@ -171,25 +171,34 @@ def test_add_new_relic(aws_credentials, mock_function_config):
                 in update_kwargs["Environment"]["Variables"]["NEW_RELIC_LAMBDA_HANDLER"]
             )
 
-    with patch("newrelic_lambda_cli.layers.enquiries.choose") as mock_enquiries:
-        mock_layers = [
-            {
-                "LatestMatchingVersion": {
-                    "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/javajava"
-                }
-            },
-            {
-                "LatestMatchingVersion": {
-                    "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/NewRelicLambdaExtension"
-                }
-            },
-        ]
+    mock_layers = [
+        {
+            "LatestMatchingVersion": {
+                "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/javajava"
+            }
+        },
+        {
+            "LatestMatchingVersion": {
+                "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/NewRelicLambdaExtension"
+            }
+        },
+    ]
+
+    with patch("newrelic_lambda_cli.layers.enquiries.choose") as mock_enquiries, patch(
+        "sys.stdout.isatty"
+    ) as mock_isatty:
+        mock_isatty.return_value = True
         mock_enquiries.return_value = (
             "arn:aws:lambda:us-east-1:123456789:layer/javajava"
         )
 
         result = layer_selection(mock_layers, "python3.7", "x86_64")
         assert result == [mock_enquiries.return_value]
+
+    with patch("sys.stdout.isatty") as mock_isatty:
+        mock_isatty.return_value = False
+        with pytest.raises(UsageError):
+            layer_selection(mock_layers, "python3.7", "x86_64")
 
     config = mock_function_config("python3.7")
     _add_new_relic(
