@@ -4,4 +4,3 @@ colorama
 gql
 requests
 tabulate
-enquiries

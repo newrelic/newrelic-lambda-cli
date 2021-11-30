@@ -4,7 +4,6 @@ import sys  #
 
 import botocore
 import click
-import enquiries
 import json
 import requests
 
@@ -44,32 +43,38 @@ def index(region, runtime, architecture):
 
 
 def layer_selection(available_layers, runtime, architecture):
-    selected_layer = []
-    if len(available_layers) > 1:
-        layer_options = [
-            layer["LatestMatchingVersion"]["LayerVersionArn"]
-            for layer in available_layers
-        ]
+    if len(available_layers) == 1:
+        return available_layers[0]["LatestMatchingVersion"]["LayerVersionArn"]
 
-        if sys.stdout.isatty():
-            response = enquiries.choose(
-                "Discovered multiple layers for runtime %s (%s)"
+    layer_options = [
+        layer["LatestMatchingVersion"]["LayerVersionArn"] for layer in available_layers
+    ]
+
+    if sys.stdout.isatty():
+        output = "\n".join(
+            [
+                "Discovered multiple layers for runtime %s (%s):"
                 % (runtime, architecture),
-                layer_options,
-            )
-            success("Layer %s selected" % response)
-            selected_layer.append(response)
-        else:
-            raise click.UsageError(
-                "Discovered multiple layers for runtime %s (%s):\n%s\n"
-                "Pass --layer-arn to specify a layer ARN"
-                % (runtime, architecture, "\n".join(layer_options))
-            )
-    else:
-        selected_layer.append(
-            available_layers[0]["LatestMatchingVersion"]["LayerVersionArn"]
+                "",
+            ]
+            + ["%d: %s" % (i, layer) for i, layer in enumerate(layer_options)]
+            + ["", "Select a layer"]
         )
-    return selected_layer
+
+        while True:
+            value = click.prompt(output, default=0, type=int)
+            try:
+                selected_layer = layer_options[value]
+                success("Layer %s selected" % selected_layer)
+                return selected_layer
+            except IndexError:
+                failure("Invalid layer selection")
+    else:
+        raise click.UsageError(
+            "Discovered multiple layers for runtime %s (%s):\n%s\n"
+            "Pass --layer-arn to specify a layer ARN"
+            % (runtime, architecture, "\n".join(layer_options))
+        )
 
 
 def _add_new_relic(input, config, nr_license_key):
@@ -139,7 +144,7 @@ def _add_new_relic(input, config, nr_license_key):
             .get("Environment", {})
             .get("Variables", {})
         },
-        "Layers": new_relic_layer + existing_layers,
+        "Layers": [new_relic_layer] + existing_layers,
     }
 
     # We don't want to modify the handler if the NewRelicLambdaExtension layer
