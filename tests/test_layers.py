@@ -184,16 +184,13 @@ def test_add_new_relic(aws_credentials, mock_function_config):
         },
     ]
 
-    with patch("newrelic_lambda_cli.layers.enquiries.choose") as mock_enquiries, patch(
+    with patch("newrelic_lambda_cli.layers.click.prompt") as mock_prompt, patch(
         "sys.stdout.isatty"
     ) as mock_isatty:
         mock_isatty.return_value = True
-        mock_enquiries.return_value = (
-            "arn:aws:lambda:us-east-1:123456789:layer/javajava"
-        )
-
+        mock_prompt.return_value = 0
         result = layer_selection(mock_layers, "python3.7", "x86_64")
-        assert result == [mock_enquiries.return_value]
+        assert result == "arn:aws:lambda:us-east-1:123456789:layer/javajava"
 
     with patch("sys.stdout.isatty") as mock_isatty:
         mock_isatty.return_value = False
