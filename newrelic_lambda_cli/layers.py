@@ -123,7 +123,7 @@ def _add_new_relic(input, config, nr_license_key):
     new_relic_layer = []
 
     if input.layer_arn:
-        new_relic_layer = [input.layer_arn]
+        new_relic_layer = input.layer_arn
     else:
         # discover compatible layers...
         available_layers = index(aws_region, runtime, architecture)
