@@ -36,9 +36,10 @@ def index(region, runtime, architecture):
     return [
         layer
         for layer in layers_response.get("Layers", [])
-        if "CompatibleArchitectures" not in layer
-        and architecture == "x86_64"
-        or architecture in layer["CompatibleArchitectures"]
+        if architecture
+        in layer.get("LatestMatchingVersion", {}).get(
+            "CompatibleArchitectures", ["x86_64"]
+        )
     ]
 
 

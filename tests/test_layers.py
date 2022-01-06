@@ -10,6 +10,7 @@ from newrelic_lambda_cli.layers import (
     _detach_license_key_policy,
     _add_new_relic,
     _remove_new_relic,
+    index,
     install,
     uninstall,
     layer_selection,
@@ -472,3 +473,9 @@ def test_uninstall(aws_credentials, mock_function_config):
                     )
                 ]
             )
+
+
+def test_layers_index():
+    layers = index("ap-southeast-1", "nodejs14.x", "x86_64")
+
+    assert len(layers) == 1
