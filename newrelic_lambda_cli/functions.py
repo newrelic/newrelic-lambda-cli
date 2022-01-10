@@ -39,6 +39,12 @@ def list_functions(session, filter=None):
 def get_function(session, function_name):
     """Returns details about an AWS lambda function"""
     try:
+        if len(function_name) > 170 or len(function_name) == 0:
+            raise click.UsageError(
+                str(
+                    "Lambda Function name does not meet constraints ref: https://docs.aws.amazon.com/lambda/latest/dg/API_GetFunction.html#API_GetFunction_RequestSyntax"
+                )
+            )
         return session.client("lambda").get_function(FunctionName=function_name)
     except botocore.exceptions.ClientError as e:
         if (
