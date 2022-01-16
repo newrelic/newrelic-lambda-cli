@@ -15,6 +15,7 @@ from newrelic_lambda_cli.types import (
     IntegrationUpdate,
 )
 from newrelic_lambda_cli.utils import catch_boto_errors, NR_DOCS_ACT_LINKING_URL
+from newrelic_lambda_cli.constants import Constants
 
 INGEST_STACK_NAME = "NewRelicLogIngestion"
 LICENSE_KEY_STACK_NAME = "NewRelicLicenseKeySecret"
@@ -215,7 +216,7 @@ def _import_log_ingestion_function(input, nr_license_key):
                 {
                     "ResourceType": "AWS::Lambda::Function",
                     "LogicalResourceId": "NewRelicLogIngestionFunctionNoCap",
-                    "ResourceIdentifier": {"FunctionName": "newrelic-log-ingestion"},
+                    "ResourceIdentifier": {"FunctionName": Constants.NR_LOG_FUNC.value},
                 }
             ],
         )
@@ -334,7 +335,7 @@ def update_log_ingestion_function(input):
         # We can't change props during import, so let's set them to their current values
         lambda_client = input.session.client("lambda")
         old_props = lambda_client.get_function_configuration(
-            FunctionName="newrelic-log-ingestion"
+            FunctionName=Constants.NR_LOG_FUNC.value
         )
         old_role_name = old_props["Role"].split("/")[-1]
         old_nr_license_key = old_props["Environment"]["Variables"]["LICENSE_KEY"]
@@ -508,7 +509,7 @@ def install_log_ingestion(
     Returns True for success and False for failure.
     """
     assert isinstance(input, IntegrationInstall)
-    function = get_function(input.session, "newrelic-log-ingestion")
+    function = get_function(input.session, Constants.NR_LOG_FUNC.value)
     if function is None:
         stack_status = _check_for_ingest_stack(input.session)
         if stack_status is None:
@@ -549,7 +550,7 @@ def update_log_ingestion(input):
     """
     assert isinstance(input, IntegrationUpdate)
 
-    function = get_function(input.session, "newrelic-log-ingestion")
+    function = get_function(input.session, Constants.NR_LOG_FUNC.value)
     if function is None:
         failure(
             "No 'newrelic-log-ingestion' function in region '%s'. "
@@ -583,7 +584,7 @@ def get_log_ingestion_license_key(session):
     """
     Fetches the license key value from the log ingestion function
     """
-    function = get_function(session, "newrelic-log-ingestion")
+    function = get_function(session, Constants.NR_LOG_FUNC.value)
     if function:
         return function["Configuration"]["Environment"]["Variables"]["LICENSE_KEY"]
     return None

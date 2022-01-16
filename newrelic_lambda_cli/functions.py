@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from asyncio.proactor_events import constants
 import botocore
 import click
 
@@ -10,6 +11,7 @@ from newrelic_lambda_cli.types import (
     SubscriptionUninstall,
 )
 from newrelic_lambda_cli import utils
+from newrelic_lambda_cli.constants import Constants
 
 
 @utils.catch_boto_errors
@@ -71,7 +73,7 @@ def get_aliased_functions(input):
         function
         for function in input.functions
         if function.lower()
-        not in ("all", "installed", "not-installed", "newrelic-log-ingestion")
+        not in ("all", "installed", "not-installed", Constants.NR_LOG_FUNC.value)
         and function not in input.excludes
     ]
 
@@ -82,7 +84,7 @@ def get_aliased_functions(input):
         for function in list_functions(input.session, alias):
             if (
                 "FunctionName" in function
-                and "newrelic-log-ingestion" not in function["FunctionName"]
+                and Constants.NR_LOG_FUNC.value not in function["FunctionName"]
                 and function["FunctionName"] not in input.excludes
             ):
                 functions.append(function["FunctionName"])

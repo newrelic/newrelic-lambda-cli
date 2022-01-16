@@ -4,6 +4,7 @@ from moto import mock_lambda
 from unittest.mock import MagicMock
 
 from newrelic_lambda_cli.functions import get_aliased_functions, list_functions
+from newrelic_lambda_cli.constants import Constants
 
 from .conftest import layer_install
 
@@ -47,7 +48,7 @@ def test_get_aliased_functions(mock_list_functions, aws_credentials):
     mock_list_functions.return_value = [
         {"FunctionName": "aliased-func"},
         {"FunctionName": "ignored-func"},
-        {"FunctionName": "newrelic-log-ingestion"},
+        {"FunctionName": Constants.NR_LOG_FUNC.value},
     ]
     assert get_aliased_functions(
         layer_install(
