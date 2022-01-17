@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from asyncio.proactor_events import constants
 import botocore
 import click
 
