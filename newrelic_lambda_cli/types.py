@@ -43,6 +43,13 @@ INTEGRATION_UPDATE_KEYS = [
     "tags",
 ]
 
+INTEGRATION_LOG_FUNCTION_VERSION_KEYS = [
+    "session",
+    "aws_profile",
+    "aws_region",
+    "aws_permissions_check",
+]
+
 LAYER_INSTALL_KEYS = [
     "session",
     "verbose",
@@ -94,6 +101,10 @@ SUBSCRIPTION_UNINSTALL_KEYS = [
 IntegrationInstall = namedtuple("IntegrationInstall", INTEGRATION_INSTALL_KEYS)
 IntegrationUninstall = namedtuple("IntegrationUninstall", INTEGRATION_UNINSTALL_KEYS)
 IntegrationUpdate = namedtuple("IntegrationUpdate", INTEGRATION_UPDATE_KEYS)
+IntegrationLogFunctionVersion = namedtuple(
+    "IntegrationLogFunctionVersion", INTEGRATION_LOG_FUNCTION_VERSION_KEYS
+)
+
 
 LayerInstall = namedtuple("LayerInstall", LAYER_INSTALL_KEYS)
 LayerUninstall = namedtuple("LayerUninstall", LAYER_UNINSTALL_KEYS)

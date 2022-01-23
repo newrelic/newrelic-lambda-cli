@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from enum import Enum
 import sys
 
 import boto3
@@ -53,6 +54,18 @@ RUNTIME_CONFIG = {
         "LambdaExtension": True,
     },
 }
+
+
+class DefaultStackNames(Enum):
+    """Possible Default Stack Names depending on how log-ingestion function may exist in ecosystem
+
+    Args:
+        Enum ([type]): names of CloudFormation Stacks, based around
+        how the log-ingestion function might exist in one's AWS ecosystem
+    """
+
+    SERVERLESS_INSTALLED_FUNC_STACK = "serverlessrepo-NewRelic-log-ingestion"
+    CLI_TOOL_BASED_INSTALLED_FUNC_STACK = "NewRelic-log-ingestion"
 
 
 def catch_boto_errors(func):

@@ -8,6 +8,7 @@ from newrelic_lambda_cli.types import (
     IntegrationInstall,
     IntegrationUninstall,
     IntegrationUpdate,
+    IntegrationLogFunctionVersion,
 )
 from newrelic_lambda_cli.cli.decorators import add_options, AWS_OPTIONS, NR_OPTIONS
 from newrelic_lambda_cli.cliutils import done, failure
@@ -24,6 +25,25 @@ def register(group):
     integrations_group.add_command(install)
     integrations_group.add_command(uninstall)
     integrations_group.add_command(update)
+    integrations_group.add_command(get_log_function_version)
+
+
+@click.command(name="get-log-function-version")
+@add_options(AWS_OPTIONS)
+@click.pass_context
+def get_log_function_version(ctx, **kwargs):
+    """Fetch New Relic Log Ingest Function Version"""
+    input = IntegrationLogFunctionVersion(session=None, **kwargs)
+    input = input._replace(
+        session=boto3.Session(
+            profile_name=input.aws_profile, region_name=input.aws_region
+        )
+    )
+    click.echo(
+        "Fetching newrelic-log-ingestion version(s) that may exist in AWS account"
+    )
+    integrations.get_log_function_version(input)
+    pass
 
 
 @click.command(name="install")

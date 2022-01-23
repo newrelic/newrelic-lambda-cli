@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 
+from inspect import stack
 import os
+import pdb
+import re
 import time
+from tkinter.messagebox import NO
 
 import botocore
 import click
@@ -13,8 +17,13 @@ from newrelic_lambda_cli.types import (
     IntegrationInstall,
     IntegrationUninstall,
     IntegrationUpdate,
+    IntegrationLogFunctionVersion,
 )
-from newrelic_lambda_cli.utils import catch_boto_errors, NR_DOCS_ACT_LINKING_URL
+from newrelic_lambda_cli.utils import (
+    catch_boto_errors,
+    NR_DOCS_ACT_LINKING_URL,
+    DefaultStackNames,
+)
 
 INGEST_STACK_NAME = "NewRelicLogIngestion"
 LICENSE_KEY_STACK_NAME = "NewRelicLicenseKeySecret"
@@ -749,3 +758,46 @@ def _get_stack_output_value(session, output_keys):
 @catch_boto_errors
 def get_aws_account_id(session):
     return session.client("sts").get_caller_identity().get("Account")
+
+
+@catch_boto_errors
+def get_log_function_version(input):
+    """Returns the version of the log function installed with info"""
+    stack_list_responses = []
+    client = input.session.client("cloudformation")
+    current_stack_lookup = None
+    for default_stack_name in DefaultStackNames:
+        click.echo("Looking for: " + default_stack_name.value)
+        current_stack_lookup = default_stack_name.value
+        try:
+            res = client.describe_stacks(StackName=default_stack_name.value)
+            click.echo("return response: " + str(dict))
+            if res is not None:
+                stack_list_responses.append(res)
+        except Exception as ex:
+            click.echo(
+                "wasn't able to find log function with stack: " + current_stack_lookup
+            )
+            pass
+    if len(stack_list_responses) == 0:
+        failure(
+            "No 'NewRelicLogIngestion' stack in region '%s'. "
+            "This likely means the New Relic log ingestion function was "
+            "installed manually. "
+            "In order to install via the CLI, please delete this function and "
+            "run 'newrelic-lambda integrations install'." % input.session.region_name
+        )
+        return False
+    for item in stack_list_responses:
+        stacks_to_audit = item.get("Stacks", [])
+        for stack in stacks_to_audit:
+            current_stack_id = stack.get("StackId", "")
+            possible_tags = stack.get("Tags", [])
+            for tag in possible_tags:
+                possible_key = tag.get("Key", "")
+                if "semanticVersion" in possible_key:
+                    click.echo("########")
+                    click.echo("Found Version of New Relic Log Ingestion Function")
+                    click.echo("Version found in: " + current_stack_id)
+                    aws_installed_version_value = tag.get("Value", "")
+                    click.echo("Version is: " + aws_installed_version_value)
