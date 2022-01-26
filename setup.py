@@ -20,7 +20,7 @@ setup(
         "click>=7.1.2",
         "colorama",
         "emoji",
-        "gql",
+        "gql==2.0.0",
         "requests",
         "tabulate",
     ],

@@ -1,6 +1,6 @@
 boto3
 click
 colorama
-gql
+gql==2.0.0
 requests
 tabulate
