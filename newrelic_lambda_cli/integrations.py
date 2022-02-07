@@ -525,10 +525,11 @@ def install_log_ingestion(
                 failure("Failed to create 'newrelic-log-ingestion' function: %s" % e)
                 return False
         else:
-            failure(
+            warning(
                 "CloudFormation Stack NewRelicLogIngestion exists (status: %s), but "
                 "newrelic-log-ingestion Lambda function does not.\n"
-                "Please manually delete the stack and re-run this command."
+                "IF you wish to use the New Relic Lambda Extension you can ignore this.\n"
+                "Otherwise please manually delete the stack and re-run this command."
                 % stack_status
             )
             return False
