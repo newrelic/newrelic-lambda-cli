@@ -156,10 +156,10 @@ class NewRelicGQL(object):
         try:
             return res["cloudLinkAccount"]["linkedAccounts"][0]
         except (IndexError, KeyError):
-            if "errors" in res:
+            if "errors" in res["cloudLinkAccount"]:
                 failure(
                     "Error while linking account with New Relic:\n%s"
-                    % "\n".join([e["message"] for e in res["errors"] if "message" in e])
+                    % "\n".join([e["message"] for e in res["cloudLinkAccount"]["errors"] if "message" in e])
                 )
             return None
 
