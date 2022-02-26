@@ -159,7 +159,13 @@ class NewRelicGQL(object):
             if "errors" in res["cloudLinkAccount"]:
                 failure(
                     "Error while linking account with New Relic:\n%s"
-                    % "\n".join([e["message"] for e in res["cloudLinkAccount"]["errors"] if "message" in e])
+                    % "\n".join(
+                        [
+                            e["message"]
+                            for e in res["cloudLinkAccount"]["errors"]
+                            if "message" in e
+                        ]
+                    )
                 )
             return None
 
