@@ -133,13 +133,15 @@ retain their values, unless you specify different values on the command line. By
 secret, if it is missing.
 
 ```bash
-newrelic-lambda integrations update
+newrelic-lambda integrations update \
+    --nr-account-id <account id> \
+    --nr-api-key <api key>
 ```
 
 | Option | Required? | Description |
 |--------|-----------|-------------|
-| `--nr-account-id` or `-a` | No | The [New Relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) for the integration. Only required if changing the account to which the logs are sent. Can also use the `NEW_RELIC_ACCOUNT_ID` environment variable. |
-| `--nr-api-key` or `-k` | No | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Can also use the `NEW_RELIC_API_KEY` environment variable. Only required if changing the account to which the logs are sent. |
+| `--nr-account-id` or `-a` | Yes | The [New Relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) for the integration. Only required if changing the account to which the logs are sent. Can also use the `NEW_RELIC_ACCOUNT_ID` environment variable. |
+| `--nr-api-key` or `-k` | Yes | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Can also use the `NEW_RELIC_API_KEY` environment variable. Only required if changing the account to which the logs are sent. |
 | `--disable-logs` or `-d` | No | Disables forwarding logs to New Relic Logging. Make sure you run `newrelic-lambda subscriptions install --function ...` afterwards. |
 | `--enable-logs` or `-e` | No | Enables forwarding logs to New Relic Logging. Make sure you run `newrelic-lambda subscriptions install --function ... --filter-pattern ""` afterwards. |
 | `--memory-size` or `-m` | No | Memory size (in MiB) for the New Relic log ingestion function. |

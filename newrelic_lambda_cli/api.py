@@ -17,7 +17,11 @@ import click
 import requests
 
 from newrelic_lambda_cli.cliutils import failure, success
-from newrelic_lambda_cli.types import IntegrationInstall, LayerInstall
+from newrelic_lambda_cli.types import (
+    IntegrationInstall,
+    IntegrationUpdate,
+    LayerInstall,
+)
 from newrelic_lambda_cli.utils import parse_arn
 
 __cached_license_key = None
@@ -323,7 +327,7 @@ class NewRelicGQL(object):
 
 
 def validate_gql_credentials(input):
-    assert isinstance(input, (IntegrationInstall, LayerInstall))
+    assert isinstance(input, (IntegrationInstall, IntegrationUpdate, LayerInstall))
 
     try:
         return NewRelicGQL(input.nr_account_id, input.nr_api_key, input.nr_region)

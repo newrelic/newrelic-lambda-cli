@@ -351,7 +351,7 @@ def test_install_failure(aws_credentials, mock_function_config):
     with patch(
         "newrelic_lambda_cli.layers._get_license_key_outputs"
     ) as mock_get_license_key_outputs:
-        mock_get_license_key_outputs.return_value = ["12345", "policy"]
+        mock_get_license_key_outputs.return_value = ("license_arn", "12345", "policy")
         config = mock_function_config("python3.7")
         mock_client.get_function.return_value = config
         with pytest.raises(UsageError):
@@ -369,7 +369,7 @@ def test_install(aws_credentials, mock_function_config):
     ) as mock_get_license_key_outputs:
         mock_client = mock_session.client.return_value
         mock_client.get_function.reset_mock(return_value=True)
-        mock_get_license_key_outputs.return_value = ["12345", "policy"]
+        mock_get_license_key_outputs.return_value = ("license_arn", "12345", "policy")
         config = mock_function_config("python3.7")
         mock_client.get_function.return_value = config
         with pytest.raises(UsageError):
@@ -432,7 +432,7 @@ def test_uninstall(aws_credentials, mock_function_config):
     with patch(
         "newrelic_lambda_cli.layers._get_license_key_outputs"
     ) as mock_get_license_key_outputs:
-        mock_get_license_key_outputs.return_value = ["12345", "policy"]
+        mock_get_license_key_outputs.return_value = ("license_arn", "12345", "policy")
         mock_client = mock_session.client.return_value
         mock_client.get_function.return_value = None
         assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is False

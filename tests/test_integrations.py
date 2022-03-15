@@ -231,16 +231,36 @@ def test_install_license_key(success_mock):
 
 
 @patch("newrelic_lambda_cli.integrations.success")
-def test_install_license_key__already_installed(success_mock):
+@patch("newrelic_lambda_cli.integrations._exec_change_set")
+def test_install_license_key__already_installed(exec_changeset_mock, success_mock):
     session = MagicMock()
     with patch.object(session, "client") as mock_client_factory:
         cf_mocks = {
+            "create_change_set.return_value": None,
             "describe_stacks.return_value": {
-                "Stacks": [{"StackStatus": "CREATE_COMPLETE"}]
+                "Stacks": [
+                    {
+                        "outputs": [
+                            {
+                                "OutputKey": "LicenseKeySecretARN",
+                                "OutputValue": "license_arn",
+                            },
+                            {"OutputKey": "NrAccountId", "OutputValue": 12345},
+                            {"OutputKey": "ViewPolicyARN", "OutputValue": "policy_arn"},
+                        ],
+                        "StackStatus": "CREATE_COMPLETE",
+                    }
+                ]
             },
         }
         cf_client = MagicMock(name="cloudformation", **cf_mocks)
-        mock_client_factory.side_effect = [cf_client, cf_client]
+        sm_mocks = {
+            "get_secret_value.return_value": {
+                "SecretString": '{"LicenseKey": "foobar"}'
+            },
+        }
+        sm_client = MagicMock(name="secretsmanager", **sm_mocks)
+        mock_client_factory.side_effect = [cf_client, sm_client, cf_client, cf_client]
 
         result = install_license_key(integration_install(session=session), "1234abcd")
         assert result is True
@@ -248,6 +268,12 @@ def test_install_license_key__already_installed(success_mock):
         cf_client.assert_has_calls(
             [
                 call.describe_stacks(StackName="NewRelicLicenseKeySecret"),
+            ],
+            any_order=True,
+        )
+        sm_client.assert_has_calls(
+            [
+                call.get_secret_value(SecretId=None),
             ],
             any_order=True,
         )
@@ -275,14 +301,15 @@ def test__get_license_key_outputs():
         "newrelic_lambda_cli.integrations._get_stack_output_value"
     ) as mock_get_stack_output:
         mock_get_stack_output.return_value = {
+            "LicenseKeySecretARN": "license_arn",
             "NrAccountId": 12345,
             "ViewPolicyARN": "policy_arn",
         }
         session = MagicMock()
         result = _get_license_key_outputs(session)
-        assert result == (12345, "policy_arn")
+        assert result == ("license_arn", 12345, "policy_arn")
         mock_get_stack_output.assert_called_once_with(
-            session, ["NrAccountId", "ViewPolicyARN"]
+            session, ["LicenseKeySecretARN", "NrAccountId", "ViewPolicyARN"]
         )
 
 

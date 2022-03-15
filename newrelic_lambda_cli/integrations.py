@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import json
 import os
 import time
 
@@ -19,6 +20,7 @@ from newrelic_lambda_cli.utils import catch_boto_errors, NR_DOCS_ACT_LINKING_URL
 INGEST_STACK_NAME = "NewRelicLogIngestion"
 LICENSE_KEY_STACK_NAME = "NewRelicLicenseKeySecret"
 
+__cached_license_key_arn = None
 __cached_license_key_policy_arn = None
 __cached_license_key_nr_account_id = None
 
@@ -590,50 +592,41 @@ def get_log_ingestion_license_key(session):
 
 
 @catch_boto_errors
-def auto_install_license_key(input):
-    """
-    If the LK secret is missing, create it, picking up the LK value from the ingest
-    lambda's configuration.
-    """
+def install_license_key(input, nr_license_key, policy_name=None):
     assert isinstance(input, (IntegrationInstall, IntegrationUpdate))
-    lk_stack_status = _get_cf_stack_status(input.session, LICENSE_KEY_STACK_NAME)
-    if lk_stack_status is None:
-        click.echo("Creating the managed secret for the New Relic License Key")
-        lk = get_log_ingestion_license_key(input.session)
-        if lk is None:
-            failure(
-                "Could not create license key secret; failed to fetch license key "
-                "value from ingest lambda"
-            )
-            return False
-        return install_license_key(input, nr_license_key=lk)
-    return True
 
+    mode = "CREATE"
 
-@catch_boto_errors
-def install_license_key(input, nr_license_key, policy_name=None, mode="CREATE"):
-    assert isinstance(input, (IntegrationInstall, IntegrationUpdate))
     lk_stack_status = _get_cf_stack_status(
         input.session, LICENSE_KEY_STACK_NAME, input.nr_account_id
     )
     if lk_stack_status is not None:
         success("Managed secret already exists")
-        return True
+        mode = "UPDATE"
 
-    click.echo(
-        "Setting up %s stack in region: %s"
-        % (LICENSE_KEY_STACK_NAME, input.session.region_name)
-    )
+    if mode == "CREATE":
+        click.echo(
+            "Setting up %s stack in region: %s"
+            % (LICENSE_KEY_STACK_NAME, input.session.region_name)
+        )
+    else:
+        click.echo(
+            "Verifying %s stack in region: %s"
+            % (LICENSE_KEY_STACK_NAME, input.session.region_name)
+        )
+        if _verify_license_key_value(input.session, nr_license_key):
+            success("Managed secret configured correctly")
+            return True
+
     try:
         client = input.session.client("cloudformation")
 
-        update_mode = mode == "UPDATE"
         parameters = []
         if policy_name is not None:
             parameters.append(
                 {"ParameterKey": "PolicyName", "ParameterValue": policy_name}
             )
-        elif update_mode:
+        elif mode == "UPDATE":
             parameters.append({"ParameterKey": "PolicyName", "UsePreviousValue": True})
 
         parameters.extend(
@@ -651,6 +644,7 @@ def install_license_key(input, nr_license_key, policy_name=None, mode="CREATE"):
             mode,
             int(time.time()),
         )
+
         click.echo("Creating change set: %s" % change_set_name)
         template_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
@@ -709,15 +703,31 @@ def remove_license_key(input):
 
 
 def _get_license_key_outputs(session):
-    """Returns the account id and policy ARN for the license key secret if they exist"""
+    """Returns the account id, secret arn and policy ARN for the license key secret if they exist"""
+    global __cached_license_key_arn
     global __cached_license_key_nr_account_id
     global __cached_license_key_policy_arn
-    if __cached_license_key_nr_account_id and __cached_license_key_policy_arn:
-        return __cached_license_key_nr_account_id, __cached_license_key_policy_arn
-    output_values = _get_stack_output_value(session, ["NrAccountId", "ViewPolicyARN"])
+    if (
+        __cached_license_key_arn
+        and __cached_license_key_nr_account_id
+        and __cached_license_key_policy_arn
+    ):
+        return (
+            __cached_license_key_arn,
+            __cached_license_key_nr_account_id,
+            __cached_license_key_policy_arn,
+        )
+    output_values = _get_stack_output_value(
+        session, ["LicenseKeySecretARN", "NrAccountId", "ViewPolicyARN"]
+    )
+    __cached_license_key_arn = output_values.get("LicenseKeySecretARN")
     __cached_license_key_nr_account_id = output_values.get("NrAccountId")
     __cached_license_key_policy_arn = output_values.get("ViewPolicyARN")
-    return __cached_license_key_nr_account_id, __cached_license_key_policy_arn
+    return (
+        __cached_license_key_arn,
+        __cached_license_key_nr_account_id,
+        __cached_license_key_policy_arn,
+    )
 
 
 def _get_stack_output_value(session, output_keys):
@@ -744,6 +754,14 @@ def _get_stack_output_value(session, output_keys):
             for output in stack.get("Outputs", [])
             if output["OutputKey"] in output_keys
         }
+
+
+def _verify_license_key_value(session, nr_license_key):
+    client = session.client("secretsmanager")
+    license_key_arn, _, _ = _get_license_key_outputs(session)
+    secret = client.get_secret_value(SecretId=license_key_arn)
+    secret_string = json.loads(secret["SecretString"])
+    return secret_string["LicenseKey"] == nr_license_key
 
 
 @catch_boto_errors
