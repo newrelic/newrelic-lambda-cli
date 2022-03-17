@@ -148,7 +148,15 @@ def test_integrations_update(
     register_groups(cli)
     result = cli_runner.invoke(
         cli,
-        ["integrations", "update", "--aws-permissions-check"],
+        [
+            "integrations",
+            "update",
+            "--aws-permissions-check",
+            "--nr-account-id",
+            "123456789",
+            "--nr-api-key",
+            "foobar",
+        ],
         env={"AWS_DEFAULT_REGION": "us-east-1"},
     )
 
@@ -165,7 +173,7 @@ def test_integrations_update(
         [
             call.update_log_ingestion(ANY),
             call.update_log_ingestion().__bool__(),
-            call.auto_install_license_key(ANY),
-            call.auto_install_license_key().__bool__(),
+            call.install_license_key(ANY, ANY),
+            call.install_license_key().__bool__(),
         ]
     )

@@ -216,7 +216,8 @@ def install(input, function_arn):
         failure("Could not find function: %s" % function_arn)
         return False
 
-    nr_account_id, policy_arn = _get_license_key_outputs(input.session)
+    _, nr_account_id, policy_arn = _get_license_key_outputs(input.session)
+
     # If a managed secret exists but it was created with a different NR account
     # id and license key We want to notify the user and point them to
     # documentation on how to proceed.
@@ -372,7 +373,7 @@ def uninstall(input, function_arn):
         )
         return False
     else:
-        _, policy_arn = _get_license_key_outputs(input.session)
+        _, _, policy_arn = _get_license_key_outputs(input.session)
         if policy_arn:
             _detach_license_key_policy(
                 input.session, config["Configuration"]["Role"], policy_arn

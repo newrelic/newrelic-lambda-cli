@@ -257,6 +257,7 @@ def uninstall(**kwargs):
     metavar="<size>",
     type=click.INT,
 )
+@add_options(NR_OPTIONS)
 @click.option(
     "--timeout",
     "-t",
@@ -299,6 +300,12 @@ def update(**kwargs):
     if input.aws_permissions_check:
         permissions.ensure_integration_install_permissions(input)
 
+    click.echo("Validating New Relic credentials")
+    gql_client = api.validate_gql_credentials(input)
+
+    click.echo("Retrieving integration license key")
+    nr_license_key = api.retrieve_license_key(gql_client)
+
     update_success = True
 
     click.echo("Updating newrelic-log-ingestion Lambda function in AWS account")
@@ -306,7 +313,9 @@ def update(**kwargs):
     update_success = res and update_success
 
     if input.enable_license_key_secret:
-        update_success = update_success and integrations.auto_install_license_key(input)
+        update_success = update_success and integrations.install_license_key(
+            input, nr_license_key
+        )
     else:
         integrations.remove_license_key(input)
 
