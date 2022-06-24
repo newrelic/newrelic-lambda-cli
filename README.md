@@ -36,12 +36,11 @@ A CLI to install the New Relic AWS Lambda integration and layers.
 * dotnetcore3.1
 * java8.al2
 * java11
-* nodejs10.x
 * nodejs12.x
 * nodejs14.x
+* nodejs16.x
 * provided
 * provided.al2
-* python2.7
 * python3.6
 * python3.7
 * python3.8
