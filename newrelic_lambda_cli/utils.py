@@ -18,10 +18,6 @@ RUNTIME_CONFIG = {
         "Handler": "com.newrelic.java.HandlerWrapper::",
         "LambdaExtension": True,
     },
-    "nodejs10.x": {
-        "Handler": "newrelic-lambda-wrapper.handler",
-        "LambdaExtension": True,
-    },
     "nodejs12.x": {
         "Handler": "newrelic-lambda-wrapper.handler",
         "LambdaExtension": True,
@@ -30,12 +26,12 @@ RUNTIME_CONFIG = {
         "Handler": "newrelic-lambda-wrapper.handler",
         "LambdaExtension": True,
     },
+    "nodejs16.x": {
+        "Handler": "newrelic-lambda-wrapper.handler",
+        "LambdaExtension": True,
+    },
     "provided": {"LambdaExtension": True},
     "provided.al2": {"LambdaExtension": True},
-    "python2.7": {
-        "Handler": "newrelic_lambda_wrapper.handler",
-        "LambdaExtension": False,
-    },
     "python3.6": {
         "Handler": "newrelic_lambda_wrapper.handler",
         "LambdaExtension": False,
