@@ -51,7 +51,7 @@ manual function wrapping is required using the runtime specific New Relic agent.
 
 ## Requirements
 
-* Python >= 3.3
+* Python >= 3.3 < 3.10
 * Retrieve your [New relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) and [User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key)
 
 ## Recommendations
