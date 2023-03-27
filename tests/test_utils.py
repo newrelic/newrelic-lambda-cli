@@ -82,6 +82,7 @@ def test_supports_lambda_extension():
             "nodejs12.x",
             "nodejs14.x",
             "nodejs16.x",
+            "nodejs18.x",
             "provided",
             "provided.al2",
             "python3.7",
