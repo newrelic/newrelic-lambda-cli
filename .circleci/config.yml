@@ -20,8 +20,8 @@ jobs:
       - run:
           name: Check code style
           command: |
-            sudo pip install -q -U pip 'packaging<20.5'
-            sudo pip install -q -U black
+            sudo pip install -q -U pip
+            sudo pip install -q -U 'black<22.10.1'
             black --check newrelic_lambda_cli tests
       - run:
           name: Check README
