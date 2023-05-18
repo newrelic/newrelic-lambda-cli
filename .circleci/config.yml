@@ -1,4 +1,7 @@
-version: 2
+version: 2.1
+orbs:
+  codecov: codecov/codecov@3.2.4
+
 jobs:
   test:
     docker:
@@ -10,7 +13,7 @@ jobs:
           command: |
             sudo pip install -q -r dev-requirements.txt
             py.test --cov-report=xml --cov=newrelic_lambda_cli tests
-            codecov
+      - codecov/upload
 
   code-style:
     docker:
