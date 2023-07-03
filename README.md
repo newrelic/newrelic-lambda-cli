@@ -41,17 +41,17 @@ A CLI to install the New Relic AWS Lambda integration and layers.
 * nodejs16.x
 * provided
 * provided.al2
-* python3.6
 * python3.7
 * python3.8
 * python3.9
+* python3.10
 
 **Note:** Automatic handler wrapping is only supported for Node.js and Python. For other runtimes,
 manual function wrapping is required using the runtime specific New Relic agent.
 
 ## Requirements
 
-* Python >= 3.3 < 3.10
+* Python >= 3.3 <= 3.10
 * Retrieve your [New relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) and [User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key)
 
 ## Recommendations
