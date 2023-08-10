@@ -11,6 +11,7 @@ jobs:
       - run:
           name: Run tests
           command: |
+            sudo pip install -q -U pip
             sudo pip install -q -r dev-requirements.txt
             py.test --cov-report=xml --cov=newrelic_lambda_cli tests
       - codecov/upload
@@ -29,8 +30,9 @@ jobs:
       - run:
           name: Check README
           command: |
+            sudo pip install -q -U pip
             sudo pip install -q -U setuptools twine wheel
-            python setup.py sdist
+            python setup.py sdist bdist_wheel
             twine check dist/*
 
   release:
@@ -41,11 +43,12 @@ jobs:
       - run:
           name: Install release dependencies
           command: |
+            sudo pip install -q -U pip
             sudo pip install -q -U pyOpenSSL setuptools twine wheel
       - run:
           name: Release package
           command: |
-            python setup.py sdist
+            python setup.py sdist bdist_wheel
             twine check dist/*
             twine upload dist/*
 
