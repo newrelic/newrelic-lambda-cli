@@ -48,7 +48,7 @@ A CLI to install the New Relic AWS Lambda integration and layers.
 * python3.9
 * python3.10
 
-**Note:** Automatic handler wrapping is only supported for Node.js and Python. For other runtimes,
+**Note:** Automatic handler wrapping is only supported for Node.js, Python and Java. For other runtimes,
 manual function wrapping is required using the runtime specific New Relic agent.
 
 ## Requirements
