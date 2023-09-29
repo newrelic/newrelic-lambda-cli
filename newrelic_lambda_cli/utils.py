@@ -60,6 +60,10 @@ RUNTIME_CONFIG = {
         "Handler": "newrelic_lambda_wrapper.handler",
         "LambdaExtension": True,
     },
+    "python3.11": {
+        "Handler": "newrelic_lambda_wrapper.handler",
+        "LambdaExtension": True,
+    },
 }
 
 
