@@ -5,7 +5,7 @@ orbs:
 jobs:
   test:
     docker:
-      - image: circleci/python:3.11
+      - image: cimg/python:3.11
     steps:
       - checkout
       - run:
@@ -19,7 +19,7 @@ jobs:
 
   code-style:
     docker:
-      - image: circleci/python:3.11
+      - image: cimg/python:3.11
     steps:
       - checkout
       - run:
@@ -37,7 +37,7 @@ jobs:
 
   release:
     docker:
-      - image: circleci/python:3.11
+      - image: cimg/python:3.11
     steps:
       - checkout
       - run:
