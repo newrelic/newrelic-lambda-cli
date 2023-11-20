@@ -14,7 +14,7 @@ jobs:
             pip install -q -U pip
             pip install -q pipenv
             pipenv install --dev
-            pytest --cov-report=xml --cov=newrelic_lambda_cli tests
+            pipenv run pytest --cov-report=xml --cov=newrelic_lambda_cli tests
       - codecov/upload
 
   code-style:
