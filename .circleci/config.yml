@@ -5,19 +5,21 @@ orbs:
 jobs:
   test:
     docker:
-      - image: circleci/python:3.7
+      - image: circleci/python:3.11
     steps:
       - checkout
       - run:
           name: Run tests
           command: |
-            sudo pip install -q -r dev-requirements.txt
+            sudo pip install -q -U pip
+            sudo pip install -q pipenv
+            sudo pipenv install --dev
             py.test --cov-report=xml --cov=newrelic_lambda_cli tests
       - codecov/upload
 
   code-style:
     docker:
-      - image: circleci/python:3.7
+      - image: circleci/python:3.11
     steps:
       - checkout
       - run:
@@ -35,7 +37,7 @@ jobs:
 
   release:
     docker:
-      - image: circleci/python:3.7
+      - image: circleci/python:3.11
     steps:
       - checkout
       - run:

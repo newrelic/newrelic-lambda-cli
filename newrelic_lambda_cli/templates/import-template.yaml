@@ -65,7 +65,7 @@ Resources:
       FunctionName: newrelic-log-ingestion
       MemorySize:
         Ref: MemorySize
-      Runtime: python3.7
+      Runtime: python3.9
       Role: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${FunctionRole}
       Timeout:
         Ref: Timeout
@@ -87,7 +87,7 @@ Resources:
       FunctionName: newrelic-log-ingestion
       MemorySize:
         Ref: MemorySize
-      Runtime: python3.7
+      Runtime: python3.9
       Timeout:
         Ref: Timeout
       Environment:
