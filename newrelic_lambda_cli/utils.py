@@ -10,6 +10,10 @@ NR_DOCS_ACT_LINKING_URL = "https://docs.newrelic.com/docs/serverless-function-mo
 NEW_RELIC_ARN_PREFIX_TEMPLATE = "arn:aws:lambda:%s:451483290750"
 RUNTIME_CONFIG = {
     "dotnetcore3.1": {"LambdaExtension": True},
+    "java17": {
+        "Handler": "com.newrelic.java.HandlerWrapper::",
+        "LambdaExtension": True,
+    },
     "java11": {
         "Handler": "com.newrelic.java.HandlerWrapper::",
         "LambdaExtension": True,
@@ -53,6 +57,10 @@ RUNTIME_CONFIG = {
         "LambdaExtension": True,
     },
     "python3.10": {
+        "Handler": "newrelic_lambda_wrapper.handler",
+        "LambdaExtension": True,
+    },
+    "python3.11": {
         "Handler": "newrelic_lambda_wrapper.handler",
         "LambdaExtension": True,
     },

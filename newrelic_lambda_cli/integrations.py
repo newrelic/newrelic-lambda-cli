@@ -307,10 +307,17 @@ def update_log_ingestion_function(input):
 
     # Detect an old-style nested install and unwrap it
     client = input.session.client("cloudformation")
-    resources = client.describe_stack_resources(
-        StackName=INGEST_STACK_NAME, LogicalResourceId="NewRelicLogIngestion"
-    )
-    stack_resources = resources["StackResources"]
+    try:
+        resources = client.describe_stack_resources(
+            StackName=INGEST_STACK_NAME, LogicalResourceId="NewRelicLogIngestion"
+        )
+        stack_resources = resources["StackResources"]
+    except botocore.exceptions.ClientError as e:
+        if e.response.get("Error", {}).get("Code", "") == "ValidationError":
+            # Stack does not exist
+            stack_resources = []
+        else:
+            raise
 
     # The nested installs had a single Application resource
     if (

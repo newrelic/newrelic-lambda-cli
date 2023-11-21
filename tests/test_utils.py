@@ -77,6 +77,7 @@ def test_supports_lambda_extension():
         supports_lambda_extension(runtime)
         for runtime in (
             "dotnetcore3.1",
+            "java17",
             "java11",
             "java8.al2",
             "nodejs12.x",
@@ -89,6 +90,7 @@ def test_supports_lambda_extension():
             "python3.8",
             "python3.9",
             "python3.10",
+            "python3.11",
         )
     )
     assert not any(

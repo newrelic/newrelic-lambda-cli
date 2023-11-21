@@ -5,46 +5,47 @@ orbs:
 jobs:
   test:
     docker:
-      - image: circleci/python:3.7
+      - image: cimg/python:3.11
     steps:
       - checkout
       - run:
           name: Run tests
           command: |
-            sudo pip install -q -U pip
-            sudo pip install -q -r dev-requirements.txt
-            py.test --cov-report=xml --cov=newrelic_lambda_cli tests
+            pip install -q -U pip
+            pip install -q pipenv
+            pipenv install --dev
+            pipenv run pytest --cov-report=xml --cov=newrelic_lambda_cli tests
       - codecov/upload
 
   code-style:
     docker:
-      - image: circleci/python:3.7
+      - image: cimg/python:3.11
     steps:
       - checkout
       - run:
           name: Check code style
           command: |
-            sudo pip install -q -U pip
-            sudo pip install -q -U 'black<22.10.1'
+            pip install -q -U pip
+            pip install -q -U 'black<22.10.1'
             black --check newrelic_lambda_cli tests
       - run:
           name: Check README
           command: |
-            sudo pip install -q -U pip
-            sudo pip install -q -U setuptools twine wheel
+            pip install -q -U pip
+            pip install -q -U setuptools twine wheel
             python setup.py sdist bdist_wheel
             twine check dist/*
 
   release:
     docker:
-      - image: circleci/python:3.7
+      - image: cimg/python:3.11
     steps:
       - checkout
       - run:
           name: Install release dependencies
           command: |
-            sudo pip install -q -U pip
-            sudo pip install -q -U pyOpenSSL setuptools twine wheel
+            pip install -q -U pip
+            pip install -q -U pyOpenSSL setuptools twine wheel
       - run:
           name: Release package
           command: |
