@@ -31,8 +31,9 @@ jobs:
       - run:
           name: Check README
           command: |
+            pip install -q -U pip
             pip install -q -U setuptools twine wheel
-            python setup.py sdist
+            python setup.py sdist bdist_wheel
             twine check dist/*
 
   release:
@@ -43,11 +44,12 @@ jobs:
       - run:
           name: Install release dependencies
           command: |
+            pip install -q -U pip
             pip install -q -U pyOpenSSL setuptools twine wheel
       - run:
           name: Release package
           command: |
-            python setup.py sdist
+            python setup.py sdist bdist_wheel
             twine check dist/*
             twine upload dist/*
 
