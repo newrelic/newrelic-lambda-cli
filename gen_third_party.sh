@@ -2,24 +2,24 @@
 PROJECT=$(basename $PWD)
 
 function getdeps {
-  REQSFILE=$1; shift
+  FLAGS=$1; shift
   (
     TMPINSTALL=`mktemp -d /tmp/${PROJECT}-getdeps.XXXXXX` || exit 1
 
     (
       # Record install deps
-      if [ ! -d $TMPINSTALL/pyenv ]; then
-        virtualenv $TMPINSTALL/pyenv
+      if [ ! -d $TMPINSTALL/venv ]; then
+        virtualenv $TMPINSTALL/venv
       fi
     ) 2>&1 >/dev/null
 
-    # Activate pyenv
-    . $TMPINSTALL/pyenv/bin/activate
+    # Activate venv
+    . $TMPINSTALL/venv/bin/activate
 
     # Isolate output from installations
     (
-      pip install pip-licenses;
-      pip install -r $REQSFILE
+      pip install pip-licenses pipenv;
+      PIPENV_VERBOSITY=-1 pipenv install $FLAGS
     ) 2>&1 >/dev/null
 
     # Generate markdown report
@@ -44,9 +44,9 @@ r any licenses that require the disclosure of source code, the source code can b
 
 # Dependencies
 
-$(getdeps requirements.txt)
+$(getdeps)
 
 # DevDependencies
 
-$(getdeps dev-requirements.txt)
+$(getdeps --dev)
 EOF

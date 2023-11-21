@@ -24,7 +24,7 @@ from .conftest import layer_install, layer_uninstall
 def test_add_new_relic(aws_credentials, mock_function_config):
     session = boto3.Session(region_name="us-east-1")
 
-    config = mock_function_config("python3.7")
+    config = mock_function_config("python3.11")
 
     assert config["Configuration"]["Handler"] == "original_handler"
 
@@ -74,7 +74,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
         is True
     )
 
-    config = mock_function_config("python3.7")
+    config = mock_function_config("python3.11")
     config["Configuration"]["Layers"] = [{"Arn": get_arn_prefix("us-east-1")}]
     assert (
         _add_new_relic(
@@ -93,7 +93,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
 
     with patch("newrelic_lambda_cli.layers.index") as mock_index:
         mock_index.return_value = []
-        config = mock_function_config("python3.7")
+        config = mock_function_config("python3.11")
         assert (
             _add_new_relic(
                 layer_install(
@@ -190,15 +190,15 @@ def test_add_new_relic(aws_credentials, mock_function_config):
     ) as mock_isatty:
         mock_isatty.return_value = True
         mock_prompt.return_value = 0
-        result = layer_selection(mock_layers, "python3.7", "x86_64")
+        result = layer_selection(mock_layers, "python3.11", "x86_64")
         assert result == "arn:aws:lambda:us-east-1:123456789:layer/javajava"
 
     with patch("sys.stdout.isatty") as mock_isatty:
         mock_isatty.return_value = False
         with pytest.raises(UsageError):
-            layer_selection(mock_layers, "python3.7", "x86_64")
+            layer_selection(mock_layers, "python3.11", "x86_64")
 
-    config = mock_function_config("python3.7")
+    config = mock_function_config("python3.11")
     _add_new_relic(
         layer_install(
             session=session,
@@ -216,7 +216,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
         in config["Configuration"]["Environment"]["Variables"]
     )
 
-    config = mock_function_config("python3.7")
+    config = mock_function_config("python3.11")
     config["Configuration"]["Environment"]["Variables"]["NEW_RELIC_FOO"] = "bar"
     config["Configuration"]["Layers"] = [{"Arn": get_arn_prefix("us-east-1")}]
     update_kwargs = _add_new_relic(
@@ -257,7 +257,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
 def test_remove_new_relic(aws_credentials, mock_function_config):
     session = boto3.Session(region_name="us-east-1")
 
-    config = mock_function_config("python3.7")
+    config = mock_function_config("python3.11")
     config["Configuration"]["Handler"] = "newrelic_lambda_wrapper.handler"
     config["Configuration"]["Environment"]["Variables"][
         "NEW_RELIC_LAMBDA_HANDLER"
@@ -281,7 +281,7 @@ def test_remove_new_relic(aws_credentials, mock_function_config):
         is True
     )
 
-    config = mock_function_config("python3.7")
+    config = mock_function_config("python3.11")
     config["Configuration"]["Handler"] = "what is this?"
     assert (
         _remove_new_relic(
@@ -352,7 +352,7 @@ def test_install_failure(aws_credentials, mock_function_config):
         "newrelic_lambda_cli.layers._get_license_key_outputs"
     ) as mock_get_license_key_outputs:
         mock_get_license_key_outputs.return_value = ("license_arn", "12345", "policy")
-        config = mock_function_config("python3.7")
+        config = mock_function_config("python3.11")
         mock_client.get_function.return_value = config
         with pytest.raises(UsageError):
             install(
@@ -370,7 +370,7 @@ def test_install(aws_credentials, mock_function_config):
         mock_client = mock_session.client.return_value
         mock_client.get_function.reset_mock(return_value=True)
         mock_get_license_key_outputs.return_value = ("license_arn", "12345", "policy")
-        config = mock_function_config("python3.7")
+        config = mock_function_config("python3.11")
         mock_client.get_function.return_value = config
         with pytest.raises(UsageError):
             install(
@@ -397,7 +397,7 @@ def test_install(aws_credentials, mock_function_config):
         )
 
         mock_client.get_function.reset_mock(return_value=True)
-        config = mock_function_config("python3.7")
+        config = mock_function_config("python3.11")
         mock_client.get_function.return_value = config
         assert (
             install(
@@ -443,7 +443,7 @@ def test_uninstall(aws_credentials, mock_function_config):
         assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is True
 
         mock_client.get_function.reset_mock(return_value=True)
-        config = mock_function_config("python3.7")
+        config = mock_function_config("python3.11")
         mock_client.get_function.return_value = config
         assert uninstall(layer_uninstall(session=mock_session), "foobarbaz") is False
 

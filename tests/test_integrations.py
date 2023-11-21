@@ -344,18 +344,16 @@ def test__get_role(aws_credentials):
 @mock_cloudformation
 def test__import_log_ingestion_function(aws_credentials):
     session = boto3.Session(region_name="us-east-1")
-    # FIXME: For some reason moto raises a "NoCap" KeyError
-    with pytest.raises(KeyError):
-        _import_log_ingestion_function(
-            integration_update(
-                session=session,
-                enable_logs=True,
-                memory_size=1024,
-                timeout=30,
-                role_name="foobar",
-            ),
-            "foobar",
-        )
+    _import_log_ingestion_function(
+        integration_update(
+            session=session,
+            enable_logs=True,
+            memory_size=1024,
+            timeout=30,
+            role_name="foobar",
+        ),
+        "foobar",
+    )
 
 
 @mock_sts
