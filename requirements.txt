@@ -1,6 +1,0 @@
-boto3
-click
-colorama
-gql==2.0.0
-requests
-tabulate
