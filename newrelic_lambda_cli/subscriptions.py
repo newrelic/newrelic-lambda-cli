@@ -83,11 +83,11 @@ def _remove_subscription_filter(session, function_name, filter_name):
 @catch_boto_errors
 def create_log_subscription(input, function_name):
     assert isinstance(input, SubscriptionInstall)
-    destination = get_function(input.session, "newrelic-log-ingestion")
+    destination = get_function(input.session, input.log_ingestion_lambda)
     if destination is None:
         failure(
-            "Could not find 'newrelic-log-ingestion' function. Is the New Relic AWS "
-            "integration installed?"
+            "Could not find %s function. Is the New Relic AWS "
+            "integration installed?" % input.log_ingestion_lambda
         )
         return False
     destination_arn = destination["Configuration"]["FunctionArn"]

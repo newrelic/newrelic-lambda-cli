@@ -42,8 +42,8 @@ def test_create_log_subscription(
     mock_create_subscription_filter.return_value = True
     mock_remove_subscription_filter.return_value = True
 
-    assert create_log_subscription(subscription_install(), "FooBarBaz") is False
-    mock_get_function.assert_called_once_with(None, "newrelic-log-ingestion")
+    assert create_log_subscription(subscription_install(log_ingestion_lambda="newrelic-log-ingestion-12f9323e1d13"), "FooBarBaz") is False
+    mock_get_function.assert_called_once_with(None, "newrelic-log-ingestion-12f9323e1d13")
     mock_get_subscription_filters.assert_not_called()
 
     assert create_log_subscription(subscription_install(), "FooBarBaz") is False

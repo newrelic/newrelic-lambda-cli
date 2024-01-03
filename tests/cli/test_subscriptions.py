@@ -10,6 +10,7 @@ def test_subscriptions_install(aws_credentials, cli_runner):
     Assert that 'newrelic-lambda subscriptions install' attempts to install the
     New Relic log subscription on a function.
     """
+    log_ingestion_lambda_name = "newrelic-log-ingestion-12f9323e1d13"
     register_groups(cli)
 
     result = cli_runner.invoke(
@@ -22,6 +23,8 @@ def test_subscriptions_install(aws_credentials, cli_runner):
             "foobar",
             "--aws-region",
             "us-east-1",
+            "--log-ingestion-lambda",
+            log_ingestion_lambda_name,
         ],
         env={
             "AWS_ACCESS_KEY_ID": "testing",
@@ -34,7 +37,7 @@ def test_subscriptions_install(aws_credentials, cli_runner):
     assert result.exit_code == 1
     assert result.stdout == ""
     assert (
-        "Could not find 'newrelic-log-ingestion' function. "
+        f"Could not find {log_ingestion_lambda_name} function. "
         "Is the New Relic AWS integration installed?"
     ) in result.stderr
 
@@ -50,6 +53,8 @@ def test_subscriptions_install(aws_credentials, cli_runner):
             "barbaz",
             "--aws-region",
             "us-east-1",
+            "--log-ingestion-lambda",
+            log_ingestion_lambda_name,
         ],
         env={
             "AWS_ACCESS_KEY_ID": "testing",
@@ -62,7 +67,7 @@ def test_subscriptions_install(aws_credentials, cli_runner):
     assert result2.exit_code == 1
     assert result2.stdout == ""
     assert (
-        "Could not find 'newrelic-log-ingestion' function. "
+        f"Could not find {log_ingestion_lambda_name} function. "
         "Is the New Relic AWS integration installed?"
     ) in result2.stderr
 

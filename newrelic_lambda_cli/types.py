@@ -15,6 +15,7 @@ INTEGRATION_INSTALL_KEYS = [
     "nr_region",
     "timeout",
     "role_name",
+    "log_ingestion_lambda",
     "enable_license_key_secret",
     "enable_cw_ingest",
     "integration_arn",
@@ -81,6 +82,7 @@ SUBSCRIPTION_INSTALL_KEYS = [
     "aws_permissions_check",
     "functions",
     "excludes",
+    "log_ingestion_lambda",
     "filter_pattern",
 ]
 

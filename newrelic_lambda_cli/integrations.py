@@ -324,7 +324,6 @@ def update_log_ingestion_function(input):
         len(stack_resources) > 0
         and stack_resources[0]["ResourceType"] == "AWS::CloudFormation::Stack"
     ):
-
         click.echo("Unwrapping nested stack... ", nl=False)
 
         # Set the ingest function itself to disallow deletes
@@ -517,13 +516,13 @@ def install_log_ingestion(
     Returns True for success and False for failure.
     """
     assert isinstance(input, IntegrationInstall)
-    function = get_function(input.session, "newrelic-log-ingestion")
+    function = get_function(input.session, input.log_ingestion_lambda)
     if function is None:
         stack_status = _check_for_ingest_stack(input.session)
         if stack_status is None:
             click.echo(
-                "Setting up 'newrelic-log-ingestion' function in region: %s"
-                % input.session.region_name
+                "Setting up %s function in region: %s"
+                % (input.log_ingestion_lambda, input.session.region_name)
             )
             try:
                 _create_log_ingestion_function(
@@ -543,8 +542,8 @@ def install_log_ingestion(
             return False
     else:
         success(
-            "The 'newrelic-log-ingestion' function already exists in region %s, "
-            "skipping" % input.session.region_name
+            "The %s function already exists in region %s, "
+            "skipping" % (input.log_ingestion_lambda, input.session.region_name)
         )
     return True
 

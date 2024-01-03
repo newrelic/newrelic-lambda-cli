@@ -46,6 +46,13 @@ def register(group):
     multiple=True,
 )
 @click.option(
+    "--log-ingestion-lambda",
+    default="newrelic-log-ingestion",
+    help="The name of the log ingestion lambda function",
+    metavar="<lambda_name>",
+    show_default=False,
+)
+@click.option(
     "filter_pattern",
     "--filter-pattern",
     default=DEFAULT_FILTER_PATTERN,

@@ -73,6 +73,13 @@ def register(group):
     show_default=False,
 )
 @click.option(
+    "--log-ingestion-lambda",
+    default="newrelic-log-ingestion",
+    help="The name of the log ingestion lambda function",
+    metavar="<lambda_name>",
+    show_default=False,
+)
+@click.option(
     "--enable-license-key-secret/--disable-license-key-secret",
     default=True,
     show_default=True,
