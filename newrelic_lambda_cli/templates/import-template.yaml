@@ -62,7 +62,7 @@ Resources:
         Key: 466768951184/arn:aws:serverlessrepo:us-east-1:463657938898:applications-NewRelic-log-ingestion-versions-2.2.1/2dcb4087-186a-42c8-bc1f-cf93780786c0
       Description: Sends log data from CloudWatch Logs and S3 to New Relic Infrastructure (Cloud integrations) and New Relic Logging
       Handler: function.lambda_handler
-      FunctionName: newrelic-log-ingestion
+      FunctionName: !Join ['-', ['newrelic-log-ingestion', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
       MemorySize:
         Ref: MemorySize
       Runtime: python3.9
@@ -84,7 +84,7 @@ Resources:
         Key: 466768951184/arn:aws:serverlessrepo:us-east-1:463657938898:applications-NewRelic-log-ingestion-versions-2.2.1/2dcb4087-186a-42c8-bc1f-cf93780786c0
       Description: Sends log data from CloudWatch Logs and S3 to New Relic Infrastructure (Cloud integrations) and New Relic Logging
       Handler: function.lambda_handler
-      FunctionName: newrelic-log-ingestion
+      FunctionName: !Join ['-', ['newrelic-log-ingestion', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
       MemorySize:
         Ref: MemorySize
       Runtime: python3.9

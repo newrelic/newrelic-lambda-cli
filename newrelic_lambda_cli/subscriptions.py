@@ -5,6 +5,7 @@ import click
 
 from newrelic_lambda_cli.cliutils import failure, success, warning
 from newrelic_lambda_cli.functions import get_function
+from newrelic_lambda_cli.integrations import get_newrelic_log_ingestion_function
 from newrelic_lambda_cli.types import (
     LayerInstall,
     SubscriptionInstall,
@@ -83,10 +84,10 @@ def _remove_subscription_filter(session, function_name, filter_name):
 @catch_boto_errors
 def create_log_subscription(input, function_name):
     assert isinstance(input, SubscriptionInstall)
-    destination = get_function(input.session, "newrelic-log-ingestion")
+    destination = get_newrelic_log_ingestion_function(input.session)
     if destination is None:
         failure(
-            "Could not find 'newrelic-log-ingestion' function. Is the New Relic AWS "
+            "Could not find newrelic-log-ingestion function. Is the New Relic AWS "
             "integration installed?"
         )
         return False

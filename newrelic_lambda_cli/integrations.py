@@ -85,6 +85,56 @@ def _get_cf_stack_status(session, stack_name, nr_account_id=None):
     else:
         return res["Stacks"][0]["StackStatus"]
 
+def get_unique_newrelic_log_ingestion_name(session):
+    stack_id = _get_cf_stack_id(session, stack_name=INGEST_STACK_NAME)
+    return "newrelic-log-ingestion-%s"%(stack_id.split("/")[2].split("-")[4])
+
+def get_newrelic_log_ingestion_function(session):
+    unique_log_ingestion_name = get_unique_newrelic_log_ingestion_name(session)
+    old_log_ingestion_name = "newrelic-log-ingestion"
+
+    function = get_function(session, unique_log_ingestion_name)
+    if function is None:
+        function = get_function(session, old_log_ingestion_name)
+    return function
+
+def _get_cf_stack_id(session, stack_name, nr_account_id=None):
+    """Returns the StackId of the CloudFormation stack if it exists"""
+    try:
+        res = session.client("cloudformation").describe_stacks(StackName=stack_name)
+        if nr_account_id is not None:
+            stack_output_account_id = _get_stack_output_value(
+                session, ["NrAccountId"]
+            ).get("NrAccountId")
+            # Checking outputs here to protect against installs done
+            # with older CLI versions. We don't want to constantly warn users
+            # who installed on previous versions with no outputs.
+            if stack_output_account_id and stack_output_account_id != str(
+                nr_account_id
+            ):
+                warning(
+                    "WARNING: Managed secret already exists in this region for "
+                    "New Relic account {0}.\n"
+                    "Current CLI behavior limits the setup of one managed "
+                    "secret per region.\n"
+                    "To set up an additional secret for New Relic account {1} "
+                    "see our docs:\n{2}.\n"
+                    "Or run this command with --disable-license-key-secret to "
+                    "avoid attempting to create a new managed secret.".format(
+                        stack_output_account_id, nr_account_id, NR_DOCS_ACT_LINKING_URL
+                    )
+                )
+    except botocore.exceptions.ClientError as e:
+        if (
+            e.response
+            and "ResponseMetadata" in e.response
+            and "HTTPStatusCode" in e.response["ResponseMetadata"]
+            and e.response["ResponseMetadata"]["HTTPStatusCode"] in (400, 404)
+        ):
+            return None
+        raise click.UsageError(str(e))
+    else:
+        return res["Stacks"][0]["StackId"]
 
 # TODO: Merge this with create_integration_role?
 def _create_role(input):
@@ -200,6 +250,8 @@ def _import_log_ingestion_function(input, nr_license_key):
     )
 
     with open(template_path) as template:
+        unique_log_ingestion_name = get_unique_newrelic_log_ingestion_name(input.session)
+
         change_set_name = "%s-IMPORT-%d" % (INGEST_STACK_NAME, int(time.time()))
         click.echo("Creating change set: %s" % change_set_name)
 
@@ -217,7 +269,7 @@ def _import_log_ingestion_function(input, nr_license_key):
                 {
                     "ResourceType": "AWS::Lambda::Function",
                     "LogicalResourceId": "NewRelicLogIngestionFunctionNoCap",
-                    "ResourceIdentifier": {"FunctionName": "newrelic-log-ingestion"},
+                    "ResourceIdentifier": {"FunctionName": unique_log_ingestion_name},
                 }
             ],
         )
@@ -342,8 +394,9 @@ def update_log_ingestion_function(input):
 
         # We can't change props during import, so let's set them to their current values
         lambda_client = input.session.client("lambda")
+        unique_log_ingestion_name = get_unique_newrelic_log_ingestion_name(input.session)
         old_props = lambda_client.get_function_configuration(
-            FunctionName="newrelic-log-ingestion"
+            FunctionName=unique_log_ingestion_name
         )
         old_role_name = old_props["Role"].split("/")[-1]
         old_nr_license_key = old_props["Environment"]["Variables"]["LICENSE_KEY"]
@@ -517,12 +570,12 @@ def install_log_ingestion(
     Returns True for success and False for failure.
     """
     assert isinstance(input, IntegrationInstall)
-    function = get_function(input.session, "newrelic-log-ingestion")
+    function = get_newrelic_log_ingestion_function(input.session)
     if function is None:
         stack_status = _check_for_ingest_stack(input.session)
         if stack_status is None:
             click.echo(
-                "Setting up 'newrelic-log-ingestion' function in region: %s"
+                "Setting up newrelic-log-ingestion function in region: %s"
                 % input.session.region_name
             )
             try:
@@ -531,7 +584,7 @@ def install_log_ingestion(
                     nr_license_key,
                 )
             except Exception as e:
-                failure("Failed to create 'newrelic-log-ingestion' function: %s" % e)
+                failure("Failed to create newrelic-log-ingestion function: %s" % e)
                 return False
         else:
             failure(
@@ -543,11 +596,10 @@ def install_log_ingestion(
             return False
     else:
         success(
-            "The 'newrelic-log-ingestion' function already exists in region %s, "
+            "The newrelic-log-ingestion function already exists in region %s, "
             "skipping" % input.session.region_name
         )
     return True
-
 
 @catch_boto_errors
 def update_log_ingestion(input):
@@ -557,15 +609,6 @@ def update_log_ingestion(input):
     Returns True for success and False for failure.
     """
     assert isinstance(input, IntegrationUpdate)
-
-    function = get_function(input.session, "newrelic-log-ingestion")
-    if function is None:
-        failure(
-            "No 'newrelic-log-ingestion' function in region '%s'. "
-            "Run 'newrelic-lambda integrations install' to install it."
-            % input.session.region_name
-        )
-        return False
 
     stack_status = _check_for_ingest_stack(input.session)
     if stack_status is None:
@@ -578,10 +621,19 @@ def update_log_ingestion(input):
         )
         return False
 
+    function = get_newrelic_log_ingestion_function(input.session)
+    if function is None:
+        failure(
+            "No newrelic-log-ingestion function in region '%s'. "
+            "Run 'newrelic-lambda integrations install' to install it."
+            % input.session.region_name
+        )
+        return False
+
     try:
         update_log_ingestion_function(input)
     except Exception as e:
-        failure("Failed to update 'newrelic-log-ingestion' function: %s" % e)
+        failure("Failed to update newrelic-log-ingestion function: %s" % e)
         return False
     else:
         return True
@@ -592,7 +644,7 @@ def get_log_ingestion_license_key(session):
     """
     Fetches the license key value from the log ingestion function
     """
-    function = get_function(session, "newrelic-log-ingestion")
+    function = get_newrelic_log_ingestion_function(session)
     if function:
         return function["Configuration"]["Environment"]["Variables"]["LICENSE_KEY"]
     return None
