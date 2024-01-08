@@ -70,8 +70,8 @@ def get_aliased_functions(input):
     functions = [
         function
         for function in input.functions
-        if function.lower()
-        not in ("all", "installed", "not-installed") and "newrelic-log-ingestion" not in function.lower()
+        if function.lower() not in ("all", "installed", "not-installed")
+        and "newrelic-log-ingestion" not in function.lower()
         and function not in input.excludes
     ]
 

@@ -8,6 +8,7 @@ INTEGRATION_INSTALL_KEYS = [
     "aws_permissions_check",
     "aws_role_policy",
     "enable_logs",
+    "stackname",
     "memory_size",
     "linked_account_name",
     "nr_account_id",
@@ -26,6 +27,7 @@ INTEGRATION_UNINSTALL_KEYS = [
     "aws_profile",
     "aws_region",
     "aws_permissions_check",
+    "stackname",
     "nr_account_id",
     "force",
 ]
@@ -36,6 +38,7 @@ INTEGRATION_UPDATE_KEYS = [
     "aws_region",
     "aws_permissions_check",
     "enable_logs",
+    "stackname",
     "memory_size",
     "nr_account_id",
     "nr_api_key",
@@ -80,6 +83,7 @@ SUBSCRIPTION_INSTALL_KEYS = [
     "aws_region",
     "aws_permissions_check",
     "functions",
+    "stackname",
     "excludes",
     "filter_pattern",
 ]
@@ -90,6 +94,7 @@ SUBSCRIPTION_UNINSTALL_KEYS = [
     "aws_region",
     "aws_permissions_check",
     "functions",
+    "stackname",
     "excludes",
 ]
 

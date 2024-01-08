@@ -43,8 +43,8 @@ def _get_role(session, role_name):
         raise click.UsageError(str(e))
 
 
-def _check_for_ingest_stack(session):
-    return _get_cf_stack_status(session, INGEST_STACK_NAME)
+def _check_for_ingest_stack(session, stack_name):
+    return _get_cf_stack_status(session, stack_name)
 
 
 def _get_cf_stack_status(session, stack_name, nr_account_id=None):
@@ -85,18 +85,19 @@ def _get_cf_stack_status(session, stack_name, nr_account_id=None):
     else:
         return res["Stacks"][0]["StackStatus"]
 
-def get_unique_newrelic_log_ingestion_name(session):
-    stack_id = _get_cf_stack_id(session, stack_name=INGEST_STACK_NAME)
-    return "newrelic-log-ingestion-%s"%(stack_id.split("/")[2].split("-")[4])
 
-def get_newrelic_log_ingestion_function(session):
-    unique_log_ingestion_name = get_unique_newrelic_log_ingestion_name(session)
-    old_log_ingestion_name = "newrelic-log-ingestion"
+def get_unique_newrelic_log_ingestion_name(session, stackname = None):
+    if not stackname:
+        stackname = INGEST_STACK_NAME
+    stack_id = _get_cf_stack_id(session, stack_name=stackname)
+    if stack_id:
+        return "newrelic-log-ingestion-%s"%(stack_id.split("/")[2].split("-")[4])
 
-    function = get_function(session, unique_log_ingestion_name)
-    if function is None:
-        function = get_function(session, old_log_ingestion_name)
-    return function
+def get_newrelic_log_ingestion_function(session, stackname = None):
+    unique_log_ingestion_name = get_unique_newrelic_log_ingestion_name(session, stackname)
+    if unique_log_ingestion_name:
+        function = get_function(session, unique_log_ingestion_name)
+        return function
 
 def _get_cf_stack_id(session, stack_name, nr_account_id=None):
     """Returns the StackId of the CloudFormation stack if it exists"""
@@ -135,6 +136,7 @@ def _get_cf_stack_id(session, stack_name, nr_account_id=None):
         raise click.UsageError(str(e))
     else:
         return res["Stacks"][0]["StackId"]
+
 
 # TODO: Merge this with create_integration_role?
 def _create_role(input):
@@ -250,31 +252,33 @@ def _import_log_ingestion_function(input, nr_license_key):
     )
 
     with open(template_path) as template:
-        unique_log_ingestion_name = get_unique_newrelic_log_ingestion_name(input.session)
-
-        change_set_name = "%s-IMPORT-%d" % (INGEST_STACK_NAME, int(time.time()))
-        click.echo("Creating change set: %s" % change_set_name)
-
-        change_set = client.create_change_set(
-            StackName=INGEST_STACK_NAME,
-            TemplateBody=template.read(),
-            Parameters=parameters,
-            Capabilities=capabilities,
-            Tags=[{"Key": key, "Value": value} for key, value in input.tags]
-            if input.tags
-            else [],
-            ChangeSetType="IMPORT",
-            ChangeSetName=change_set_name,
-            ResourcesToImport=[
-                {
-                    "ResourceType": "AWS::Lambda::Function",
-                    "LogicalResourceId": "NewRelicLogIngestionFunctionNoCap",
-                    "ResourceIdentifier": {"FunctionName": unique_log_ingestion_name},
-                }
-            ],
+        unique_log_ingestion_name = get_unique_newrelic_log_ingestion_name(
+            input.session
         )
+        if unique_log_ingestion_name:
+            change_set_name = "%s-IMPORT-%d" % (INGEST_STACK_NAME, int(time.time()))
+            click.echo("Creating change set: %s" % change_set_name)
 
-        _exec_change_set(client, change_set, "IMPORT")
+            change_set = client.create_change_set(
+                StackName=INGEST_STACK_NAME,
+                TemplateBody=template.read(),
+                Parameters=parameters,
+                Capabilities=capabilities,
+                Tags=[{"Key": key, "Value": value} for key, value in input.tags]
+                if input.tags
+                else [],
+                ChangeSetType="IMPORT",
+                ChangeSetName=change_set_name,
+                ResourcesToImport=[
+                    {
+                        "ResourceType": "AWS::Lambda::Function",
+                        "LogicalResourceId": "NewRelicLogIngestionFunctionNoCap",
+                        "ResourceIdentifier": {"FunctionName": unique_log_ingestion_name},
+                    }
+                ],
+            )
+
+            _exec_change_set(client, change_set, "IMPORT")
 
 
 def _create_log_ingestion_function(
@@ -293,11 +297,11 @@ def _create_log_ingestion_function(
     click.echo("Fetching new CloudFormation template url")
     template_url = _get_sar_template_url(input.session)
 
-    change_set_name = "%s-%s-%d" % (INGEST_STACK_NAME, mode, int(time.time()))
+    change_set_name = "%s-%s-%d" % (input.stackname, mode, int(time.time()))
     click.echo("Creating change set: %s" % change_set_name)
 
     change_set = client.create_change_set(
-        StackName=INGEST_STACK_NAME,
+        StackName=input.stackname,
         TemplateURL=template_url,
         Parameters=parameters,
         Capabilities=capabilities,
@@ -308,10 +312,10 @@ def _create_log_ingestion_function(
         ChangeSetName=change_set_name,
     )
 
-    _exec_change_set(client, change_set, mode)
+    _exec_change_set(client, change_set, mode, input.stackname)
 
 
-def _exec_change_set(client, change_set, mode, stack_name=INGEST_STACK_NAME):
+def _exec_change_set(client, change_set, mode, stack_name):
     click.echo(
         "Waiting for change set creation to complete, this may take a minute... ",
         nl=False,
@@ -376,7 +380,6 @@ def update_log_ingestion_function(input):
         len(stack_resources) > 0
         and stack_resources[0]["ResourceType"] == "AWS::CloudFormation::Stack"
     ):
-
         click.echo("Unwrapping nested stack... ", nl=False)
 
         # Set the ingest function itself to disallow deletes
@@ -394,10 +397,24 @@ def update_log_ingestion_function(input):
 
         # We can't change props during import, so let's set them to their current values
         lambda_client = input.session.client("lambda")
-        unique_log_ingestion_name = get_unique_newrelic_log_ingestion_name(input.session)
-        old_props = lambda_client.get_function_configuration(
-            FunctionName=unique_log_ingestion_name
+        unique_log_ingestion_name = get_unique_newrelic_log_ingestion_name(
+            input.session
         )
+        old_props = {}
+        try:
+            old_props = lambda_client.get_function_configuration(
+                FunctionName=unique_log_ingestion_name
+            )
+        except lambda_client.exceptions.ResourceNotFoundException:
+            old_props = lambda_client.get_function_configuration(
+                FunctionName="newrelic-log-ingestion"
+            )
+            warning(
+                "It looks like an old log ingestion function is present in this region. "
+                "Consider manually deleting this as it is no longer used and "
+                "has been replaced by a log ingestion function specific to the stack."
+            )
+
         old_role_name = old_props["Role"].split("/")[-1]
         old_nr_license_key = old_props["Environment"]["Variables"]["LICENSE_KEY"]
         old_enable_logs = False
@@ -477,19 +494,19 @@ def remove_log_ingestion_function(input):
     assert isinstance(input, IntegrationUninstall)
 
     client = input.session.client("cloudformation")
-    stack_status = _check_for_ingest_stack(input.session)
+    stack_status = _check_for_ingest_stack(input.session, input.stackname)
     if stack_status is None:
         click.echo(
             "No New Relic AWS Lambda log ingestion found in region %s, skipping"
             % input.session.region_name
         )
         return
-    click.echo("Deleting New Relic log ingestion stack '%s'" % INGEST_STACK_NAME)
-    client.delete_stack(StackName=INGEST_STACK_NAME)
+    click.echo("Deleting New Relic log ingestion stack '%s'" % input.stackname)
+    client.delete_stack(StackName=input.stackname)
     click.echo(
         "Waiting for stack deletion to complete, this may take a minute... ", nl=False
     )
-    client.get_waiter("stack_delete_complete").wait(StackName=INGEST_STACK_NAME)
+    client.get_waiter("stack_delete_complete").wait(StackName=input.stackname)
     success("Done")
 
 
@@ -570,23 +587,36 @@ def install_log_ingestion(
     Returns True for success and False for failure.
     """
     assert isinstance(input, IntegrationInstall)
-    function = get_newrelic_log_ingestion_function(input.session)
-    if function is None:
-        stack_status = _check_for_ingest_stack(input.session)
-        if stack_status is None:
-            click.echo(
-                "Setting up newrelic-log-ingestion function in region: %s"
-                % input.session.region_name
+    function = get_function(input.session, "newrelic-log-ingestion")
+    if function:
+        warning(
+            "It looks like an old log ingestion function is present in this region. "
+            "Consider manually deleting this as it is no longer used and "
+            "has been replaced by a log ingestion function specific to the stack."
+        )
+    stack_status = _check_for_ingest_stack(input.session, input.stackname)
+    if stack_status is None:
+        click.echo(
+            "Setting up CloudFormation Stack %s in region: %s"
+            % (input.stackname, input.session.region_name)
+        )
+        try:
+            _create_log_ingestion_function(
+                input,
+                nr_license_key,
             )
-            try:
-                _create_log_ingestion_function(
-                    input,
-                    nr_license_key,
-                )
-            except Exception as e:
-                failure("Failed to create newrelic-log-ingestion function: %s" % e)
-                return False
-        else:
+            return True
+        except Exception as e:
+            failure(
+                "CloudFormation Stack NewRelicLogIngestion exists (status: %s).\n"
+                "Please manually delete the stack and re-run this command."
+                % stack_status
+            )
+            return False
+    else:
+        function = get_newrelic_log_ingestion_function(input.session)
+
+        if function is None:
             failure(
                 "CloudFormation Stack NewRelicLogIngestion exists (status: %s), but "
                 "newrelic-log-ingestion Lambda function does not.\n"
@@ -594,12 +624,14 @@ def install_log_ingestion(
                 % stack_status
             )
             return False
-    else:
-        success(
-            "The newrelic-log-ingestion function already exists in region %s, "
-            "skipping" % input.session.region_name
-        )
-    return True
+        else:
+            success(
+                "The CloudFormation Stack NewRelicLogIngestion and "
+                "newrelic-log-ingestion function already exists in region %s, "
+                "skipping" % input.session.region_name
+            )
+            return True
+
 
 @catch_boto_errors
 def update_log_ingestion(input):
@@ -610,7 +642,7 @@ def update_log_ingestion(input):
     """
     assert isinstance(input, IntegrationUpdate)
 
-    stack_status = _check_for_ingest_stack(input.session)
+    stack_status = _check_for_ingest_stack(input.session, input.stackname)
     if stack_status is None:
         failure(
             "No 'NewRelicLogIngestion' stack in region '%s'. "
@@ -621,7 +653,7 @@ def update_log_ingestion(input):
         )
         return False
 
-    function = get_newrelic_log_ingestion_function(input.session)
+    function = get_newrelic_log_ingestion_function(input.session, input.stackname)
     if function is None:
         failure(
             "No newrelic-log-ingestion function in region '%s'. "
