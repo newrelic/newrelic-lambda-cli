@@ -375,7 +375,7 @@ def test_install(aws_credentials, mock_function_config):
             install(
                 layer_install(nr_account_id=12345, session=mock_session), "foobarbaz"
             )
-            is True
+            is False
         )
 
         mock_client.get_function.reset_mock(return_value=True)
