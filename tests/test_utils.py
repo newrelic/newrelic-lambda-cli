@@ -80,8 +80,6 @@ def test_supports_lambda_extension():
             "java17",
             "java11",
             "java8.al2",
-            "nodejs12.x",
-            "nodejs14.x",
             "nodejs16.x",
             "nodejs18.x",
             "nodejs20.x",

@@ -476,6 +476,6 @@ def test_uninstall(aws_credentials, mock_function_config):
 
 
 def test_layers_index():
-    layers = index("ap-southeast-1", "nodejs14.x", "x86_64")
+    layers = index("ap-southeast-1", "nodejs20.x", "x86_64")
 
     assert len(layers) == 1
