@@ -89,7 +89,7 @@ def _add_new_relic(input, config, nr_license_key):
             "Unsupported Lambda runtime for '%s': %s"
             % (config["Configuration"]["FunctionArn"], runtime)
         )
-        return True
+        return False
 
     architectures = config["Configuration"].get("Architectures", ["x86_64"])
     architecture = architectures[0]

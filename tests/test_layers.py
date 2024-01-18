@@ -71,7 +71,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
             config,
             nr_license_key=None,
         )
-        is True
+        is False
     )
 
     config = mock_function_config("python3.12")
