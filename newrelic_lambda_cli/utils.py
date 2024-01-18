@@ -36,10 +36,6 @@ RUNTIME_CONFIG = {
     },
     "provided": {"LambdaExtension": True},
     "provided.al2": {"LambdaExtension": True},
-    "python3.6": {
-        "Handler": "newrelic_lambda_wrapper.handler",
-        "LambdaExtension": False,
-    },
     "python3.7": {
         "Handler": "newrelic_lambda_wrapper.handler",
         "LambdaExtension": True,
@@ -57,6 +53,10 @@ RUNTIME_CONFIG = {
         "LambdaExtension": True,
     },
     "python3.11": {
+        "Handler": "newrelic_lambda_wrapper.handler",
+        "LambdaExtension": True,
+    },
+    "python3.12": {
         "Handler": "newrelic_lambda_wrapper.handler",
         "LambdaExtension": True,
     },

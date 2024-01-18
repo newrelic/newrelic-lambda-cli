@@ -406,7 +406,7 @@ def test_remove_integration_role(aws_credentials):
 def test_install_log_ingestion(aws_credentials, mock_function_config):
     mock_session = MagicMock()
     mock_client = mock_session.client.return_value
-    mock_client.get_function.return_value = mock_function_config("python3.6")
+    mock_client.get_function.return_value = mock_function_config("python3.7")
 
     assert (
         install_log_ingestion(
@@ -451,7 +451,7 @@ def test_update_log_ingestion(aws_credentials, mock_function_config):
     )
 
     mock_client.get_function.reset_mock(return_value=True)
-    mock_client.get_function.return_value = mock_function_config("python3.6")
+    mock_client.get_function.return_value = mock_function_config("python3.7")
     mock_client.describe_stacks.return_value = {"Stacks": [{"StackStatus": None}]}
 
     assert (

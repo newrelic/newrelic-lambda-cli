@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 RUN useradd -r -u 1000 newrelic-lambda-cli
 USER newrelic-lambda-cli
 WORKDIR /home/newrelic-lambda-cli
