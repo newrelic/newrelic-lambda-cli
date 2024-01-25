@@ -70,7 +70,11 @@ def test__create_log_ingestion_function__defaults(success_mock):
 
         _create_log_ingestion_function(
             integration_install(
-                session=session, enable_logs=False, memory_size=128, timeout=30, stackname="NewRelicLogIngestion"
+                session=session,
+                enable_logs=False,
+                memory_size=128,
+                timeout=30,
+                stackname="NewRelicLogIngestion",
             ),
             "test_key",
         )
