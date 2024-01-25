@@ -6,6 +6,7 @@ from newrelic_lambda_cli.cli import functions, integrations, layers, subscriptio
 
 
 @click.group()
+@click.version_option()
 @click.option("--verbose", "-v", help="Increase verbosity", is_flag=True)
 @click.pass_context
 def cli(ctx, verbose):

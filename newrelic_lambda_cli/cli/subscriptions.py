@@ -38,6 +38,14 @@ def register(group):
     required=True,
 )
 @click.option(
+    "--stackname",
+    default="NewRelicLogIngestion",
+    help="The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function",
+    metavar="<arn>",
+    show_default=False,
+    required=False,
+)
+@click.option(
     "excludes",
     "--exclude",
     "-e",
@@ -91,6 +99,14 @@ def install(**kwargs):
     metavar="<arn>",
     multiple=True,
     required=True,
+)
+@click.option(
+    "--stackname",
+    default="NewRelicLogIngestion",
+    help="The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function",
+    metavar="<arn>",
+    show_default=False,
+    required=False,
 )
 @click.option(
     "excludes",

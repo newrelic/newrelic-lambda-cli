@@ -21,13 +21,24 @@ def test__get_log_group_name():
 @patch("newrelic_lambda_cli.subscriptions._create_subscription_filter", autospec=True)
 @patch("newrelic_lambda_cli.subscriptions._get_subscription_filters", autospec=True)
 @patch("newrelic_lambda_cli.subscriptions._remove_subscription_filter", autospec=True)
+@patch("newrelic_lambda_cli.integrations.get_function", autospec=True)
 @patch("newrelic_lambda_cli.subscriptions.get_function", autospec=True)
+@patch(
+    "newrelic_lambda_cli.integrations.get_unique_newrelic_log_ingestion_name",
+    autospec=True,
+)
 def test_create_log_subscription(
+    mock_get_unique_newrelic_log_ingestion_name,
+    mock_subscriptions_get_function,
     mock_get_function,
     mock_remove_subscription_filter,
     mock_get_subscription_filters,
     mock_create_subscription_filter,
 ):
+    mock_get_unique_newrelic_log_ingestion_name.return_value = "newrelic-log-ingestion"
+
+    mock_subscriptions_get_function.side_effect = None
+
     mock_get_function.side_effect = (
         None,
         {"Configuration": {"FunctionArn": "FooBarBaz"}},

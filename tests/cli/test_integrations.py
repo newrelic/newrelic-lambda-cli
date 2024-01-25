@@ -1,4 +1,4 @@
-from unittest.mock import patch, call, ANY
+from unittest.mock import patch, MagicMock, call, ANY
 
 from newrelic_lambda_cli.cli import cli, register_groups
 
@@ -30,7 +30,7 @@ def test_integrations_install(
     assert result.exit_code == 0, result.stderr
 
     boto3_mock.assert_has_calls(
-        [call.Session(profile_name=None, region_name="us-east-1")]
+        [call.Session(profile_name='default', region_name="us-east-1")]
     )
 
     permissions_mock.assert_has_calls(
@@ -83,7 +83,7 @@ def test_integrations_uninstall(
     assert result.exit_code == 0, result.stderr
 
     boto3_mock.assert_has_calls(
-        [call.Session(profile_name=None, region_name="us-east-1")]
+        [call.Session(profile_name='default', region_name="us-east-1")]
     )
     permissions_mock.assert_not_called()
     integrations_mock.assert_has_calls(
@@ -120,7 +120,7 @@ def test_integrations_uninstall_force(
     assert result.exit_code == 0, result.stderr
 
     boto3_mock.assert_has_calls(
-        [call.Session(profile_name=None, region_name="us-east-1")]
+        [call.Session(profile_name='default', region_name="us-east-1")]
     )
 
     permissions_mock.assert_has_calls(
@@ -163,7 +163,7 @@ def test_integrations_update(
     assert result.exit_code == 0, result.stderr
 
     boto3_mock.assert_has_calls(
-        [call.Session(profile_name=None, region_name="us-east-1")]
+        [call.Session(profile_name='default', region_name="us-east-1")]
     )
     permissions_mock.assert_has_calls(
         [call.ensure_integration_install_permissions(ANY)]

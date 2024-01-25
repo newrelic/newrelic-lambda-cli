@@ -114,6 +114,7 @@ newrelic-lambda integrations install \
 | `--aws-role-policy` | No | Specify an alternative IAM role policy ARN for this integration. |
 | `--disable-license-key-secret` | No | Don't create a managed secret for your account's New Relic License Key |
 | `--tag <key> <value>` | No | Sets tags on the CloudFormation Stacks this CLI creates. Can be used multiple times, example: `--tag key1 value1 --tag key2 value2`. |
+| `--stackname` | No | The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function. If no value is provided, the command searches for the NewRelicLogIngestion stack |
 
 #### Uninstall Integration
 
@@ -127,6 +128,7 @@ newrelic-lambda integrations uninstall
 | `--aws-region` or `-r` | No | The AWS region for the integration. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 | `--force` or `-f` | No | Forces uninstall non-interactively |
 | `--nr-account-id` or `-a` | No | The [New Relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) for the integration. Only required if also uninstalling the New Relic AWS Lambda integration. Can also use the `NEW_RELIC_ACCOUNT_ID` environment variable. |
+| `--stackname` | No | The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function. If no value is provided, the command searches for the NewRelicLogIngestion stack |
 
 #### Update Integration
 
@@ -154,6 +156,7 @@ newrelic-lambda integrations update \
 | `--aws-region` or `-r` | No | The AWS region for the integration. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 | `--disable-license-key-secret` | No | Disable automatic creation of the license key secret on update. The secret is not created if it exists. |
 | `--tag <key> <value>` | No | Sets tags on the CloudFormation Stacks this CLI creates. Can be used multiple times, example: `--tag key1 value1 --tag key2 value2`. |
+| `--stackname` | No | The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function. If no value is provided, the command searches for the NewRelicLogIngestion stack |
 
 ### AWS Lambda Layers
 
@@ -226,6 +229,7 @@ newrelic-lambda subscriptions install --function <name or arn>
 | Option | Required? | Description |
 |--------|-----------|-------------|
 | `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to add a log subscription. Can provide multiple `--function` arguments. Will also accept `all`, `installed` and `not-installed` similar to `newrelic-lambda functions list`. |
+| `--stackname` | No | The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function. If no value is provided, the command searches for the NewRelicLogIngestion stack |
 | `--exclude` or `-e` | No | A function name to exclude while installing subscriptions. Can provide multiple `--exclude` arguments. Only checked when `all`, `installed` and `not-installed` are used. See `newrelic-lambda functions list` for function names. |
 | `--filter-pattern` | No | Specify a custom log subscription filter pattern. To collect all logs use `--filter-pattern ""`. |
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
@@ -240,6 +244,7 @@ newrelic-lambda subscriptions uninstall --function <name or arn>
 | Option | Required? | Description |
 |--------|-----------|-------------|
 | `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to remove a log subscription. Can provide multiple `--function` arguments. Will also accept `all`, `installed` and `not-installed` similar to `newrelic-lambda functions list`. |
+| `--stackname` | No | The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function. If no value is provided, the command searches for the NewRelicLogIngestion stack |
 | `--exclude` or `-e` | No | A function name to exclude while uninstalling subscriptions. Can provide multiple `--exclude` arguments. Only checked when `all`, `installed` and `not-installed` are used. See `newrelic-lambda functions list` for function names. |
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |

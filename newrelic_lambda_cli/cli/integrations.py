@@ -40,6 +40,14 @@ def register(group):
     is_flag=True,
 )
 @click.option(
+    "--stackname",
+    default="NewRelicLogIngestion",
+    help="The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function",
+    metavar="<arn>",
+    show_default=False,
+    required=False,
+)
+@click.option(
     "--memory-size",
     "-m",
     default=128,
@@ -195,6 +203,14 @@ def install(ctx, **kwargs):
     required=False,
     type=click.INT,
 )
+@click.option(
+    "--stackname",
+    default="NewRelicLogIngestion",
+    help="The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function",
+    metavar="<arn>",
+    show_default=False,
+    required=False,
+)
 @click.option("--force", "-f", help="Force uninstall non-interactively", is_flag=True)
 def uninstall(**kwargs):
     """Uninstall New Relic AWS Lambda Integration"""
@@ -251,6 +267,14 @@ def uninstall(**kwargs):
     help="Determines if logs are forwarded to New Relic Logging",
 )
 @click.option(
+    "--stackname",
+    default="NewRelicLogIngestion",
+    help="The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function",
+    metavar="<arn>",
+    show_default=False,
+    required=False,
+)
+@click.option(
     "--memory-size",
     "-m",
     help="Memory size (in MiB) for the log ingestion function",
@@ -271,6 +295,14 @@ def uninstall(**kwargs):
     help="The name of a new pre-created execution role for the log ingest function",
     metavar="<role_name>",
     show_default=False,
+)
+@click.option(
+    "--stackname",
+    default="NewRelicLogIngestion",
+    help="The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function",
+    metavar="<arn>",
+    show_default=False,
+    required=False,
 )
 @click.option(
     "--enable-license-key-secret/--disable-license-key-secret",

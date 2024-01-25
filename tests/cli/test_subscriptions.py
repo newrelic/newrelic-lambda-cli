@@ -1,8 +1,8 @@
-from moto import mock_lambda, mock_logs
+from moto import mock_lambda, mock_logs, mock_cloudformation
 
 from newrelic_lambda_cli.cli import cli, register_groups
 
-
+@mock_cloudformation
 @mock_lambda
 @mock_logs
 def test_subscriptions_install(aws_credentials, cli_runner):
@@ -30,11 +30,10 @@ def test_subscriptions_install(aws_credentials, cli_runner):
             "AWS_SESSION_TOKEN": "testing",
         },
     )
-
     assert result.exit_code == 1
     assert result.stdout == ""
     assert (
-        "Could not find 'newrelic-log-ingestion' function. "
+        "Could not find newrelic-log-ingestion function. "
         "Is the New Relic AWS integration installed?"
     ) in result.stderr
 
@@ -62,7 +61,7 @@ def test_subscriptions_install(aws_credentials, cli_runner):
     assert result2.exit_code == 1
     assert result2.stdout == ""
     assert (
-        "Could not find 'newrelic-log-ingestion' function. "
+        "Could not find newrelic-log-ingestion function. "
         "Is the New Relic AWS integration installed?"
     ) in result2.stderr
 

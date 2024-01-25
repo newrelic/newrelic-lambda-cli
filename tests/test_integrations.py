@@ -43,7 +43,7 @@ def test__check_for_ingest_stack_none_when_not_found():
         )
     }
     session = MagicMock(**describe_stack_mock)
-    assert _check_for_ingest_stack(session) is None
+    assert _check_for_ingest_stack(session, "test_stack_name") is None
 
 
 def test__check_for_ingest_stack_status_when_found():
@@ -56,7 +56,7 @@ def test__check_for_ingest_stack_status_when_found():
         }
     }
     session = MagicMock(**describe_stack_mock)
-    assert _check_for_ingest_stack(session) == "CREATE_COMPLETE"
+    assert _check_for_ingest_stack(session, "test_stack_name") == "CREATE_COMPLETE"
 
 
 @patch("newrelic_lambda_cli.integrations.success")
@@ -70,7 +70,7 @@ def test__create_log_ingestion_function__defaults(success_mock):
 
         _create_log_ingestion_function(
             integration_install(
-                session=session, enable_logs=False, memory_size=128, timeout=30
+                session=session, enable_logs=False, memory_size=128, timeout=30, stackname="NewRelicLogIngestion"
             ),
             "test_key",
         )
@@ -115,6 +115,7 @@ def test__create_log_ingestion_function__opts(success_mock):
                 memory_size=256,
                 role_name="CustomExecRole",
                 timeout=60,
+                stackname="NewRelicLogIngestion",
             ),
             "test_key",
         )
@@ -156,8 +157,8 @@ def test_remove_log_ingestion_function(success_mock):
     session.assert_has_calls(
         [
             call.client("cloudformation"),
-            call.client().describe_stacks(StackName="NewRelicLogIngestion"),
-            call.client().delete_stack(StackName="NewRelicLogIngestion"),
+            call.client().describe_stacks(StackName=None),
+            call.client().delete_stack(StackName=None),
         ],
         any_order=True,
     )
@@ -178,7 +179,7 @@ def test_remove_log_ingestion_function_not_present(success_mock):
     session.assert_has_calls(
         [
             call.client("cloudformation"),
-            call.client().describe_stacks(StackName="NewRelicLogIngestion"),
+            call.client().describe_stacks(StackName=None),
         ],
         any_order=True,
     )
@@ -418,7 +419,15 @@ def test_install_log_ingestion(aws_credentials, mock_function_config):
 
     mock_client.get_function.reset_mock(return_value=True)
     mock_client.get_function.return_value = None
-    mock_client.describe_stacks.return_value = {"Stacks": [{"StackStatus": "peachy"}]}
+    mock_client.describe_stacks.return_value = {
+        "Stacks": [
+            {
+                "StackId": "arn:aws:cloudformation:us-east-2:363096433263:stack/NewRelicLogIngestion/ec0fa5a0-abdb-11ee-9bc5-0625ef1d38db",
+                "StackName": "NewRelicLogIngestion",
+                "StackStatus": "CREATE_COMPLETE",
+            }
+        ]
+    }
     assert (
         install_log_ingestion(
             integration_install(nr_account_id=123456789, session=mock_session),
@@ -428,7 +437,10 @@ def test_install_log_ingestion(aws_credentials, mock_function_config):
     )
 
     mock_client.describe_stacks.reset_mock(return_value=True)
-    mock_client.describe_stacks.return_value = {"Stacks": [{"StackStatus": None}]}
+    mock_client.describe_stacks.return_value = {
+        "Stacks": [{"StackId": None, "StackName": None, "StackStatus": None}]
+    }
+    mock_client._check_for_ingest_stack.return_value = None
     assert (
         install_log_ingestion(
             integration_install(nr_account_id=123456789, session=mock_session),
@@ -462,7 +474,15 @@ def test_update_log_ingestion(aws_credentials, mock_function_config):
     )
 
     mock_client.describe_stacks.reset_mock(return_value=True)
-    mock_client.describe_stacks.return_value = {"Stacks": [{"StackStatus": "peachy"}]}
+    mock_client.describe_stacks.return_value = {
+        "Stacks": [
+            {
+                "StackId": "arn:aws:cloudformation:us-east-2:363096433263:stack/NewRelicLogIngestion/ec0fa5a0-abdb-11ee-9bc5-0625ef1d38db",
+                "StackName": "NewRelicLogIngestion",
+                "StackStatus": "CREATE_COMPLETE",
+            }
+        ]
+    }
 
     assert (
         update_log_ingestion(
