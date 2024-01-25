@@ -2,6 +2,7 @@ from moto import mock_lambda, mock_logs, mock_cloudformation
 
 from newrelic_lambda_cli.cli import cli, register_groups
 
+
 @mock_cloudformation
 @mock_lambda
 @mock_logs

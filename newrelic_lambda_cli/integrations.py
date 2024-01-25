@@ -86,18 +86,22 @@ def _get_cf_stack_status(session, stack_name, nr_account_id=None):
         return res["Stacks"][0]["StackStatus"]
 
 
-def get_unique_newrelic_log_ingestion_name(session, stackname = None):
+def get_unique_newrelic_log_ingestion_name(session, stackname=None):
     if not stackname:
         stackname = INGEST_STACK_NAME
     stack_id = _get_cf_stack_id(session, stack_name=stackname)
     if stack_id:
-        return "newrelic-log-ingestion-%s"%(stack_id.split("/")[2].split("-")[4])
+        return "newrelic-log-ingestion-%s" % (stack_id.split("/")[2].split("-")[4])
 
-def get_newrelic_log_ingestion_function(session, stackname = None):
-    unique_log_ingestion_name = get_unique_newrelic_log_ingestion_name(session, stackname)
+
+def get_newrelic_log_ingestion_function(session, stackname=None):
+    unique_log_ingestion_name = get_unique_newrelic_log_ingestion_name(
+        session, stackname
+    )
     if unique_log_ingestion_name:
         function = get_function(session, unique_log_ingestion_name)
         return function
+
 
 def _get_cf_stack_id(session, stack_name, nr_account_id=None):
     """Returns the StackId of the CloudFormation stack if it exists"""
@@ -273,7 +277,9 @@ def _import_log_ingestion_function(input, nr_license_key):
                     {
                         "ResourceType": "AWS::Lambda::Function",
                         "LogicalResourceId": "NewRelicLogIngestionFunctionNoCap",
-                        "ResourceIdentifier": {"FunctionName": unique_log_ingestion_name},
+                        "ResourceIdentifier": {
+                            "FunctionName": unique_log_ingestion_name
+                        },
                     }
                 ],
             )
