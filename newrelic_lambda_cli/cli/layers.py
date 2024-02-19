@@ -108,12 +108,6 @@ def install(ctx, **kwargs):
     """Install New Relic AWS Lambda Layers"""
     input = LayerInstall(session=None, verbose=ctx.obj["VERBOSE"], **kwargs)
 
-    input = input._replace(
-        session=boto3.Session(
-            profile_name=input.aws_profile, region_name=input.aws_region
-        )
-    )
-
     if input.aws_permissions_check:
         permissions.ensure_layer_install_permissions(input)
 
@@ -121,7 +115,16 @@ def install(ctx, **kwargs):
 
     with ThreadPoolExecutor() as executor:
         futures = [
-            executor.submit(layers.install, input, function) for function in functions
+            executor.submit(
+                layers.install,
+                input._replace(
+                    session=boto3.Session(
+                        profile_name=input.aws_profile, region_name=input.aws_region
+                    )
+                ),
+                function,
+            )
+            for function in functions
         ]
         install_success = all(future.result() for future in as_completed(futures))
 
@@ -179,12 +182,6 @@ def uninstall(ctx, **kwargs):
     """Uninstall New Relic AWS Lambda Layers"""
     input = LayerUninstall(session=None, verbose=ctx.obj["VERBOSE"], **kwargs)
 
-    input = input._replace(
-        session=boto3.Session(
-            profile_name=input.aws_profile, region_name=input.aws_region
-        )
-    )
-
     if input.aws_permissions_check:
         permissions.ensure_layer_uninstall_permissions(input)
 
@@ -192,7 +189,16 @@ def uninstall(ctx, **kwargs):
 
     with ThreadPoolExecutor() as executor:
         futures = [
-            executor.submit(layers.uninstall, input, function) for function in functions
+            executor.submit(
+                layers.uninstall,
+                input._replace(
+                    session=boto3.Session(
+                        profile_name=input.aws_profile, region_name=input.aws_region
+                    )
+                ),
+                function,
+            )
+            for function in functions
         ]
         uninstall_success = all(future.result() for future in as_completed(futures))
 
