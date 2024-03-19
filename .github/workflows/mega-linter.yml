@@ -21,7 +21,6 @@
     jobs:
       build:
         name: Mega-Linter
-        environment: newrelic_production_release
         runs-on: ubuntu-latest
         steps:
           # Git Checkout
