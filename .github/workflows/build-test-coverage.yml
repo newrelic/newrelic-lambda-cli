@@ -10,16 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
-    strategy:
-      matrix:
-        python-version: ["3.8"]
     steps:
-      - uses: actions/checkout@v3
-
-      - uses: actions/setup-python@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
-
+          python-version: "3.12"
       - name: Run tests
         run: |
           pip install -q -U pip
