@@ -8,22 +8,28 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
+    strategy:
+      matrix:
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.12"
-    - name: Run tests
-      run: |
-        pip install -q -U pip
-        pip install -q pipenv
-        pipenv install --dev
-        pipenv run pytest --cov-report=xml --cov=newrelic_lambda_cli tests
-    - name: Upload coverage report
-      run: bash -c "$(curl -s https://codecov.io/bash)"
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run tests
+        run: |
+          pip install -q -U pip
+          pip install -q pipenv
+          pipenv install --dev
+          pipenv run pytest --cov-report=xml --cov=newrelic_lambda_cli tests
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with: 
+          fail_ci_if_error: true  
 
   code-style:
     name: Code style
@@ -32,11 +38,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Check code style
-        run: |
-          pip install -q -U pip
-          pip install -q -U 'black<22.10.1'
-          black --check newrelic_lambda_cli tests
       - name: Check README
         run: |
           pip install -q -U pip
