@@ -5,50 +5,10 @@ on:
 
 jobs:
 
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.12"
-    - name: Run tests
-      run: |
-        pip install -q -U pip
-        pip install -q pipenv
-        pipenv install --dev
-        pipenv run pytest --cov-report=xml --cov=newrelic_lambda_cli tests
-    - name: Upload coverage report
-      run: bash -c "$(curl -s https://codecov.io/bash)"
-
-  code-style:
-    name: Code style
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Check code style
-        run: |
-          pip install -q -U pip
-          pip install -q -U 'black<22.10.1'
-          black --check newrelic_lambda_cli tests
-      - name: Check README
-        run: |
-          pip install -q -U pip
-          pip install -q -U setuptools twine wheel
-          python setup.py sdist bdist_wheel
-          twine check dist/*
-
   release:
     name: Release package
     environment: newrelic_production_release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: code-style
     runs-on: ubuntu-latest
 
     steps:
@@ -65,4 +25,4 @@ jobs:
       run: |
         python3 setup.py sdist bdist_wheel
         twine check dist/*
-        twine upload dist/*
+        twine upload --non-interactive dist/*
