@@ -42,7 +42,8 @@
               # https://oxsecurity.github.io/megalinter/configuration/
               VALIDATE_ALL_CODEBASE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }} # Validates all source when push on main, else just the git diff with main. Set 'true' if you always want to lint all sources
               DEFAULT_BRANCH: ${{ github.event_name == 'pull_request' && github.base_ref || 'main' }}
-              GITHUB_TOKEN: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              PAT: ${{ secrets.PAT }}
               # ADD YOUR CUSTOM ENV VARIABLES HERE TO OVERRIDE VALUES OF .mega-linter.yml AT THE ROOT OF YOUR REPOSITORY TEST
     
           # Upload Mega-Linter artifacts
