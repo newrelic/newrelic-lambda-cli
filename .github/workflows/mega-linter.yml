@@ -20,6 +20,7 @@
     
     jobs:
       build:
+        permissions: write-all
         name: Mega-Linter
         runs-on: ubuntu-latest
         steps:
