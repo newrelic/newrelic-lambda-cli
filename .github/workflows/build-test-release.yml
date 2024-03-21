@@ -1,0 +1,27 @@
+name: Build Test & Release Assets
+on:
+  release:
+    types: [published]
+
+jobs:
+
+  release:
+    name: Release package
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Install release dependencies
+      run: |
+        pip install -q -U pip
+        pip install -q -U pyOpenSSL setuptools twine wheel
+    - name: Release package
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.NEWRELIC_PYPI }}
+      run: |
+        python3 setup.py sdist bdist_wheel
+        twine check dist/*
+        twine upload --non-interactive dist/*
