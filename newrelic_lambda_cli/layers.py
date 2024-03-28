@@ -153,7 +153,7 @@ def _add_new_relic(input, config, nr_license_key):
     if any("NewRelicLambdaExtension" in s for s in new_relic_layer):
         runtime_handler = None
 
-    # Only used by Python, Node.js and Java runtimes not using the
+    # Only used by Python, Node.js, Ruby, and Java runtimes not using the
     # NewRelicLambdaExtension layer
     if runtime_handler:
         update_kwargs["Handler"] = runtime_handler
