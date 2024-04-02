@@ -40,6 +40,7 @@ RUNTIME_CONFIG = {
     },
     "provided": {"LambdaExtension": True},
     "provided.al2": {"LambdaExtension": True},
+    "provided.al2023": {"LambdaExtension": True},
     "python3.7": {
         "Handler": "newrelic_lambda_wrapper.handler",
         "LambdaExtension": True,
