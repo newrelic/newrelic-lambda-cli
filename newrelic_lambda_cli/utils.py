@@ -68,6 +68,10 @@ RUNTIME_CONFIG = {
         "Handler": "newrelic_lambda_wrapper.handler",
         "LambdaExtension": True,
     },
+    "ruby3.3": {
+        "Handler": "newrelic_lambda_wrapper.handler",
+        "LambdaExtension": True,
+    },
 }
 
 
