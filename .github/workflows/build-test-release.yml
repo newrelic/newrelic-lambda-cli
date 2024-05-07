@@ -20,7 +20,7 @@ jobs:
     - name: Release package
       env:
         TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.NEWRELIC_PYPI }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
       run: |
         python3 setup.py sdist bdist_wheel
         twine check dist/*
