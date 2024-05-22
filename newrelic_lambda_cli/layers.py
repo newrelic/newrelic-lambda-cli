@@ -202,6 +202,18 @@ def _add_new_relic(input, config, nr_license_key):
             "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
         ] = "false"
 
+    if "dotnet" in runtime:
+        update_kwargs["Environment"]["Variables"]["CORECLR_ENABLE_PROFILING"] = "1"
+        update_kwargs["Environment"]["Variables"][
+            "CORECLR_PROFILER"
+        ] = "{36032161-FFC0-4B61-B559-F6C5D41BAE5A}"
+        update_kwargs["Environment"]["Variables"][
+            "CORECLR_NEWRELIC_HOME"
+        ] = "/opt/lib/newrelic-dotnet-agent"
+        update_kwargs["Environment"]["Variables"][
+            "CORECLR_PROFILER_PATH"
+        ] = "/opt/lib/newrelic-dotnet-agent/libNewRelicProfiler.so"
+
     return update_kwargs
 
 
