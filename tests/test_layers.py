@@ -236,6 +236,69 @@ def test_add_new_relic(aws_credentials, mock_function_config):
 
 
 @mock_lambda
+def test_add_new_relic_dotnet(aws_credentials, mock_function_config):
+    session = boto3.Session(region_name="us-east-1")
+
+    test_runtimes = ["dotnet6", "dotnet8"]
+    for test_runtime in test_runtimes:
+        config = mock_function_config(test_runtime)
+
+        assert config["Configuration"]["Handler"] == "original_handler"
+
+        update_kwargs = _add_new_relic(
+            layer_install(
+                session=session,
+                aws_region="us-east-1",
+                nr_account_id=12345,
+                enable_extension=True,
+                enable_extension_function_logs=True,
+            ),
+            config,
+            nr_license_key=None,
+        )
+
+        # .NET doesn't require specifying a handler by default
+        assert "Handler" not in update_kwargs
+        assert (
+            "NEW_RELIC_LAMBDA_HANDLER" not in update_kwargs["Environment"]["Variables"]
+        )
+
+        assert update_kwargs["FunctionName"] == config["Configuration"]["FunctionArn"]
+        assert (
+            update_kwargs["Environment"]["Variables"]["NEW_RELIC_ACCOUNT_ID"] == "12345"
+        )
+        assert (
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
+            ]
+            == "true"
+        )
+        assert (
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
+            ]
+            == "true"
+        )
+
+        # .NET specific environment variables
+        assert (
+            update_kwargs["Environment"]["Variables"]["CORECLR_ENABLE_PROFILING"] == "1"
+        )
+        assert (
+            update_kwargs["Environment"]["Variables"]["CORECLR_PROFILER"]
+            == "{36032161-FFC0-4B61-B559-F6C5D41BAE5A}"
+        )
+        assert (
+            update_kwargs["Environment"]["Variables"]["CORECLR_NEWRELIC_HOME"]
+            == "/opt/lib/newrelic-dotnet-agent"
+        )
+        assert (
+            update_kwargs["Environment"]["Variables"]["CORECLR_PROFILER_PATH"]
+            == "/opt/lib/newrelic-dotnet-agent/libNewRelicProfiler.so"
+        )
+
+
+@mock_lambda
 def test_remove_new_relic(aws_credentials, mock_function_config):
     session = boto3.Session(region_name="us-east-1")
 
