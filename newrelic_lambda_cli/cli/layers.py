@@ -107,7 +107,11 @@ def register(group):
 def install(ctx, **kwargs):
     """Install New Relic AWS Lambda Layers"""
     input = LayerInstall(session=None, verbose=ctx.obj["VERBOSE"], **kwargs)
-
+    input = input._replace(
+        session=boto3.Session(
+            profile_name=input.aws_profile, region_name=input.aws_region
+        )
+    )
     if input.aws_permissions_check:
         permissions.ensure_layer_install_permissions(input)
 
@@ -181,7 +185,11 @@ def install(ctx, **kwargs):
 def uninstall(ctx, **kwargs):
     """Uninstall New Relic AWS Lambda Layers"""
     input = LayerUninstall(session=None, verbose=ctx.obj["VERBOSE"], **kwargs)
-
+    input = input._replace(
+        session=boto3.Session(
+            profile_name=input.aws_profile, region_name=input.aws_region
+        )
+    )
     if input.aws_permissions_check:
         permissions.ensure_layer_uninstall_permissions(input)
 
