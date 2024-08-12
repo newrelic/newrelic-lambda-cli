@@ -49,7 +49,6 @@ def get_unique_newrelic_otel_log_ingestion_name(session, stackname=None):
     if not stackname:
         stackname = INGEST_OTEL_STACK_NAME
     stack_id = _get_otel_cf_stack_id(session, stack_name=stackname)
-    print("stack_id", stack_id)
     if stack_id:
         return "newrelic-aws-otel-log-ingestion-%s" % (
             stack_id.split("/")[2].split("-")[4]
