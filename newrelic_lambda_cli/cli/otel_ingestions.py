@@ -13,7 +13,7 @@ from newrelic_lambda_cli.cli.decorators import add_options, AWS_OPTIONS, NR_OPTI
 from newrelic_lambda_cli.cliutils import done, failure
 
 
-@click.group(name="otel-ingestion")
+@click.group(name="otel-ingestions")
 def ingestion_group():
     """Manage New Relic AWS Lambda Otel Log Ingestion lambda"""
     pass
@@ -111,7 +111,7 @@ def install(ctx, **kwargs):
         permissions.ensure_integration_install_permissions(input)
 
     click.echo("Validating New Relic credentials")
-    gql_client = api.validate_gql_credentials(input, True)
+    gql_client = api.validate_gql_credentials(input, otel=True)
 
     click.echo("Retrieving integration license key")
     nr_license_key = api.retrieve_license_key(gql_client)
