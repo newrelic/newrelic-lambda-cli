@@ -300,32 +300,6 @@ def remove_otel_log_ingestion_function(input):
 
 
 @catch_boto_errors
-def remove_integration_role(input):
-    """
-    Removes the AWS CloudFormation stack that includes the New Relic AWS Integration
-    IAM role.
-    """
-    assert isinstance(input, OtelIngestionUninstall)
-    client = input.session.client("cloudformation")
-    stack_name = "NewRelicLambdaIntegrationRole-%s" % input.nr_account_id
-    stack_status = _get_cf_stack_status(input.session, stack_name)
-    if stack_status is None:
-        click.echo("No New Relic AWS Lambda Integration found, skipping")
-        return
-    click.echo("Deleting New Relic AWS Lambda Integration stack '%s'" % stack_name)
-    client.delete_stack(StackName=stack_name)
-    click.echo(
-        "Waiting for stack deletion to complete, this may take a minute... ", nl=False
-    )
-    try:
-        client.get_waiter("stack_delete_complete").wait(StackName=stack_name)
-    except botocore.exceptions.WaiterError as e:
-        failure(e.last_response["Status"]["StatusReason"])
-    else:
-        success("Done")
-
-
-@catch_boto_errors
 def install_otel_log_ingestion(
     input,
     nr_license_key,
@@ -419,19 +393,3 @@ def update_otel_log_ingestion(input):
         return False
     else:
         return True
-
-
-@catch_boto_errors
-def get_log_ingestion_license_key(session):
-    """
-    Fetches the license key value from the log ingestion function
-    """
-    function = get_newrelic_otel_log_ingestion_function(session)
-    if function:
-        return function["Configuration"]["Environment"]["Variables"]["LICENSE_KEY"]
-    return None
-
-
-@catch_boto_errors
-def get_aws_account_id(session):
-    return session.client("sts").get_caller_identity().get("Account")

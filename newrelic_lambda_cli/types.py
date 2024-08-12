@@ -56,7 +56,6 @@ OTEL_INGESTION_INSTALL_KEYS = [
     "aws_region",
     "aws_permissions_check",
     "aws_role_policy",
-    "enable_logs",
     "stackname",
     "memory_size",
     "linked_account_name",

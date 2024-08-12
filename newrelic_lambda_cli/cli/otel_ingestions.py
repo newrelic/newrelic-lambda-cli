@@ -34,12 +34,6 @@ def register(group):
     metavar="<arn>",
 )
 @click.option(
-    "--enable-logs",
-    "-e",
-    help="Determines if logs are forwarded to New Relic Logging",
-    is_flag=True,
-)
-@click.option(
     "--stackname",
     default="NewRelicLogIngestion",
     help="The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function",
