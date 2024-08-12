@@ -61,9 +61,19 @@ def register(group):
     metavar="<pattern>",
     show_default=False,
 )
+@click.option(
+    "--otel",
+    "-o",
+    help="Subscribe to OTEL log ingestion function",
+    is_flag=True,
+)
 def install(**kwargs):
     """Install New Relic AWS Lambda Log Subscriptions"""
     input = SubscriptionInstall(session=None, **kwargs)
+    if input.otel and not input.stackname:
+        input = input._replace(
+            stackname="NewRelicOtelLogIngestion",
+        )
     input = input._replace(
         session=boto3.Session(
             profile_name=input.aws_profile, region_name=input.aws_region
@@ -75,18 +85,32 @@ def install(**kwargs):
     functions = get_aliased_functions(input)
 
     with ThreadPoolExecutor() as executor:
-        futures = [
-            executor.submit(
-                subscriptions.create_log_subscription,
-                input._replace(
-                    session=boto3.Session(
-                        profile_name=input.aws_profile, region_name=input.aws_region
-                    )
-                ),
-                function,
-            )
-            for function in functions
-        ]
+        if input.otel:
+            futures = [
+                executor.submit(
+                    subscriptions.create_otel_log_subscription,
+                    input._replace(
+                        session=boto3.Session(
+                            profile_name=input.aws_profile, region_name=input.aws_region
+                        )
+                    ),
+                    function,
+                )
+                for function in functions
+            ]
+        else:
+            futures = [
+                executor.submit(
+                    subscriptions.create_log_subscription,
+                    input._replace(
+                        session=boto3.Session(
+                            profile_name=input.aws_profile, region_name=input.aws_region
+                        )
+                    ),
+                    function,
+                )
+                for function in functions
+            ]
         install_success = all(future.result() for future in as_completed(futures))
 
     if install_success:
@@ -122,9 +146,19 @@ def install(**kwargs):
     metavar="<name>",
     multiple=True,
 )
+@click.option(
+    "--otel",
+    "-o",
+    help="Subscribe to OTEL log ingestion function",
+    is_flag=True,
+)
 def uninstall(**kwargs):
     """Uninstall New Relic AWS Lambda Log Subscriptions"""
     input = SubscriptionUninstall(session=None, **kwargs)
+    if input.otel and not input.stackname:
+        input = input._replace(
+            stackname="NewRelicOtelLogIngestion",
+        )
     input = input._replace(
         session=boto3.Session(
             profile_name=input.aws_profile, region_name=input.aws_region
@@ -136,18 +170,32 @@ def uninstall(**kwargs):
     functions = get_aliased_functions(input)
 
     with ThreadPoolExecutor() as executor:
-        futures = [
-            executor.submit(
-                subscriptions.remove_log_subscription,
-                input._replace(
-                    session=boto3.Session(
-                        profile_name=input.aws_profile, region_name=input.aws_region
-                    )
-                ),
-                function,
-            )
-            for function in functions
-        ]
+        if input.otel:
+            futures = [
+                executor.submit(
+                    subscriptions.remove_otel_log_subscription,
+                    input._replace(
+                        session=boto3.Session(
+                            profile_name=input.aws_profile, region_name=input.aws_region
+                        )
+                    ),
+                    function,
+                )
+                for function in functions
+            ]
+        else:
+            futures = [
+                executor.submit(
+                    subscriptions.remove_log_subscription,
+                    input._replace(
+                        session=boto3.Session(
+                            profile_name=input.aws_profile, region_name=input.aws_region
+                        )
+                    ),
+                    function,
+                )
+                for function in functions
+            ]
         uninstall_success = all(future.result() for future in as_completed(futures))
 
     if uninstall_success:
