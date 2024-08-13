@@ -105,7 +105,7 @@ def install(ctx, **kwargs):
         permissions.ensure_integration_install_permissions(input)
 
     click.echo("Validating New Relic credentials")
-    gql_client = api.validate_gql_credentials(input, otel=True)
+    gql_client = api.validate_gql_credentials(input)
 
     click.echo("Retrieving integration license key")
     nr_license_key = api.retrieve_license_key(gql_client)

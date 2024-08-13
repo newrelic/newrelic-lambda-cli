@@ -335,11 +335,18 @@ class NewRelicGQL(object):
         return res
 
 
-def validate_gql_credentials(input, otel: bool = False):
-    if otel:
-        assert isinstance(input, (OtelIngestionInstall, OtelIngestionUpdate))
-    else:
-        assert isinstance(input, (IntegrationInstall, IntegrationUpdate, LayerInstall))
+def validate_gql_credentials(input):
+
+    assert isinstance(
+        input,
+        (
+            IntegrationInstall,
+            IntegrationUpdate,
+            LayerInstall,
+            OtelIngestionInstall,
+            OtelIngestionUpdate,
+        ),
+    )
 
     try:
         return NewRelicGQL(input.nr_account_id, input.nr_api_key, input.nr_region)
