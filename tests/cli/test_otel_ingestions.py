@@ -37,7 +37,7 @@ def test_otel_ingestions_install(
 
     api_mock.assert_has_calls(
         [
-            call.validate_gql_credentials(ANY, otel=True),
+            call.validate_gql_credentials(ANY),
             call.retrieve_license_key(ANY),
         ],
         any_order=True,
@@ -52,10 +52,10 @@ def test_otel_ingestions_install(
 
 
 @patch("newrelic_lambda_cli.cli.otel_ingestions.boto3")
-@patch("newrelic_lambda_cli.cli.otel_ingestions.otel_ingestions")
+@patch("newrelic_lambda_cli.cli.otel_ingestions.integrations")
 @patch("newrelic_lambda_cli.cli.otel_ingestions.permissions")
 def test_otel_ingestions_uninstall(
-    permissions_mock, otel_ingestions_mock, boto3_mock, cli_runner
+    permissions_mock, integrations_mock, boto3_mock, cli_runner
 ):
     """
     Assert that 'newrelic-lambda integrations uninstall' uninstall the log ingestion
@@ -81,18 +81,18 @@ def test_otel_ingestions_uninstall(
         [call.Session(profile_name=None, region_name="us-east-1")]
     )
     permissions_mock.assert_not_called()
-    otel_ingestions_mock.assert_has_calls(
+    integrations_mock.assert_has_calls(
         [
-            call.remove_otel_log_ingestion_function(ANY),
+            call.remove_log_ingestion_function(ANY, otel=True),
         ]
     )
 
 
 @patch("newrelic_lambda_cli.cli.otel_ingestions.boto3")
-@patch("newrelic_lambda_cli.cli.otel_ingestions.otel_ingestions")
+@patch("newrelic_lambda_cli.cli.otel_ingestions.integrations")
 @patch("newrelic_lambda_cli.cli.otel_ingestions.permissions")
 def test_otel_ingestions_uninstall_force(
-    permissions_mock, otel_ingestions_mock, boto3_mock, cli_runner
+    permissions_mock, integrations_mock, boto3_mock, cli_runner
 ):
     """
     Test that the --force option bypasses the prompts by not providing input to the CLI runner
@@ -121,9 +121,9 @@ def test_otel_ingestions_uninstall_force(
         [call.ensure_integration_uninstall_permissions(ANY)]
     )
 
-    otel_ingestions_mock.assert_has_calls(
+    integrations_mock.assert_has_calls(
         [
-            call.remove_otel_log_ingestion_function(ANY),
+            call.remove_log_ingestion_function(ANY, otel=True),
         ]
     )
 

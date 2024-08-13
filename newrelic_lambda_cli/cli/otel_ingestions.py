@@ -3,8 +3,7 @@
 import boto3
 import click
 
-from newrelic_lambda_cli import api, otel_ingestions, permissions
-from newrelic_lambda_cli.integrations import remove_log_ingestion_function
+from newrelic_lambda_cli import api, otel_ingestions, permissions, integrations
 from newrelic_lambda_cli.types import (
     OtelIngestionInstall,
     OtelIngestionUninstall,
@@ -139,7 +138,7 @@ def uninstall(**kwargs):
     if input.aws_permissions_check:
         permissions.ensure_integration_uninstall_permissions(input)
 
-    remove_log_ingestion_function(input, otel=True)
+    integrations.remove_log_ingestion_function(input, otel=True)
 
     done("Uninstall Complete")
 
