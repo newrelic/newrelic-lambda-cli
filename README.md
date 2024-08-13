@@ -272,7 +272,6 @@ newrelic-lambda otel-ingestions install \
 |--------|-----------|-------------|
 | `--nr-account-id` or `-a` | Yes | The [New Relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) for this integration. Can also use the `NEW_RELIC_ACCOUNT_ID` environment variable. |
 | `--nr-api-key` or `-k` | Yes | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Can also use the `NEW_RELIC_API_KEY` environment variable. |
-| `--linked-account-name` or `-n` | No | A label for the New Relic Linked Account. This is how this integration will appear in New Relic. Defaults to "New Relic Lambda Integration - <AWS Account ID>". |
 | `--memory-size` or `-m` | No | Memory size (in MiB) for the New Relic log ingestion function. Default to 128MB. |
 | `--nr-region` | No | The New Relic region to use for the integration. Can use the `NEW_RELIC_REGION` environment variable. Can be either `eu` or `us`. Defaults to `us`. |
 | `--timeout` or `-t` | No | Timeout (in seconds) for the New Relic log ingestion function. Defaults to 30 seconds. |
@@ -281,7 +280,7 @@ newrelic-lambda otel-ingestions install \
 | `--aws-region` or `-r` | No | The AWS region for the integration. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 | `--aws-role-policy` | No | Specify an alternative IAM role policy ARN for this integration. |
 | `--tag <key> <value>` | No | Sets tags on the CloudFormation Stacks this CLI creates. Can be used multiple times, example: `--tag key1 value1 --tag key2 value2`. |
-| `--stackname` | No | The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function. If no value is provided, the command searches for the NewRelicLogIngestion stack |
+| `--stackname` | No | The AWS Cloudformation stack name which contains the newrelic-aws-otel-log-ingestion lambda function. If no value is provided, the command searches for the NewRelicOtelLogIngestion stack |
 
 
 #### Uninstall Otel Log Ingestion
@@ -296,7 +295,7 @@ newrelic-lambda otel-ingestions uninstall
 | `--aws-region` or `-r` | No | The AWS region for the integration. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 | `--force` or `-f` | No | Forces uninstall non-interactively |
 | `--nr-account-id` or `-a` | No | The [New Relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) for the integration. Only required if also uninstalling the New Relic AWS Lambda integration. Can also use the `NEW_RELIC_ACCOUNT_ID` environment variable. |
-| `--stackname` | No | The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function. If no value is provided, the command searches for the NewRelicLogIngestion stack |
+| `--stackname` | No | The AWS Cloudformation stack name which contains the newrelic-aws-otel-log-ingestion lambda function. If no value is provided, the command searches for the NewRelicOtelLogIngestion stack |
 
 ### NewRelic Otel Log Subscription
 
@@ -310,7 +309,7 @@ newrelic-lambda subscriptions install --function <name or arn> --otel
 |--------|-----------|-------------|
 | `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to remove a log subscription. Can provide multiple `--function` arguments. Will also accept `all`, `installed` and `not-installed` similar to `newrelic-lambda functions list`. |
 | `--otel` or `-o` | Yes | Use this flag to install subscription filters for Lambdas that are instrumented with OpenTelemetry (Otel) |
-| `--stackname` | No | The AWS Cloudformation stack name which contains the newrelic-otel-log-ingestion lambda function. If no value is provided, the command searches for the NewRelicOtelLogIngestion stack |
+| `--stackname` | No | The AWS Cloudformation stack name which contains the newrelic-aws-otel-log-ingestion lambda function. If no value is provided, the command searches for the NewRelicOtelLogIngestion stack |
 
 
 #### Uninstall Otel Log Subscription
@@ -323,7 +322,7 @@ newrelic-lambda subscriptions uninstall --function <name or arn> --otel
 |--------|-----------|-------------|
 | `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to remove a log subscription. Can provide multiple `--function` arguments. Will also accept `all`, `installed` and `not-installed` similar to `newrelic-lambda functions list`. |
 | `--otel` or `-o` | Yes | Use this flag to install subscription filters for Lambdas that are instrumented with OpenTelemetry (Otel) |
-| `--stackname` | No | The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function. If no value is provided, the command searches for the NewRelicLogIngestion stack |
+| `--stackname` | No | The AWS Cloudformation stack name which contains the newrelic-aws-otel-log-ingestion lambda function. If no value is provided, the command searches for the NewRelicOtelLogIngestion stack |
 
 ## Docker
 
