@@ -20,8 +20,6 @@ def test_otel_ingestions_install(
             "12345678",
             "--nr-api-key",
             "test_key",
-            "--linked-account-name",
-            "test_linked_account",
             "--aws-permissions-check",
         ],
         env={"AWS_DEFAULT_REGION": "us-east-1"},
