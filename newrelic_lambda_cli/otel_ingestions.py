@@ -10,15 +10,19 @@ import json
 
 from newrelic_lambda_cli.cliutils import failure, success, warning
 from newrelic_lambda_cli.functions import get_function
+from newrelic_lambda_cli.integrations import _exec_change_set
 from newrelic_lambda_cli.types import (
     OtelIngestionInstall,
-    OtelIngestionUninstall,
     OtelIngestionUpdate,
 )
 from newrelic_lambda_cli.utils import catch_boto_errors, NR_DOCS_ACT_LINKING_URL
 
 OTEL_INGEST_STACK_NAME = "NewRelicOtelLogIngestion"
 OTEL_INGEST_LAMBDA_NAME = "newrelic-aws-otel-log-ingestion"
+OTEL_SAR_APP_ID = (
+    "arn:aws:serverlessrepo:us-west-2:466768951184:applications/"
+    + OTEL_INGEST_LAMBDA_NAME
+)
 
 
 def _check_for_ingest_stack(session, stack_name):
@@ -78,12 +82,8 @@ def _get_otel_cf_stack_id(session, stack_name, nr_account_id=None):
 
 def _get_otel_sar_template_url(session):
     sar_client = session.client("serverlessrepo")
-    sar_app_id = (
-        "arn:aws:serverlessrepo:us-west-2:466768951184:applications/"
-        + OTEL_INGEST_LAMBDA_NAME
-    )
     template_details = sar_client.create_cloud_formation_template(
-        ApplicationId=sar_app_id
+        ApplicationId=OTEL_SAR_APP_ID
     )
     return template_details["TemplateUrl"]
 
@@ -164,48 +164,6 @@ def _create_otel_log_ingestion_function(
     _exec_change_set(client, change_set, mode, input.stackname)
 
 
-def _exec_change_set(client, change_set, mode, stack_name):
-    click.echo(
-        "Waiting for change set creation to complete, this may take a minute... ",
-        nl=False,
-    )
-
-    try:
-        client.get_waiter("change_set_create_complete").wait(
-            ChangeSetName=change_set["Id"], WaiterConfig={"Delay": 10}
-        )
-    except botocore.exceptions.WaiterError as e:
-        response = e.last_response
-        status = response["Status"]
-        reason = response["StatusReason"]
-        if (
-            status == "FAILED"
-            and "The submitted information didn't contain changes." in reason
-            or "No updates are to be performed" in reason
-        ):
-            success("No Changes Detected")
-            return
-        else:
-            failure(reason)
-            return
-    client.execute_change_set(ChangeSetName=change_set["Id"])
-    click.echo(
-        "Waiting for change set to finish execution. This may take a minute... ",
-        nl=False,
-    )
-
-    exec_waiter_type = "stack_%s_complete" % mode.lower()
-
-    try:
-        client.get_waiter(exec_waiter_type).wait(
-            StackName=stack_name, WaiterConfig={"Delay": 15}
-        )
-    except botocore.exceptions.WaiterError as e:
-        failure(e.last_response["Status"]["StatusReason"])
-    else:
-        success("Done")
-
-
 @catch_boto_errors
 def update_otel_log_ingestion_function(input):
     assert isinstance(input, OtelIngestionUpdate)
@@ -217,27 +175,6 @@ def update_otel_log_ingestion_function(input):
         nr_license_key=None,
         mode="UPDATE",
     )
-
-
-@catch_boto_errors
-def remove_otel_log_ingestion_function(input):
-    assert isinstance(input, OtelIngestionUninstall)
-
-    client = input.session.client("cloudformation")
-    stack_status = _check_for_ingest_stack(input.session, input.stackname)
-    if stack_status is None:
-        click.echo(
-            "No New Relic AWS Lambda otel log ingestion found in region %s, skipping"
-            % input.session.region_name
-        )
-        return
-    click.echo("Deleting New Relic otel log ingestion stack '%s'" % input.stackname)
-    client.delete_stack(StackName=input.stackname)
-    click.echo(
-        "Waiting for stack deletion to complete, this may take a minute... ", nl=False
-    )
-    client.get_waiter("stack_delete_complete").wait(StackName=input.stackname)
-    success("Done")
 
 
 @catch_boto_errors

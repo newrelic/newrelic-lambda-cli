@@ -4,6 +4,7 @@ import boto3
 import click
 
 from newrelic_lambda_cli import api, otel_ingestions, permissions
+from newrelic_lambda_cli.integrations import remove_log_ingestion_function
 from newrelic_lambda_cli.types import (
     OtelIngestionInstall,
     OtelIngestionUninstall,
@@ -35,8 +36,8 @@ def register(group):
 )
 @click.option(
     "--stackname",
-    default="NewRelicOtelLogIngestion",
-    help="The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function",
+    default=otel_ingestions.OTEL_INGEST_STACK_NAME,
+    help=f"The AWS Cloudformation stack name which contains the {otel_ingestions.OTEL_INGEST_LAMBDA_NAME} lambda function",
     metavar="<arn>",
     show_default=False,
     required=False,
@@ -49,13 +50,6 @@ def register(group):
     metavar="<size>",
     show_default=True,
     type=click.INT,
-)
-@click.option(
-    "--linked-account-name",
-    "-n",
-    help="New Relic Linked Account Label",
-    metavar="<name>",
-    required=False,
 )
 @add_options(NR_OPTIONS)
 @click.option(
@@ -75,13 +69,6 @@ def register(group):
     show_default=False,
 )
 @click.option(
-    "--integration-arn",
-    default=None,
-    help="The ARN of a pre-existing AWS IAM role for the New Relic Lambda integration",
-    metavar="<role_arn>",
-    show_default=False,
-)
-@click.option(
     "--tag",
     "tags",
     default=[],
@@ -92,7 +79,7 @@ def register(group):
 )
 @click.pass_context
 def install(ctx, **kwargs):
-    """Install New Relic AWS Lambda Integration"""
+    """Install New Relic AWS OTEL Ingestion Lambda"""
     input = OtelIngestionInstall(session=None, verbose=ctx.obj["VERBOSE"], **kwargs)
 
     input = input._replace(
@@ -112,7 +99,9 @@ def install(ctx, **kwargs):
 
     install_success = True
 
-    click.echo("Creating newrelic-otel-log-ingestion Lambda function in AWS account")
+    click.echo(
+        f"Creating {otel_ingestions.OTEL_INGEST_LAMBDA_NAME} Lambda function in AWS account"
+    )
     res = otel_ingestions.install_otel_log_ingestion(input, nr_license_key)
     install_success = res and install_success
 
@@ -130,15 +119,15 @@ def install(ctx, **kwargs):
 )
 @click.option(
     "--stackname",
-    default="NewRelicOtelLogIngestion",
-    help="The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function",
+    default=otel_ingestions.OTEL_INGEST_STACK_NAME,
+    help=f"The AWS Cloudformation stack name which contains the {otel_ingestions.OTEL_INGEST_LAMBDA_NAME} lambda function",
     metavar="<arn>",
     show_default=False,
     required=False,
 )
 @click.option("--force", "-f", help="Force uninstall non-interactively", is_flag=True)
 def uninstall(**kwargs):
-    """Uninstall New Relic AWS Lambda Integration"""
+    """Uninstall New Relic AWS OTEL Ingestion Lambda"""
     input = OtelIngestionUninstall(session=None, **kwargs)
 
     input = input._replace(
@@ -150,7 +139,7 @@ def uninstall(**kwargs):
     if input.aws_permissions_check:
         permissions.ensure_integration_uninstall_permissions(input)
 
-    otel_ingestions.remove_otel_log_ingestion_function(input)
+    remove_log_ingestion_function(input, otel=True)
 
     done("Uninstall Complete")
 
@@ -158,14 +147,9 @@ def uninstall(**kwargs):
 @click.command(name="update")
 @add_options(AWS_OPTIONS)
 @click.option(
-    "--enable-logs/--disable-logs",
-    default=None,
-    help="Determines if logs are forwarded to New Relic Logging",
-)
-@click.option(
     "--stackname",
-    default="NewRelicLogIngestion",
-    help="The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function",
+    default=otel_ingestions.OTEL_INGEST_STACK_NAME,
+    help=f"The AWS Cloudformation stack name which contains the {otel_ingestions.OTEL_INGEST_LAMBDA_NAME} lambda function",
     metavar="<arn>",
     show_default=False,
     required=False,
@@ -201,12 +185,6 @@ def uninstall(**kwargs):
     required=False,
 )
 @click.option(
-    "--enable-license-key-secret/--disable-license-key-secret",
-    default=True,
-    show_default=True,
-    help="Enable/disable the license key managed secret",
-)
-@click.option(
     "--tag",
     "tags",
     default=[],
@@ -216,7 +194,7 @@ def uninstall(**kwargs):
     nargs=2,
 )
 def update(**kwargs):
-    """UpdateNew Relic AWS Lambda Integration"""
+    """UpdateNew New Relic AWS OTEL Ingestion Lambda"""
     input = OtelIngestionUpdate(session=None, **kwargs)
 
     input = input._replace(
@@ -231,7 +209,7 @@ def update(**kwargs):
     update_success = True
 
     click.echo(
-        "Updating newrelic-aws-otel-log-ingestion Lambda function in AWS account"
+        f"Updating {otel_ingestions.OTEL_INGEST_LAMBDA_NAME} Lambda function in AWS account"
     )
     res = otel_ingestions.update_otel_log_ingestion(input)
     update_success = res and update_success

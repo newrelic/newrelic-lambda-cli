@@ -58,13 +58,11 @@ OTEL_INGESTION_INSTALL_KEYS = [
     "aws_role_policy",
     "stackname",
     "memory_size",
-    "linked_account_name",
     "nr_account_id",
     "nr_api_key",
     "nr_region",
     "timeout",
     "role_name",
-    "integration_arn",
     "tags",
 ]
 
@@ -83,7 +81,6 @@ OTEL_INGESTION_UPDATE_KEYS = [
     "aws_profile",
     "aws_region",
     "aws_permissions_check",
-    "enable_logs",
     "stackname",
     "memory_size",
     "nr_account_id",
@@ -91,7 +88,6 @@ OTEL_INGESTION_UPDATE_KEYS = [
     "nr_region",
     "timeout",
     "role_name",
-    "enable_license_key_secret",
     "tags",
 ]
 
