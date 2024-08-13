@@ -70,7 +70,7 @@ def register(group):
 def install(**kwargs):
     """Install New Relic AWS Lambda Log Subscriptions"""
     input = SubscriptionInstall(session=None, **kwargs)
-    if input.otel and not input.stackname:
+    if input.otel and input.stackname == "NewRelicLogIngestion":
         input = input._replace(
             stackname="NewRelicOtelLogIngestion",
         )
@@ -131,14 +131,6 @@ def install(**kwargs):
     required=True,
 )
 @click.option(
-    "--stackname",
-    default="NewRelicLogIngestion",
-    help="The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function",
-    metavar="<arn>",
-    show_default=False,
-    required=False,
-)
-@click.option(
     "excludes",
     "--exclude",
     "-e",
@@ -155,10 +147,6 @@ def install(**kwargs):
 def uninstall(**kwargs):
     """Uninstall New Relic AWS Lambda Log Subscriptions"""
     input = SubscriptionUninstall(session=None, **kwargs)
-    if input.otel and not input.stackname:
-        input = input._replace(
-            stackname="NewRelicOtelLogIngestion",
-        )
     input = input._replace(
         session=boto3.Session(
             profile_name=input.aws_profile, region_name=input.aws_region

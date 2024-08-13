@@ -35,7 +35,7 @@ def register(group):
 )
 @click.option(
     "--stackname",
-    default="NewRelicLogIngestion",
+    default="NewRelicOtelLogIngestion",
     help="The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function",
     metavar="<arn>",
     show_default=False,
@@ -130,7 +130,7 @@ def install(ctx, **kwargs):
 )
 @click.option(
     "--stackname",
-    default="NewRelicLogIngestion",
+    default="NewRelicOtelLogIngestion",
     help="The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function",
     metavar="<arn>",
     show_default=False,
@@ -194,7 +194,7 @@ def uninstall(**kwargs):
 )
 @click.option(
     "--stackname",
-    default="NewRelicLogIngestion",
+    default="NewRelicOtelLogIngestion",
     help="The AWS Cloudformation stack name which contains the newrelic-log-ingestion lambda function",
     metavar="<arn>",
     show_default=False,
@@ -230,7 +230,9 @@ def update(**kwargs):
 
     update_success = True
 
-    click.echo("Updating newrelic-otel-log-ingestion Lambda function in AWS account")
+    click.echo(
+        "Updating newrelic-aws-otel-log-ingestion Lambda function in AWS account"
+    )
     res = otel_ingestions.update_otel_log_ingestion(input)
     update_success = res and update_success
 

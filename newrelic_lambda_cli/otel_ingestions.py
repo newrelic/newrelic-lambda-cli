@@ -17,7 +17,8 @@ from newrelic_lambda_cli.types import (
 )
 from newrelic_lambda_cli.utils import catch_boto_errors, NR_DOCS_ACT_LINKING_URL
 
-INGEST_OTEL_STACK_NAME = "NewRelicOtelLogIngestion"
+OTEL_INGEST_STACK_NAME = "NewRelicOtelLogIngestion"
+OTEL_INGEST_LAMBDA_NAME = "newrelic-aws-otel-log-ingestion"
 
 
 def _check_for_ingest_stack(session, stack_name):
@@ -26,12 +27,8 @@ def _check_for_ingest_stack(session, stack_name):
 
 def _get_cf_stack_status(session, stack_name, nr_account_id=None):
     """Returns the status of the CloudFormation stack if it exists"""
-    print(
-        "_get_cf_stack_status: Returns the status of the CloudFormation stack if it exists"
-    )
     try:
         res = session.client("cloudformation").describe_stacks(StackName=stack_name)
-        print("res", res)
     except botocore.exceptions.ClientError as e:
         if (
             e.response
@@ -47,12 +44,10 @@ def _get_cf_stack_status(session, stack_name, nr_account_id=None):
 
 def get_unique_newrelic_otel_log_ingestion_name(session, stackname=None):
     if not stackname:
-        stackname = INGEST_OTEL_STACK_NAME
+        stackname = OTEL_INGEST_STACK_NAME
     stack_id = _get_otel_cf_stack_id(session, stack_name=stackname)
     if stack_id:
-        return "newrelic-aws-otel-log-ingestion-%s" % (
-            stack_id.split("/")[2].split("-")[4]
-        )
+        return "%s-%s" % (OTEL_INGEST_LAMBDA_NAME, stack_id.split("/")[2].split("-")[4])
 
 
 def get_newrelic_otel_log_ingestion_function(session, stackname=None):
@@ -83,7 +78,10 @@ def _get_otel_cf_stack_id(session, stack_name, nr_account_id=None):
 
 def _get_otel_sar_template_url(session):
     sar_client = session.client("serverlessrepo")
-    sar_app_id = "arn:aws:serverlessrepo:us-west-2:466768951184:applications/newrelic-aws-otel-log-ingestion"  # noqa
+    sar_app_id = (
+        "arn:aws:serverlessrepo:us-west-2:466768951184:applications/"
+        + OTEL_INGEST_LAMBDA_NAME
+    )
     template_details = sar_client.create_cloud_formation_template(
         ApplicationId=sar_app_id
     )
@@ -130,57 +128,6 @@ def _create_otel_log_ingest_parameters(input, nr_license_key, mode="CREATE"):
     return parameters, capabilities
 
 
-def _import_log_ingestion_function(input, nr_license_key):
-    assert isinstance(input, OtelIngestionUpdate)
-
-    parameters, capabilities = _create_otel_log_ingest_parameters(
-        input, nr_license_key, "IMPORT"
-    )
-    client = input.session.client("cloudformation")
-
-    click.echo("Fetching new CloudFormation template url")
-
-    template_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "templates", "import-template.yaml"
-    )
-
-    with open(template_path) as template:
-        unique_log_ingestion_name = get_unique_newrelic_otel_log_ingestion_name(
-            input.session
-        )
-        if unique_log_ingestion_name:
-            change_set_name = "%s-IMPORT-%d" % (
-                INGEST_OTEL_STACK_NAME,
-                int(time.time()),
-            )
-            click.echo("Creating change set: %s" % change_set_name)
-
-            change_set = client.create_change_set(
-                StackName=INGEST_OTEL_STACK_NAME,
-                TemplateBody=template.read(),
-                Parameters=parameters,
-                Capabilities=capabilities,
-                Tags=(
-                    [{"Key": key, "Value": value} for key, value in input.tags]
-                    if input.tags
-                    else []
-                ),
-                ChangeSetType="IMPORT",
-                ChangeSetName=change_set_name,
-                ResourcesToImport=[
-                    {
-                        "ResourceType": "AWS::Lambda::Function",
-                        "LogicalResourceId": "NewRelicLogIngestionFunctionNoCap",
-                        "ResourceIdentifier": {
-                            "FunctionName": unique_log_ingestion_name
-                        },
-                    }
-                ],
-            )
-
-            _exec_change_set(client, change_set, "IMPORT")
-
-
 def _create_otel_log_ingestion_function(
     input,
     nr_license_key,
@@ -196,13 +143,8 @@ def _create_otel_log_ingestion_function(
 
     click.echo("Fetching new CloudFormation template url for OTEL log ingestion")
     template_url = _get_otel_sar_template_url(input.session)
-    click.echo("Fetched template_url")
-    print("template_url", template_url)
     change_set_name = "%s-%s-%d" % (input.stackname, mode, int(time.time()))
     click.echo("Creating change set: %s" % change_set_name)
-    print(
-        input.stackname, template_url, parameters, capabilities, change_set_name, mode
-    )
     try:
         change_set = client.create_change_set(
             StackName=input.stackname,
@@ -219,7 +161,6 @@ def _create_otel_log_ingestion_function(
         )
     except Exception as e:
         print(f"Error: {e}")
-    print("change set created....")
     _exec_change_set(client, change_set, mode, input.stackname)
 
 
@@ -310,8 +251,7 @@ def install_otel_log_ingestion(
     Returns True for success and False for failure.
     """
     assert isinstance(input, OtelIngestionInstall)
-    function = get_function(input.session, "newrelic-otel-log-ingestion")
-    print("function", function)
+    function = get_function(input.session, OTEL_INGEST_LAMBDA_NAME)
     if function:
         warning(
             "It looks like an old log ingestion function is present in this region. "
@@ -332,27 +272,30 @@ def install_otel_log_ingestion(
             return True
         except Exception as e:
             failure(
-                "CloudFormation Stack NewRelicOtelLogIngestion exists (status: %s).\n"
+                "CloudFormation Stack %s exists (status: %s).\n"
                 "Please manually delete the stack and re-run this command."
-                % stack_status
+                % (input.stackname, stack_status)
             )
             return False
     else:
-        function = get_newrelic_otel_log_ingestion_function(input.session)
+        function = get_newrelic_otel_log_ingestion_function(
+            input.session, input.stackname
+        )
 
         if function is None:
             failure(
-                "CloudFormation Stack NewRelicOtelLogIngestion exists (status: %s), but "
-                "newrelic-otel-log-ingestion Lambda function does not.\n"
+                "CloudFormation Stack %s exists (status: %s), but "
+                "%s Lambda function does not.\n"
                 "Please manually delete the stack and re-run this command."
-                % stack_status
+                % (input.stackname, stack_status, OTEL_INGEST_LAMBDA_NAME)
             )
             return False
         else:
             success(
-                "The CloudFormation Stack NewRelicOtelLogIngestion and "
-                "newrelic-log-ingestion function already exists in region %s, "
-                "skipping" % input.session.region_name
+                "The CloudFormation Stack %s and "
+                "%s function already exists in region %s, "
+                "skipping"
+                % (input.stackname, OTEL_INGEST_LAMBDA_NAME, input.session.region_name)
             )
             return True
 
@@ -369,20 +312,21 @@ def update_otel_log_ingestion(input):
     stack_status = _check_for_ingest_stack(input.session, input.stackname)
     if stack_status is None:
         failure(
-            "No 'NewRelicOtelLogIngestion' stack in region '%s'. "
-            "This likely means the New Relic log ingestion function was "
+            "No '%s' stack in region '%s'. "
+            "This likely means the New Relic otel log ingestion function was "
             "installed manually. "
             "In order to install via the CLI, please delete this function and "
-            "run 'newrelic-lambda otel-ingestion install'." % input.session.region_name
+            "run 'newrelic-lambda otel-ingestion install'."
+            % (OTEL_INGEST_STACK_NAME, input.session.region_name)
         )
         return False
 
     function = get_newrelic_otel_log_ingestion_function(input.session, input.stackname)
     if function is None:
         failure(
-            "No newrelic-otel-log-ingestion function in region '%s'. "
+            "No %s function in region '%s'. "
             "Run 'newrelic-lambda otel-ingestion install' to install it."
-            % input.session.region_name
+            % (OTEL_INGEST_LAMBDA_NAME, input.session.region_name)
         )
         return False
 

@@ -141,7 +141,6 @@ SUBSCRIPTION_UNINSTALL_KEYS = [
     "aws_region",
     "aws_permissions_check",
     "functions",
-    "stackname",
     "excludes",
     "otel",
 ]

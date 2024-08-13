@@ -156,7 +156,6 @@ def create_otel_log_subscription(input, function_name):
         )
         return False
     destination_arn = destination["Configuration"]["FunctionArn"]
-    print("destination_arn: ", destination_arn)
 
     subscription_filters = _get_subscription_filters(input.session, function_name)
     if subscription_filters is None:
