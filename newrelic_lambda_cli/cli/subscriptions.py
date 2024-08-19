@@ -70,6 +70,10 @@ def register(group):
 def install(**kwargs):
     """Install New Relic AWS Lambda Log Subscriptions"""
     input = SubscriptionInstall(session=None, **kwargs)
+    if input.otel and input.filter_pattern == DEFAULT_FILTER_PATTERN:
+        input = input._replace(
+            filter_pattern="",
+        )
     if input.otel and input.stackname == "NewRelicLogIngestion":
         input = input._replace(
             stackname="NewRelicOtelLogIngestion",

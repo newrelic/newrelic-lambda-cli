@@ -20,7 +20,7 @@ from newrelic_lambda_cli.utils import catch_boto_errors, NR_DOCS_ACT_LINKING_URL
 OTEL_INGEST_STACK_NAME = "NewRelicOtelLogIngestion"
 OTEL_INGEST_LAMBDA_NAME = "newrelic-aws-otel-log-ingestion"
 OTEL_SAR_APP_ID = (
-    "arn:aws:serverlessrepo:us-west-2:466768951184:applications/"
+    "arn:aws:serverlessrepo:us-east-1:451483290750:applications/"
     + OTEL_INGEST_LAMBDA_NAME
 )
 
