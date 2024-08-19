@@ -175,7 +175,6 @@ def create_otel_log_subscription(input, function_name):
             "serverless@newrelic.com for assistance with getting the AWS log "
             "subscription filter limit increased."
         )
-        return False
     if not newrelic_filters:
         click.echo("Adding New Relic otel log subscription to '%s'" % function_name)
         return _create_subscription_filter(
