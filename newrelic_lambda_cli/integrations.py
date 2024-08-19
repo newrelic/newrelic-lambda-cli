@@ -14,6 +14,7 @@ from newrelic_lambda_cli.types import (
     IntegrationInstall,
     IntegrationUninstall,
     IntegrationUpdate,
+    OtelIngestionUninstall,
 )
 from newrelic_lambda_cli.utils import catch_boto_errors, NR_DOCS_ACT_LINKING_URL
 
@@ -165,9 +166,11 @@ def _create_role(input):
                 {"ParameterKey": "PolicyName", "ParameterValue": role_policy_name},
             ],
             Capabilities=["CAPABILITY_NAMED_IAM"],
-            Tags=[{"Key": key, "Value": value} for key, value in input.tags]
-            if input.tags
-            else [],
+            Tags=(
+                [{"Key": key, "Value": value} for key, value in input.tags]
+                if input.tags
+                else []
+            ),
         )
 
         click.echo("Waiting for stack creation to complete... ", nl=False)
@@ -268,9 +271,11 @@ def _import_log_ingestion_function(input, nr_license_key):
                 TemplateBody=template.read(),
                 Parameters=parameters,
                 Capabilities=capabilities,
-                Tags=[{"Key": key, "Value": value} for key, value in input.tags]
-                if input.tags
-                else [],
+                Tags=(
+                    [{"Key": key, "Value": value} for key, value in input.tags]
+                    if input.tags
+                    else []
+                ),
                 ChangeSetType="IMPORT",
                 ChangeSetName=change_set_name,
                 ResourcesToImport=[
@@ -311,9 +316,11 @@ def _create_log_ingestion_function(
         TemplateURL=template_url,
         Parameters=parameters,
         Capabilities=capabilities,
-        Tags=[{"Key": key, "Value": value} for key, value in input.tags]
-        if input.tags
-        else [],
+        Tags=(
+            [{"Key": key, "Value": value} for key, value in input.tags]
+            if input.tags
+            else []
+        ),
         ChangeSetType=mode,
         ChangeSetName=change_set_name,
     )
@@ -444,9 +451,11 @@ def update_log_ingestion_function(input):
             TemplateBody=json.dumps(template_body),
             Parameters=params,
             Capabilities=["CAPABILITY_IAM"],
-            Tags=[{"Key": key, "Value": value} for key, value in input.tags]
-            if input.tags
-            else [],
+            Tags=(
+                [{"Key": key, "Value": value} for key, value in input.tags]
+                if input.tags
+                else []
+            ),
         )
 
         try:
@@ -496,18 +505,20 @@ def update_log_ingestion_function(input):
 
 
 @catch_boto_errors
-def remove_log_ingestion_function(input):
-    assert isinstance(input, IntegrationUninstall)
-
+def remove_log_ingestion_function(input, otel: bool = False):
+    assert isinstance(input, (IntegrationUninstall, OtelIngestionUninstall))
+    log_ingestion_lambda = "log ingestion" if not otel else "OTEL log ingestion"
     client = input.session.client("cloudformation")
     stack_status = _check_for_ingest_stack(input.session, input.stackname)
     if stack_status is None:
         click.echo(
-            "No New Relic AWS Lambda log ingestion found in region %s, skipping"
-            % input.session.region_name
+            "No New Relic AWS Lambda %s found in region %s, skipping"
+            % (log_ingestion_lambda, input.session.region_name)
         )
         return
-    click.echo("Deleting New Relic log ingestion stack '%s'" % input.stackname)
+    click.echo(
+        "Deleting New Relic %s stack '%s'" % (log_ingestion_lambda, input.stackname)
+    )
     client.delete_stack(StackName=input.stackname)
     click.echo(
         "Waiting for stack deletion to complete, this may take a minute... ", nl=False
@@ -755,9 +766,11 @@ def install_license_key(input, nr_license_key, policy_name=None):
                 TemplateBody=template.read(),
                 Parameters=parameters,
                 Capabilities=["CAPABILITY_NAMED_IAM"],
-                Tags=[{"Key": key, "Value": value} for key, value in input.tags]
-                if input.tags
-                else [],
+                Tags=(
+                    [{"Key": key, "Value": value} for key, value in input.tags]
+                    if input.tags
+                    else []
+                ),
                 ChangeSetType=mode,
                 ChangeSetName=change_set_name,
             )
