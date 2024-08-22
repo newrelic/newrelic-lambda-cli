@@ -19,7 +19,6 @@ setup(
         "boto3<5",
         "click>=7.1.2",
         "colorama",
-        "emoji>=2,<3",
         "gql>=2,<3",
         "requests<3",
         "tabulate",
