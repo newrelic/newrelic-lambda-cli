@@ -24,7 +24,6 @@ setup(
         "tabulate",
     ],
     setup_requires=["pytest-runner"],
-    tests_require=["moto", "pytest", "requests"],
     entry_points={
         "console_scripts": ["newrelic-lambda = newrelic_lambda_cli.cli:main"]
     },
