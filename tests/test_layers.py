@@ -1,6 +1,6 @@
 import boto3
 from click import UsageError
-from moto import mock_lambda
+from moto import mock_aws
 import pytest
 
 from unittest.mock import ANY, call, MagicMock, patch
@@ -20,7 +20,7 @@ from newrelic_lambda_cli.utils import get_arn_prefix
 from .conftest import layer_install, layer_uninstall
 
 
-@mock_lambda
+@mock_aws
 def test_add_new_relic(aws_credentials, mock_function_config):
     session = boto3.Session(region_name="us-east-1")
 
@@ -235,7 +235,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
     assert update_kwargs["Layers"][0] != get_arn_prefix("us-east-1")
 
 
-@mock_lambda
+@mock_aws
 def test_add_new_relic_dotnet(aws_credentials, mock_function_config):
     session = boto3.Session(region_name="us-east-1")
 
@@ -298,7 +298,7 @@ def test_add_new_relic_dotnet(aws_credentials, mock_function_config):
         )
 
 
-@mock_lambda
+@mock_aws
 def test_remove_new_relic(aws_credentials, mock_function_config):
     session = boto3.Session(region_name="us-east-1")
 

@@ -1,9 +1,9 @@
-from moto import mock_lambda
+from moto import mock_aws
 
 from newrelic_lambda_cli.cli import cli, register_groups
 
 
-@mock_lambda
+@mock_aws
 def test_layers_install(aws_credentials, cli_runner):
     """
     Assert that 'newrelic-lambda layers install' attempts to install the New Relic
@@ -65,7 +65,7 @@ def test_layers_install(aws_credentials, cli_runner):
     assert "Could not find function: foobar" in result2.stderr
 
 
-@mock_lambda
+@mock_aws
 def test_layers_uninstall(aws_credentials, cli_runner):
     """
     Assert that 'newrelic-lambda layers uninstall' attempts to uninstall the New Relic
