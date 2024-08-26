@@ -7,7 +7,6 @@ name = "pypi"
 boto3 = "*"
 click = "*"
 colorama = "*"
-emoji = "*"
 gql = "*"
 requests = "*"
 tabulate = "*"
@@ -17,7 +16,8 @@ black = "*"
 pytest = "*"
 pytest-cov = "*"
 requests_toolbelt = "*"
-moto = {extras = ["all"], version = "*"}
+moto = {extras = ["all"], version = ">=5,<6.0"}
+setuptools = ">=65.0,<73.0"
 
 [requires]
 python_version = "3.12"

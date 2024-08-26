@@ -1,11 +1,9 @@
-from moto import mock_lambda, mock_logs, mock_cloudformation
+from moto import mock_aws
 
 from newrelic_lambda_cli.cli import cli, register_groups
 
 
-@mock_cloudformation
-@mock_lambda
-@mock_logs
+@mock_aws
 def test_subscriptions_install(aws_credentials, cli_runner):
     """
     Assert that 'newrelic-lambda subscriptions install' attempts to install the
@@ -67,8 +65,7 @@ def test_subscriptions_install(aws_credentials, cli_runner):
     ) in result2.stderr
 
 
-@mock_lambda
-@mock_logs
+@mock_aws
 def test_subscriptions_uninstall(aws_credentials, cli_runner):
     """
     Assert that 'newrelic-lambda subscriptions uninstall' attempts to uninstall the

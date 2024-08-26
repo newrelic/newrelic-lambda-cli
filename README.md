@@ -359,7 +359,7 @@ Using these together will auto format your git commits.
 ## Running Tests
 
 ```bash
-python setup.py test
+pytest tests
 ```
 
 ## Troubleshooting

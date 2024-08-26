@@ -19,13 +19,11 @@ setup(
         "boto3<5",
         "click>=7.1.2",
         "colorama",
-        "emoji>=2,<3",
         "gql>=2,<3",
         "requests<3",
         "tabulate",
     ],
     setup_requires=["pytest-runner"],
-    tests_require=["moto", "pytest", "requests"],
     entry_points={
         "console_scripts": ["newrelic-lambda = newrelic_lambda_cli.cli:main"]
     },
