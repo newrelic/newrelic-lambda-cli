@@ -90,7 +90,7 @@ def test_subscriptions_install(aws_credentials, cli_runner):
     assert result3.exit_code == 1
     assert result3.stdout == ""
     assert (
-        "✘ Could not find newrelic-log-ingestion function in stack: MyCustomStackName. "
+        "Could not find newrelic-log-ingestion function in stack: MyCustomStackName. "
         "Is the New Relic AWS integration installed?"
     ) in result3.stderr
 
