@@ -100,8 +100,8 @@ def create_log_subscription(input, function_name):
     destination = get_newrelic_log_ingestion_function(input.session, input.stackname)
     if destination is None:
         failure(
-            "Could not find newrelic-log-ingestion function. Is the New Relic AWS "
-            "integration installed?"
+            "Could not find newrelic-log-ingestion function in stack: %s. Is the New Relic AWS "
+            "integration installed?" % input.stackname
         )
         return False
     destination_arn = destination["Configuration"]["FunctionArn"]

@@ -32,7 +32,7 @@ def test_subscriptions_install(aws_credentials, cli_runner):
     assert result.exit_code == 1
     assert result.stdout == ""
     assert (
-        "Could not find newrelic-log-ingestion function. "
+        "Could not find newrelic-log-ingestion function in stack: NewRelicLogIngestion. "
         "Is the New Relic AWS integration installed?"
     ) in result.stderr
 
@@ -60,9 +60,39 @@ def test_subscriptions_install(aws_credentials, cli_runner):
     assert result2.exit_code == 1
     assert result2.stdout == ""
     assert (
-        "Could not find newrelic-log-ingestion function. "
+        "Could not find newrelic-log-ingestion function in stack: NewRelicLogIngestion. "
         "Is the New Relic AWS integration installed?"
     ) in result2.stderr
+
+    result3 = cli_runner.invoke(
+        cli,
+        [
+            "subscriptions",
+            "install",
+            "--no-aws-permissions-check",
+            "--function",
+            "foobar",
+            "--function",
+            "barbaz",
+            "--aws-region",
+            "us-east-1",
+            "--stackname",
+            "MyCustomStackName",
+        ],
+        env={
+            "AWS_ACCESS_KEY_ID": "testing",
+            "AWS_SECRET_ACCESS_KEY": "testing",
+            "AWS_SECURITY_TOKEN": "testing",
+            "AWS_SESSION_TOKEN": "testing",
+        },
+    )
+
+    assert result3.exit_code == 1
+    assert result3.stdout == ""
+    assert (
+        "✘ Could not find newrelic-log-ingestion function in stack: MyCustomStackName. "
+        "Is the New Relic AWS integration installed?"
+    ) in result3.stderr
 
 
 @mock_aws
