@@ -239,7 +239,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
 def test_add_new_relic_dotnet(aws_credentials, mock_function_config):
     session = boto3.Session(region_name="us-east-1")
 
-    test_runtimes = ["dotnet6", "dotnet8"]
+    test_runtimes = ["dotnet6", "dotnet8", "dotnet9"]
     for test_runtime in test_runtimes:
         config = mock_function_config(test_runtime)
 
