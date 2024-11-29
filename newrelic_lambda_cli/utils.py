@@ -40,6 +40,10 @@ RUNTIME_CONFIG = {
         "Handler": "newrelic-lambda-wrapper.handler",
         "LambdaExtension": True,
     },
+    "nodejs22.x": {
+        "Handler": "newrelic-lambda-wrapper.handler",
+        "LambdaExtension": True,
+    },
     "provided": {"LambdaExtension": True},
     "provided.al2": {"LambdaExtension": True},
     "provided.al2023": {"LambdaExtension": True},
