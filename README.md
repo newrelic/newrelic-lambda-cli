@@ -328,11 +328,11 @@ newrelic-lambda subscriptions uninstall --function <name or arn> --otel
 
 ## Docker
 
-Now, you can run newrelic-lambda-cli as a container.
+Now, you can run newrelic-lambda-cli as a [container](https://gallery.ecr.aws/newrelic-lambda-layers-for-docker/newrelic-lambda-cli).
 
 ```bash
-docker build -t newrelic-lambda-cli .
-docker run -e AWS_PROFILE=your_profile -v $HOME/.aws:/home/newrelic-lambda-cli/.aws newrelic-lambda-cli functions list
+docker pull public.ecr.aws/newrelic-lambda-layers-for-docker/newrelic-lambda-cli:0.9.4
+docker run -v $HOME/.aws:/home/newrelic-lambda-cli/.aws "newrelic-lambda-cli" functions list
 ```
 
 ## Contributing
