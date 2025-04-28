@@ -103,6 +103,12 @@ def register(group):
     show_default=True,
     type=click.Choice(["handleRequest", "handleStreamsRequest"]),
 )
+@click.option(
+    "--nodejs_enable_esm",
+    default=False,
+    show_default=True,
+    help="Nodejs runtimes only - Specify nodejs implementation method to /opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index.handler",
+)
 @click.pass_context
 def install(ctx, **kwargs):
     """Install New Relic AWS Lambda Layers"""
