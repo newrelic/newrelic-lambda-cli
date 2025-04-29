@@ -193,6 +193,7 @@ newrelic-lambda layers install \
 | `--nr-api-key` or `-k` | No | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Can also use the `NEW_RELIC_API_KEY` environment variable. Only used if `--enable-extension` is set and there is no New Relic license key in AWS Secrets Manager. |
 | `--nr-region` | No | The New Relic region to use for the integration. Can use the `NEW_RELIC_REGION` environment variable. Can be either `eu` or `us`. Defaults to `us`. Only used if `--enable-extension` is set and there is no New Relic license key in AWS Secrets Manager. |
 | `--java_handler_method` or `-j` | No | For java runtimes only to specify an aws implementation method. Defaults to RequestHandler. Optional inputs are: handleRequest, handleStreamsRequest `--java_handler_method handleStreamsRequest`. |
+| `--esm` | No |  For Node.js functions using ES Modules (ESM), enable the specific ESM wrapper during installation (e.g., using the --esm flag). This sets the Lambda handler to `/opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index.handler`. |
 
 #### Uninstall Layer
 

@@ -107,6 +107,7 @@ LAYER_INSTALL_KEYS = [
     "enable_extension",
     "enable_extension_function_logs",
     "java_handler_method",
+    "esm",
 ]
 
 LAYER_UNINSTALL_KEYS = [
