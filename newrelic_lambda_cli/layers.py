@@ -103,7 +103,7 @@ def _add_new_relic(input, config, nr_license_key):
     if "nodejs" in runtime:
         prefix = (
             "/opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index"
-            if input.nodejs_enable_esm
+            if input.esm
             else "newrelic_lambda_wrapper"
         )
         runtime_handler = prefix + ".handler"
