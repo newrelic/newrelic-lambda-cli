@@ -100,6 +100,13 @@ def _add_new_relic(input, config, nr_license_key):
     if "java" in runtime:
         postfix = input.java_handler_method or "handleRequest"
         runtime_handler = runtime_handler + postfix
+    if "nodejs" in runtime:
+        prefix = (
+            "/opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index"
+            if input.esm
+            else "newrelic_lambda_wrapper"
+        )
+        runtime_handler = prefix + ".handler"
 
     existing_newrelic_layer = [
         layer["Arn"]

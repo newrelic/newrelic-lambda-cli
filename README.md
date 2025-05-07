@@ -1,6 +1,6 @@
 [![Community Plus header](https://github.com/newrelic/opensource-website/raw/master/src/images/categories/Community_Plus.png)](https://opensource.newrelic.com/oss-category/#community-plus)
 
-# newrelic-lambda-cli [![Build Status](https://circleci.com/gh/newrelic/newrelic-lambda-cli.svg?style=svg)](https://circleci.com/gh/newrelic/newrelic-lambda-cli) [![Coverage](https://codecov.io/gh/newrelic/newrelic-lambda-cli/branch/master/graph/badge.svg?token=1Rl7h0O1JJ)](https://codecov.io/gh/newrelic/newrelic-lambda-cli)
+# newrelic-lambda-cli [![Build Status](https://github.com/newrelic/newrelic-lambda-cli/actions/workflows/build-test-release.yml/badge.svg)](https://github.com/newrelic/newrelic-lambda-cli/actions/workflows/build-test-release.yml) [![Coverage](https://codecov.io/gh/newrelic/newrelic-lambda-cli/branch/master/graph/badge.svg?token=1Rl7h0O1JJ)](https://codecov.io/gh/newrelic/newrelic-lambda-cli)
 
 A CLI to install the New Relic AWS Lambda integration and layers.
 
@@ -16,6 +16,9 @@ A CLI to install the New Relic AWS Lambda integration and layers.
     * [AWS Lambda Layers](#aws-lambda-layers)
     * [AWS Lambda Functions](#aws-lambda-functions)
     * [NewRelic Log Subscription](#newRelic-log-subscription)
+    * [NewRelic Otel Log Ingestions](#newRelic-otel-ingestions-install)
+    * [NewRelic Otel Log Subscription](#newRelic-otel-log-subscription)
+
 * **[Docker](#docker)**
 * **[Contributing](#contributing)**
 * **[Code Style](#code-style)**
@@ -43,6 +46,7 @@ A CLI to install the New Relic AWS Lambda integration and layers.
 * nodejs16.x
 * nodejs18.x
 * nodejs20.x
+* nodejs22.x
 * provided
 * provided.al2
 * provided.al2023
@@ -52,6 +56,7 @@ A CLI to install the New Relic AWS Lambda integration and layers.
 * python3.10
 * python3.11
 * python3.12
+* python3.13
 * ruby3.2
 * ruby3.3
 
@@ -150,8 +155,8 @@ newrelic-lambda integrations update \
 
 | Option | Required? | Description |
 |--------|-----------|-------------|
-| `--nr-account-id` or `-a` | Yes | The [New Relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) for the integration. Only required if changing the account to which the logs are sent. Can also use the `NEW_RELIC_ACCOUNT_ID` environment variable. |
-| `--nr-api-key` or `-k` | Yes | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Can also use the `NEW_RELIC_API_KEY` environment variable. Only required if changing the account to which the logs are sent. |
+| `--nr-account-id` or `-a` | Yes | The [New Relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) for the integration. Alternatively, you can use the `NEW_RELIC_ACCOUNT_ID` environment variable. |
+| `--nr-api-key` or `-k` | Yes | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Alternatively, you can use the `NEW_RELIC_API_KEY` environment variable. |
 | `--disable-logs` or `-d` | No | Disables forwarding logs to New Relic Logging. Make sure you run `newrelic-lambda subscriptions install --function ...` afterwards. |
 | `--enable-logs` or `-e` | No | Enables forwarding logs to New Relic Logging. Make sure you run `newrelic-lambda subscriptions install --function ... --filter-pattern ""` afterwards. |
 | `--memory-size` or `-m` | No | Memory size (in MiB) for the New Relic log ingestion function. |
@@ -188,6 +193,7 @@ newrelic-lambda layers install \
 | `--nr-api-key` or `-k` | No | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Can also use the `NEW_RELIC_API_KEY` environment variable. Only used if `--enable-extension` is set and there is no New Relic license key in AWS Secrets Manager. |
 | `--nr-region` | No | The New Relic region to use for the integration. Can use the `NEW_RELIC_REGION` environment variable. Can be either `eu` or `us`. Defaults to `us`. Only used if `--enable-extension` is set and there is no New Relic license key in AWS Secrets Manager. |
 | `--java_handler_method` or `-j` | No | For java runtimes only to specify an aws implementation method. Defaults to RequestHandler. Optional inputs are: handleRequest, handleStreamsRequest `--java_handler_method handleStreamsRequest`. |
+| `--esm` | No |  For Node.js functions using ES Modules (ESM), enable the specific ESM wrapper during installation (e.g., using the --esm flag). This sets the Lambda handler to `/opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index.handler`. |
 
 #### Uninstall Layer
 
@@ -255,13 +261,79 @@ newrelic-lambda subscriptions uninstall --function <name or arn>
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 
-## Docker
+### NewRelic Otel Ingestions Install
 
-Now, you can run newrelic-lambda-cli as a container.
+#### Install Otel Log Ingestion
 
 ```bash
-docker build -t newrelic-lambda-cli .
-docker run -e AWS_PROFILE=your_profile -v $HOME/.aws:/home/newrelic-lambda-cli/.aws newrelic-lambda-cli functions list
+newrelic-lambda otel-ingestions install \
+    --nr-account-id <account id> \
+    --nr-api-key <api key>
+```
+
+| Option | Required? | Description |
+|--------|-----------|-------------|
+| `--nr-account-id` or `-a` | Yes | The [New Relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) for this integration. Can also use the `NEW_RELIC_ACCOUNT_ID` environment variable. |
+| `--nr-api-key` or `-k` | Yes | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Can also use the `NEW_RELIC_API_KEY` environment variable. |
+| `--memory-size` or `-m` | No | Memory size (in MiB) for the New Relic log ingestion function. Default to 128MB. |
+| `--nr-region` | No | The New Relic region to use for the integration. Can use the `NEW_RELIC_REGION` environment variable. Can be either `eu` or `us`. Defaults to `us`. |
+| `--timeout` or `-t` | No | Timeout (in seconds) for the New Relic log ingestion function. Defaults to 30 seconds. |
+| `--role-name` | No | Role name for the ingestion function. If you prefer to create and manage an IAM role for the function to assume out of band, do so and specify that role's name here. This avoids needing CAPABILITY_IAM. |
+| `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
+| `--aws-region` or `-r` | No | The AWS region for the integration. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
+| `--aws-role-policy` | No | Specify an alternative IAM role policy ARN for this integration. |
+| `--tag <key> <value>` | No | Sets tags on the CloudFormation Stacks this CLI creates. Can be used multiple times, example: `--tag key1 value1 --tag key2 value2`. |
+| `--stackname` | No | The AWS Cloudformation stack name which contains the newrelic-aws-otel-log-ingestion lambda function. If no value is provided, the command searches for the NewRelicOtelLogIngestion stack |
+
+
+#### Uninstall Otel Log Ingestion
+
+```bash
+newrelic-lambda otel-ingestions uninstall
+```
+
+| Option | Required? | Description |
+|--------|-----------|-------------|
+| `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
+| `--aws-region` or `-r` | No | The AWS region for the integration. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
+| `--force` or `-f` | No | Forces uninstall non-interactively |
+| `--nr-account-id` or `-a` | No | The [New Relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) for the integration. Only required if also uninstalling the New Relic AWS Lambda integration. Can also use the `NEW_RELIC_ACCOUNT_ID` environment variable. |
+| `--stackname` | No | The AWS Cloudformation stack name which contains the newrelic-aws-otel-log-ingestion lambda function. If no value is provided, the command searches for the NewRelicOtelLogIngestion stack |
+
+### NewRelic Otel Log Subscription
+
+#### Install Otel Log Subscription
+
+```bash
+newrelic-lambda subscriptions install --function <name or arn> --otel
+```
+
+| Option | Required? | Description |
+|--------|-----------|-------------|
+| `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to remove a log subscription. Can provide multiple `--function` arguments. Will also accept `all`, `installed` and `not-installed` similar to `newrelic-lambda functions list`. |
+| `--otel` or `-o` | Yes | Use this flag to install subscription filters for Lambdas that are instrumented with OpenTelemetry (Otel) |
+| `--stackname` | No | The AWS Cloudformation stack name which contains the newrelic-aws-otel-log-ingestion lambda function. If no value is provided, the command searches for the NewRelicOtelLogIngestion stack |
+
+
+#### Uninstall Otel Log Subscription
+
+```bash
+newrelic-lambda subscriptions uninstall --function <name or arn> --otel
+```
+
+| Option | Required? | Description |
+|--------|-----------|-------------|
+| `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to remove a log subscription. Can provide multiple `--function` arguments. Will also accept `all`, `installed` and `not-installed` similar to `newrelic-lambda functions list`. |
+| `--otel` or `-o` | Yes | Use this flag to install subscription filters for Lambdas that are instrumented with OpenTelemetry (Otel) |
+| `--stackname` | No | The AWS Cloudformation stack name which contains the newrelic-aws-otel-log-ingestion lambda function. If no value is provided, the command searches for the NewRelicOtelLogIngestion stack |
+
+## Docker
+
+Now, you can run newrelic-lambda-cli as a [container](https://gallery.ecr.aws/newrelic-lambda-layers-for-docker/newrelic-lambda-cli).
+
+```bash
+docker pull public.ecr.aws/newrelic-lambda-layers-for-docker/newrelic-lambda-cli:0.9.4
+docker run -v $HOME/.aws:/home/newrelic-lambda-cli/.aws "newrelic-lambda-cli" functions list
 ```
 
 ## Contributing
@@ -290,7 +362,7 @@ Using these together will auto format your git commits.
 ## Running Tests
 
 ```bash
-python setup.py test
+pytest tests
 ```
 
 ## Troubleshooting

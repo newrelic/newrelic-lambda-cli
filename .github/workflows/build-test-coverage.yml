@@ -23,7 +23,7 @@ jobs:
           pipenv install --dev
           pipenv run pytest --cov-report=xml --cov=newrelic_lambda_cli tests
       - name: Upload Coverage to Codecov
-        uses: codecov/codecov-action@v4.5.0
+        uses: codecov/codecov-action@v5.4.2
         with: 
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true  
@@ -44,5 +44,6 @@ jobs:
         run: |
           pip install -q -U pip
           pip install -q -U setuptools twine wheel
+          pip install -q -U packaging
           python setup.py sdist bdist_wheel
           twine check dist/*

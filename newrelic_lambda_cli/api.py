@@ -21,6 +21,9 @@ from newrelic_lambda_cli.types import (
     IntegrationInstall,
     IntegrationUpdate,
     LayerInstall,
+    OtelIngestionInstall,
+    OtelIngestionUninstall,
+    OtelIngestionUpdate,
 )
 from newrelic_lambda_cli.utils import parse_arn
 
@@ -333,7 +336,17 @@ class NewRelicGQL(object):
 
 
 def validate_gql_credentials(input):
-    assert isinstance(input, (IntegrationInstall, IntegrationUpdate, LayerInstall))
+
+    assert isinstance(
+        input,
+        (
+            IntegrationInstall,
+            IntegrationUpdate,
+            LayerInstall,
+            OtelIngestionInstall,
+            OtelIngestionUpdate,
+        ),
+    )
 
     try:
         return NewRelicGQL(input.nr_account_id, input.nr_api_key, input.nr_region)

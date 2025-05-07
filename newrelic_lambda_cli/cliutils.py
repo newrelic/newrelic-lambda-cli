@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
 
 import click
-import emoji
 
 from click.exceptions import Exit
 
 
 def done(message):
     """Prints a done message to the terminal"""
-    click.echo(emoji.emojize(":sparkles: %s :sparkles:" % message, language="alias"))
+    click.echo(f"✔️ {message} ✔️")
 
 
 def failure(message, exit=False):
     """Prints a failure message to the terminal"""
-    click.echo(
-        emoji.emojize(":heavy_multiplication_x: %s" % message, language="alias"),
-        color="red",
+    click.secho(
+        f"✘ {message}",
+        fg="red",
         err=True,
     )
     if exit:
@@ -24,15 +23,15 @@ def failure(message, exit=False):
 
 def success(message):
     """Prints a success message to the terminal"""
-    click.echo(
-        emoji.emojize(":heavy_check_mark: %s" % message, language="alias"),
-        color="green",
+    click.secho(
+        f"✔️ {message}",
+        fg="green",
     )
 
 
 def warning(message):
-    """Prints a warningmessage to the terminal"""
-    click.echo(
-        emoji.emojize(":heavy_exclamation_mark: %s" % message, language="alias"),
-        color="blue",
+    """Prints a warning message to the terminal"""
+    click.secho(
+        f"⚠️ {message}",
+        fg="blue",
     )

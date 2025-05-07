@@ -1,6 +1,6 @@
 import boto3
 from click import UsageError
-from moto import mock_lambda
+from moto import mock_aws
 import pytest
 
 from unittest.mock import ANY, call, MagicMock, patch
@@ -20,7 +20,7 @@ from newrelic_lambda_cli.utils import get_arn_prefix
 from .conftest import layer_install, layer_uninstall
 
 
-@mock_lambda
+@mock_aws
 def test_add_new_relic(aws_credentials, mock_function_config):
     session = boto3.Session(region_name="us-east-1")
 
@@ -235,7 +235,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
     assert update_kwargs["Layers"][0] != get_arn_prefix("us-east-1")
 
 
-@mock_lambda
+@mock_aws
 def test_add_new_relic_dotnet(aws_credentials, mock_function_config):
     session = boto3.Session(region_name="us-east-1")
 
@@ -298,7 +298,120 @@ def test_add_new_relic_dotnet(aws_credentials, mock_function_config):
         )
 
 
-@mock_lambda
+@mock_aws
+def test_add_new_relic_nodejs(aws_credentials, mock_function_config):
+    """
+    Tests adding New Relic layer and configuration to Node.js functions,
+    including the standard and ESM wrapper handlers.
+    """
+    session = boto3.Session(region_name="us-east-1")
+    nr_license_key = "test-license-key-nodejs"
+    nr_account_id = 12345
+
+    runtime = "nodejs20.x"
+
+    # --- Scenario 1: Standard Node.js Handler (ESM disabled) ---
+    print(f"\nTesting Node.js ({runtime}) Standard Handler...")
+    original_std_handler = "original_handler"
+    config_std = mock_function_config(runtime)
+
+    install_opts_std = layer_install(
+        session=session,
+        aws_region="us-east-1",
+        nr_account_id=nr_account_id,
+        enable_extension=True,
+        enable_extension_function_logs=True,
+    )
+
+    update_kwargs_std = _add_new_relic(
+        install_opts_std,
+        config_std,
+        nr_license_key=nr_license_key,
+    )
+
+    assert update_kwargs_std is not False, "Expected update_kwargs, not False"
+    assert (
+        update_kwargs_std["FunctionName"] == config_std["Configuration"]["FunctionArn"]
+    )
+    assert update_kwargs_std["Handler"] == "newrelic_lambda_wrapper.handler"
+    assert (
+        update_kwargs_std["Environment"]["Variables"]["NEW_RELIC_LAMBDA_HANDLER"]
+        == original_std_handler
+    )
+    assert update_kwargs_std["Environment"]["Variables"]["NEW_RELIC_ACCOUNT_ID"] == str(
+        nr_account_id
+    )
+    assert (
+        update_kwargs_std["Environment"]["Variables"]["NEW_RELIC_LICENSE_KEY"]
+        == nr_license_key
+    )
+    assert (
+        update_kwargs_std["Environment"]["Variables"][
+            "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
+        ]
+        == "true"
+    )
+    assert (
+        update_kwargs_std["Environment"]["Variables"][
+            "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
+        ]
+        == "true"
+    )
+
+    # --- Scenario 2: ESM Node.js Handler (ESM enabled) ---
+    print(f"\nTesting Node.js ({runtime}) ESM Handler...")
+    original_esm_handler = "original_handler"
+    config_esm = mock_function_config(runtime)
+
+    install_opts_esm = layer_install(
+        session=session,
+        aws_region="us-east-1",
+        nr_account_id=nr_account_id,
+        enable_extension=True,
+        enable_extension_function_logs=True,
+        esm=True,
+    )
+
+    update_kwargs_esm = _add_new_relic(
+        install_opts_esm,
+        config_esm,
+        nr_license_key=nr_license_key,
+    )
+
+    assert update_kwargs_esm is not False, "Expected update_kwargs, not False"
+    assert (
+        update_kwargs_esm["FunctionName"] == config_esm["Configuration"]["FunctionArn"]
+    )
+    assert (
+        update_kwargs_esm["Handler"]
+        == "/opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index.handler"
+    )
+    assert (
+        update_kwargs_esm["Environment"]["Variables"]["NEW_RELIC_LAMBDA_HANDLER"]
+        == original_esm_handler
+    )
+    assert update_kwargs_esm["Environment"]["Variables"]["NEW_RELIC_ACCOUNT_ID"] == str(
+        nr_account_id
+    )
+    assert (
+        update_kwargs_esm["Environment"]["Variables"]["NEW_RELIC_LICENSE_KEY"]
+        == nr_license_key
+    )
+    assert (
+        update_kwargs_esm["Environment"]["Variables"][
+            "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
+        ]
+        == "true"
+    )
+    assert (
+        update_kwargs_esm["Environment"]["Variables"][
+            "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
+        ]
+        == "true"
+    )
+
+
+@mock_aws
 def test_remove_new_relic(aws_credentials, mock_function_config):
     session = boto3.Session(region_name="us-east-1")
 

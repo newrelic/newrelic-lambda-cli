@@ -1,6 +1,6 @@
 import boto3
 from unittest import mock
-from moto import mock_lambda
+from moto import mock_aws
 from unittest.mock import MagicMock
 
 from newrelic_lambda_cli.functions import get_aliased_functions, list_functions
@@ -8,7 +8,7 @@ from newrelic_lambda_cli.functions import get_aliased_functions, list_functions
 from .conftest import layer_install
 
 
-@mock_lambda
+@mock_aws
 @mock.patch("newrelic_lambda_cli.functions.list_functions", autospec=True)
 def test_get_aliased_functions(mock_list_functions, aws_credentials):
     """
@@ -60,7 +60,7 @@ def test_get_aliased_functions(mock_list_functions, aws_credentials):
     ]
 
 
-@mock_lambda
+@mock_aws
 def test_list_functions(aws_credentials):
     session = boto3.Session(region_name="us-east-1")
     assert list(list_functions(session)) == []

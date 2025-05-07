@@ -2,7 +2,13 @@
 
 import click
 
-from newrelic_lambda_cli.cli import functions, integrations, layers, subscriptions
+from newrelic_lambda_cli.cli import (
+    functions,
+    integrations,
+    layers,
+    otel_ingestions,
+    subscriptions,
+)
 
 
 @click.group()
@@ -17,6 +23,7 @@ def cli(ctx, verbose):
 def register_groups(group):
     functions.register(group)
     integrations.register(group)
+    otel_ingestions.register(group)
     layers.register(group)
     subscriptions.register(group)
 

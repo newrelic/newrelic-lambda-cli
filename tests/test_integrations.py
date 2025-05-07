@@ -2,12 +2,7 @@ from __future__ import absolute_import
 
 import boto3
 import botocore
-from moto import (
-    mock_cloudformation,
-    mock_iam,
-    mock_lambda,
-    mock_sts,
-)
+from moto import mock_aws
 import pytest
 from unittest.mock import call, patch, MagicMock, ANY
 
@@ -190,7 +185,7 @@ def test_remove_log_ingestion_function_not_present(success_mock):
     success_mock.assert_not_called()
 
 
-@mock_cloudformation
+@mock_aws
 def test__get_cf_stack_status(aws_credentials):
     session = boto3.Session(region_name="us-east-1")
     assert _get_cf_stack_status(session, "foo-bar-baz") is None
@@ -332,7 +327,7 @@ def test__get_stack_output_value():
         )
 
 
-@mock_cloudformation
+@mock_aws
 def test__create_role(aws_credentials):
     session = boto3.Session(region_name="us-east-1")
     assert (
@@ -340,13 +335,13 @@ def test__create_role(aws_credentials):
     )
 
 
-@mock_iam
+@mock_aws
 def test__get_role(aws_credentials):
     session = boto3.Session(region_name="us-east-1")
     assert _get_role(session, "arn:aws:iam::1234567890:role/foobar") is None
 
 
-@mock_cloudformation
+@mock_aws
 def test__import_log_ingestion_function(aws_credentials):
     session = boto3.Session(region_name="us-east-1")
     _import_log_ingestion_function(
@@ -361,14 +356,13 @@ def test__import_log_ingestion_function(aws_credentials):
     )
 
 
-@mock_sts
+@mock_aws
 def test_get_aws_account_id(aws_credentials):
     session = boto3.Session(region_name="us-east-1")
     assert get_aws_account_id(session) == "123456789012"
 
 
-@mock_cloudformation
-@mock_lambda
+@mock_aws
 @patch("newrelic_lambda_cli.integrations._get_sar_template_url", autospec=True)
 @patch("newrelic_lambda_cli.integrations._create_log_ingestion_function", autospec=True)
 def test_update_log_ingestion_function(
