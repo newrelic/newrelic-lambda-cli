@@ -333,7 +333,7 @@ def test_add_new_relic_nodejs(aws_credentials, mock_function_config):
     assert (
         update_kwargs_std["FunctionName"] == config_std["Configuration"]["FunctionArn"]
     )
-    assert update_kwargs_std["Handler"] == "newrelic_lambda_wrapper.handler"
+    assert update_kwargs_std["Handler"] == "newrelic-lambda-wrapper.handler"
     assert (
         update_kwargs_std["Environment"]["Variables"]["NEW_RELIC_LAMBDA_HANDLER"]
         == original_std_handler
