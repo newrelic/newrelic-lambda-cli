@@ -172,7 +172,18 @@ def _add_new_relic(input, config, nr_license_key):
 
     # Update the NEW_RELIC_LAMBDA_HANDLER envvars only when it's a new install.
     if runtime_handler and handler != runtime_handler:
-        update_kwargs["Environment"]["Variables"]["NEW_RELIC_LAMBDA_HANDLER"] = handler
+        if "nodejs" in runtime:
+            if handler not in [
+                "newrelic-lambda-wrapper.handler",
+                "/opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index.handler",
+            ]:
+                update_kwargs["Environment"]["Variables"][
+                    "NEW_RELIC_LAMBDA_HANDLER"
+                ] = handler
+        else:
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_LAMBDA_HANDLER"
+            ] = handler
 
     if input.enable_extension and not utils.supports_lambda_extension(runtime):
         warning(
