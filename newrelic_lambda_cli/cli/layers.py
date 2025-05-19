@@ -105,8 +105,7 @@ def register(group):
 )
 @click.option(
     "--esm",
-    default=False,
-    show_default=True,
+    is_flag=True,
     help="Nodejs runtimes only - nodejs implementation runtime handler to /opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index.handler",
 )
 @click.pass_context
