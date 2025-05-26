@@ -313,7 +313,14 @@ def install(input, function_arn):
         if input.verbose:
             click.echo(json.dumps(res, indent=2))
 
-        success("Successfully installed layer on %s" % function_arn)
+        old_layers = config["Configuration"].get("Layers", [])
+        old_layer_arn = old_layers[0]["Arn"] if old_layers else "None"
+
+        new_layer_arn = update_kwargs["Layers"][0]
+        success(
+            "Successfully installed new layer\nfrom %s to %s to the function: %s"
+            % (old_layer_arn, new_layer_arn, function_arn)
+        )
         return True
 
 
@@ -412,7 +419,9 @@ def uninstall(input, function_arn):
         if input.verbose:
             click.echo(json.dumps(res, indent=2))
 
-        success("Successfully uninstalled layer on %s" % function_arn)
+        old_layers = config["Configuration"].get("Layers", [])
+        old_layer_arn = old_layers[0]["Arn"] if old_layers else "None"
+        success("Successfully uninstalled layer %s on %s" % (old_layer_arn,function_arn))
         return True
 
 
