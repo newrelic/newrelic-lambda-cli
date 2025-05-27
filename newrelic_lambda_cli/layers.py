@@ -315,7 +315,9 @@ def install(input, function_arn):
 
         old_layers = config["Configuration"].get("Layers", [])
         old_layer_arn = old_layers[0]["Arn"].rsplit(":", 1)[0] if old_layers else "None"
-        old_layer_version = old_layers[0]["Arn"].split(":")[-1] if old_layers else "None"
+        old_layer_version = (
+            old_layers[0]["Arn"].split(":")[-1] if old_layers else "None"
+        )
         new_layer = update_kwargs["Layers"][0]
         new_layer_arn = update_kwargs["Layers"][0].rsplit(":", 1)[0]
         new_layer_version = update_kwargs["Layers"][0].split(":")[-1]
@@ -430,7 +432,9 @@ def uninstall(input, function_arn):
 
         old_layers = config["Configuration"].get("Layers", [])
         old_layer_arn = old_layers[0]["Arn"] if old_layers else "None"
-        success("Successfully uninstalled Layer %s from %s" % (old_layer_arn,function_arn))
+        success(
+            "Successfully uninstalled Layer %s from %s" % (old_layer_arn, function_arn)
+        )
         return True
 
 

@@ -636,34 +636,41 @@ def test_uninstall(aws_credentials, mock_function_config):
 @mock_aws
 def test_install_success_message_new_layer(aws_credentials, mock_function_config):
     """Test that the correct success message is shown when installing a layer on a function with no existing layers"""
-    
+
     mock_session = MagicMock()
     mock_session.region_name = "us-east-1"
-    
-    with patch("newrelic_lambda_cli.layers._get_license_key_outputs") as mock_get_license_key_outputs, \
-         patch("newrelic_lambda_cli.layers.success") as mock_success:
-        
+
+    with patch(
+        "newrelic_lambda_cli.layers._get_license_key_outputs"
+    ) as mock_get_license_key_outputs, patch(
+        "newrelic_lambda_cli.layers.success"
+    ) as mock_success:
+
         mock_get_license_key_outputs.return_value = ("license_arn", "12345", "policy")
         mock_client = mock_session.client.return_value
-        
+
         config = mock_function_config("python3.12")
         config["Configuration"]["Layers"] = []
         mock_client.get_function.return_value = config
-        
-        new_layer_arn = "arn:aws:lambda:us-east-1:451483290750:layer:NewRelicPython39:35"
-        
+
+        new_layer_arn = (
+            "arn:aws:lambda:us-east-1:451483290750:layer:NewRelicPython39:35"
+        )
+
         with patch("newrelic_lambda_cli.layers._add_new_relic") as mock_add_new_relic:
             mock_add_new_relic.return_value = {
                 "FunctionName": "test-function-name",
-                "Layers": [new_layer_arn]
+                "Layers": [new_layer_arn],
             }
-            
+
             function_arn = "test-function-arn"
-            result = install(layer_install(nr_account_id=12345, session=mock_session), function_arn)
-            
+            result = install(
+                layer_install(nr_account_id=12345, session=mock_session), function_arn
+            )
+
             assert result is True
-            
+
             mock_success.assert_called_once_with(
-                "Successfully installed Layer ARN %s for the function: %s" 
+                "Successfully installed Layer ARN %s for the function: %s"
                 % (new_layer_arn, function_arn)
             )

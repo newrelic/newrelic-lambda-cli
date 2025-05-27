@@ -21,7 +21,13 @@ def test_error():
 def test_is_valid_handler():
     assert is_valid_handler("fakeruntime", "not.a.valid.handler") is False
     assert is_valid_handler("python3.9", "newrelic_lambda_wrapper.handler") is True
-    assert is_valid_handler("nodejs22", "/opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index.handler") is True
+    assert (
+        is_valid_handler(
+            "nodejs22",
+            "/opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index.handler",
+        )
+        is True
+    )
 
 
 def test_parse_arn():
