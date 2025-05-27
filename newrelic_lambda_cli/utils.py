@@ -131,6 +131,12 @@ def all_lambda_regions():
 
 def is_valid_handler(runtime, handler):
     runtime_handler = RUNTIME_CONFIG.get(runtime, {}).get("Handler", None)
+    if (
+        "nodejs" in runtime
+        and handler
+        == "/opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index.handler"
+    ):
+        return True
     if isinstance(runtime_handler, dict):
         for _, valid_handler in runtime_handler.items():
             if handler == valid_handler:
