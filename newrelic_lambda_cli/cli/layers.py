@@ -83,7 +83,7 @@ def register(group):
 )
 @click.option(
     "--apm",
-    help="Enable APM Lambda monitoring",
+    help="Enable APM Lambda mode",
     is_flag=True,
 )
 @click.option(
