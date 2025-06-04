@@ -118,6 +118,7 @@ def _add_new_relic(input, config, nr_license_key):
         success(
             "Already installed on function '%s'. Pass --upgrade (or -u) to allow "
             "upgrade or reinstall to latest layer version."
+            "Additionally pass --apm to enable APM Lambda mode."
             % config["Configuration"]["FunctionArn"]
         )
         return True
@@ -231,6 +232,13 @@ def _add_new_relic(input, config, nr_license_key):
         update_kwargs["Environment"]["Variables"][
             "CORECLR_PROFILER_PATH"
         ] = "/opt/lib/newrelic-dotnet-agent/libNewRelicProfiler.so"
+
+    if input.apm:
+        success(
+            "Enabling APM Lambda mode for function '%s' "
+            % config["Configuration"]["FunctionArn"]
+        )
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_APM_LAMBDA_MODE"] = "True"
 
     return update_kwargs
 

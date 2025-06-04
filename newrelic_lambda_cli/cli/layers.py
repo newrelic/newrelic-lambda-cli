@@ -82,6 +82,11 @@ def register(group):
     is_flag=True,
 )
 @click.option(
+    "--apm",
+    help="Enable APM Lambda monitoring",
+    is_flag=True,
+)
+@click.option(
     "--enable-extension/--disable-extension",
     "-x",
     default=True,
