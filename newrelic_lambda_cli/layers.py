@@ -304,6 +304,14 @@ def install(input, function_arn):
 
     try:
         res = client.update_function_configuration(**update_kwargs)
+        if input.apm:
+            client.tag_resource(
+                Resource=config["Configuration"]["FunctionArn"],
+                Tags={
+                    "NR.Apm.Lambda.Mode": "true",
+                },
+            )
+            success("Successfully added APM tag to the function")
     except botocore.exceptions.ClientError as e:
         failure(
             "Failed to update configuration for '%s': %s"
@@ -321,22 +329,6 @@ def install(input, function_arn):
 
         if input.verbose:
             click.echo(json.dumps(res, indent=2))
-
-        if input.apm:
-            try:
-                client.tag_resource(
-                    Resource=config["Configuration"]["FunctionArn"],
-                    Tags={
-                        "NR.Apm.Lambda.Mode": "true",
-                    },
-                )
-                success("Successfully added APM tag to the function")
-            except botocore.exceptions.ClientError as e:
-                failure(
-                    "Failed to add APM tag to function '%s' with APM Lambda mode: %s"
-                    % (config["Configuration"]["FunctionArn"], e)
-                )
-                return False
 
         old_layers = config["Configuration"].get("Layers", [])
         old_layer_arn = old_layers[0]["Arn"].rsplit(":", 1)[0] if old_layers else "None"
