@@ -263,6 +263,85 @@ def test_add_new_relic_apm_lambda_mode(aws_credentials, mock_function_config):
     )
 
 
+def test_install_apm(aws_credentials, mock_function_config):
+    mock_session = MagicMock()
+    mock_session.region_name = "us-east-1"
+    expected_tags_after_tagging = {
+        "NR.Apm.Lambda.Mode": "true",
+    }
+
+    with patch(
+        "newrelic_lambda_cli.layers._get_license_key_outputs"
+    ) as mock_get_license_key_outputs:
+        mock_client = mock_session.client.return_value
+
+        mock_client.get_function.reset_mock(return_value=True)
+
+        config = mock_function_config("python3.12")
+        mock_client.get_function.return_value = config
+
+        mock_get_license_key_outputs.return_value = ("license_arn", "12345", "policy")
+
+        try:
+            install(
+                layer_install(
+                    session=mock_session,
+                    aws_region="us-east-1",
+                    nr_account_id=12345,
+                    apm=True,
+                ),
+                "APMLambda",
+            )
+        except UsageError as e:
+            print(f"UsageError: {e}")
+
+        mock_client.get_function.reset_mock()
+        config = mock_function_config("python3.12")
+        mock_client.get_function.return_value = config
+        mock_client.list_tags.return_value = {"Tags": expected_tags_after_tagging}
+        assert (
+            install(
+                layer_install(nr_account_id=12345, session=mock_session), "APMLambda"
+            )
+            is True
+        )
+
+        mock_client.assert_has_calls([call.get_function(FunctionName="APMLambda")])
+        mock_client.assert_has_calls(
+            [
+                call.update_function_configuration(
+                    FunctionName="arn:aws:lambda:us-east-1:5558675309:function:aws-python3-dev-hello",  # noqa
+                    Environment={
+                        "Variables": {
+                            "EXISTING_ENV_VAR": "Hello World",
+                            "NEW_RELIC_ACCOUNT_ID": "12345",
+                            "NEW_RELIC_LAMBDA_HANDLER": "original_handler",
+                            "NEW_RELIC_LAMBDA_EXTENSION_ENABLED": "false",
+                            "NEW_RELIC_APM_LAMBDA_MODE": "True",
+                        }
+                    },
+                    Layers=ANY,
+                    Handler="newrelic_lambda_wrapper.handler",
+                )
+            ]
+        )
+
+        mock_client.assert_has_calls(
+            [
+                call.tag_resource(
+                    Resource="arn:aws:lambda:us-east-1:5558675309:function:aws-python3-dev-hello",
+                    Tags={
+                        "NR.Apm.Lambda.Mode": "true",
+                    },
+                )
+            ]
+        )
+
+        tags_from_list_tags = mock_client.list_tags(Resource="APMLambda")["Tags"]
+
+        assert tags_from_list_tags == expected_tags_after_tagging
+
+
 @mock_aws
 def test_add_new_relic_dotnet(aws_credentials, mock_function_config):
     session = boto3.Session(region_name="us-east-1")

@@ -304,6 +304,14 @@ def install(input, function_arn):
 
     try:
         res = client.update_function_configuration(**update_kwargs)
+        if input.apm:
+            client.tag_resource(
+                Resource=config["Configuration"]["FunctionArn"],
+                Tags={
+                    "NR.Apm.Lambda.Mode": "true",
+                },
+            )
+            success("Successfully added APM tag to the function")
     except botocore.exceptions.ClientError as e:
         failure(
             "Failed to update configuration for '%s': %s"
