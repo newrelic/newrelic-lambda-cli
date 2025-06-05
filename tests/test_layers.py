@@ -262,6 +262,36 @@ def test_add_new_relic_apm_lambda_mode(aws_credentials, mock_function_config):
         update_kwargs["Environment"]["Variables"]["NEW_RELIC_APM_LAMBDA_MODE"] == "True"
     )
 
+    mock_session = MagicMock()
+    mock_client = mock_session.client.return_value
+    expected_tags_after_tagging = {
+        "NR.Apm.Lambda.Mode": "true",
+    }
+    mock_client.list_tags.return_value = {"Tags": expected_tags_after_tagging}
+    response_tag_resource = mock_client.tag_resource(
+        Resource="arn:aws:lambda:us-west-2:1234567890:function:Lambda",
+        Tags={
+            "NR.Apm.Lambda.Mode": "true",
+        },
+    )
+
+    tags_from_list_tags = mock_client.list_tags(
+        Resource="arn:aws:lambda:us-west-2:1234567890:function:Lambda"
+    )["Tags"]
+
+    mock_client.tag_resource.assert_called_once_with(
+        Resource="arn:aws:lambda:us-west-2:1234567890:function:Lambda",
+        Tags={
+            "NR.Apm.Lambda.Mode": "true",
+        },
+    )
+
+    mock_client.list_tags.assert_called_once_with(
+        Resource="arn:aws:lambda:us-west-2:1234567890:function:telemetryTestLambda_Py3_12_arm"
+    )
+
+    assert tags_from_list_tags == expected_tags_after_tagging
+
 
 @mock_aws
 def test_add_new_relic_dotnet(aws_credentials, mock_function_config):
