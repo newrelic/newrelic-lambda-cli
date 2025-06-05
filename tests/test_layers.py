@@ -236,6 +236,34 @@ def test_add_new_relic(aws_credentials, mock_function_config):
 
 
 @mock_aws
+def test_add_new_relic_apm_lambda_mode(aws_credentials, mock_function_config):
+    session = boto3.Session(region_name="us-east-1")
+
+    config = mock_function_config("python3.12")
+
+    assert config["Configuration"]["Handler"] == "original_handler"
+
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=12345,
+            enable_extension=True,
+            enable_extension_function_logs=True,
+            apm=True,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert update_kwargs["FunctionName"] == config["Configuration"]["FunctionArn"]
+    assert update_kwargs["Handler"] == "newrelic_lambda_wrapper.handler"
+    assert (
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_APM_LAMBDA_MODE"] == "True"
+    )
+
+
+@mock_aws
 def test_add_new_relic_dotnet(aws_credentials, mock_function_config):
     session = boto3.Session(region_name="us-east-1")
 

@@ -104,6 +104,7 @@ LAYER_INSTALL_KEYS = [
     "excludes",
     "layer_arn",
     "upgrade",
+    "apm",
     "enable_extension",
     "enable_extension_function_logs",
     "java_handler_method",
