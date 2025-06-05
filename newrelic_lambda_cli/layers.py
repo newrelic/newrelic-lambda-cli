@@ -330,6 +330,7 @@ def install(input, function_arn):
                         "NR.Apm.Lambda.Mode": "true",
                     },
                 )
+                success("Successfully added APM tag to the function")
             except botocore.exceptions.ClientError as e:
                 failure(
                     "Failed to add APM tag to function '%s' with APM Lambda mode: %s"
