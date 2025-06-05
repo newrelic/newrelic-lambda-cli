@@ -287,7 +287,7 @@ def test_add_new_relic_apm_lambda_mode(aws_credentials, mock_function_config):
     )
 
     mock_client.list_tags.assert_called_once_with(
-        Resource="arn:aws:lambda:us-west-2:1234567890:function:telemetryTestLambda_Py3_12_arm"
+        Resource="arn:aws:lambda:us-west-2:1234567890:function:Lambda"
     )
 
     assert tags_from_list_tags == expected_tags_after_tagging
