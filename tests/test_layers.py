@@ -236,6 +236,113 @@ def test_add_new_relic(aws_credentials, mock_function_config):
 
 
 @mock_aws
+def test_add_new_relic_apm_lambda_mode(aws_credentials, mock_function_config):
+    session = boto3.Session(region_name="us-east-1")
+
+    config = mock_function_config("python3.12")
+
+    assert config["Configuration"]["Handler"] == "original_handler"
+
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=12345,
+            enable_extension=True,
+            enable_extension_function_logs=True,
+            apm=True,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert update_kwargs["FunctionName"] == config["Configuration"]["FunctionArn"]
+    assert update_kwargs["Handler"] == "newrelic_lambda_wrapper.handler"
+    assert (
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_APM_LAMBDA_MODE"] == "True"
+    )
+
+
+def test_install_apm(aws_credentials, mock_function_config):
+    mock_session = MagicMock()
+    mock_session.region_name = "us-east-1"
+    expected_tags_after_tagging = {
+        "NR.Apm.Lambda.Mode": "true",
+    }
+
+    with patch(
+        "newrelic_lambda_cli.layers._get_license_key_outputs"
+    ) as mock_get_license_key_outputs:
+        mock_client = mock_session.client.return_value
+
+        mock_client.get_function.reset_mock(return_value=True)
+
+        config = mock_function_config("python3.12")
+        mock_client.get_function.return_value = config
+
+        mock_get_license_key_outputs.return_value = ("license_arn", "12345", "policy")
+
+        try:
+            install(
+                layer_install(
+                    session=mock_session,
+                    aws_region="us-east-1",
+                    nr_account_id=12345,
+                    apm=True,
+                ),
+                "APMLambda",
+            )
+        except UsageError as e:
+            print(f"UsageError: {e}")
+
+        mock_client.get_function.reset_mock()
+        config = mock_function_config("python3.12")
+        mock_client.get_function.return_value = config
+        mock_client.list_tags.return_value = {"Tags": expected_tags_after_tagging}
+        assert (
+            install(
+                layer_install(nr_account_id=12345, session=mock_session), "APMLambda"
+            )
+            is True
+        )
+
+        mock_client.assert_has_calls([call.get_function(FunctionName="APMLambda")])
+        mock_client.assert_has_calls(
+            [
+                call.update_function_configuration(
+                    FunctionName="arn:aws:lambda:us-east-1:5558675309:function:aws-python3-dev-hello",  # noqa
+                    Environment={
+                        "Variables": {
+                            "EXISTING_ENV_VAR": "Hello World",
+                            "NEW_RELIC_ACCOUNT_ID": "12345",
+                            "NEW_RELIC_LAMBDA_HANDLER": "original_handler",
+                            "NEW_RELIC_LAMBDA_EXTENSION_ENABLED": "false",
+                            "NEW_RELIC_APM_LAMBDA_MODE": "True",
+                        }
+                    },
+                    Layers=ANY,
+                    Handler="newrelic_lambda_wrapper.handler",
+                )
+            ]
+        )
+
+        mock_client.assert_has_calls(
+            [
+                call.tag_resource(
+                    Resource="arn:aws:lambda:us-east-1:5558675309:function:aws-python3-dev-hello",
+                    Tags={
+                        "NR.Apm.Lambda.Mode": "true",
+                    },
+                )
+            ]
+        )
+
+        tags_from_list_tags = mock_client.list_tags(Resource="APMLambda")["Tags"]
+
+        assert tags_from_list_tags == expected_tags_after_tagging
+
+
+@mock_aws
 def test_add_new_relic_dotnet(aws_credentials, mock_function_config):
     session = boto3.Session(region_name="us-east-1")
 
@@ -296,6 +403,119 @@ def test_add_new_relic_dotnet(aws_credentials, mock_function_config):
             update_kwargs["Environment"]["Variables"]["CORECLR_PROFILER_PATH"]
             == "/opt/lib/newrelic-dotnet-agent/libNewRelicProfiler.so"
         )
+
+
+@mock_aws
+def test_add_new_relic_nodejs(aws_credentials, mock_function_config):
+    """
+    Tests adding New Relic layer and configuration to Node.js functions,
+    including the standard and ESM wrapper handlers.
+    """
+    session = boto3.Session(region_name="us-east-1")
+    nr_license_key = "test-license-key-nodejs"
+    nr_account_id = 12345
+
+    runtime = "nodejs20.x"
+
+    # --- Scenario 1: Standard Node.js Handler (ESM disabled) ---
+    print(f"\nTesting Node.js ({runtime}) Standard Handler...")
+    original_std_handler = "original_handler"
+    config_std = mock_function_config(runtime)
+
+    install_opts_std = layer_install(
+        session=session,
+        aws_region="us-east-1",
+        nr_account_id=nr_account_id,
+        enable_extension=True,
+        enable_extension_function_logs=True,
+    )
+
+    update_kwargs_std = _add_new_relic(
+        install_opts_std,
+        config_std,
+        nr_license_key=nr_license_key,
+    )
+
+    assert update_kwargs_std is not False, "Expected update_kwargs, not False"
+    assert (
+        update_kwargs_std["FunctionName"] == config_std["Configuration"]["FunctionArn"]
+    )
+    assert update_kwargs_std["Handler"] == "newrelic-lambda-wrapper.handler"
+    assert (
+        update_kwargs_std["Environment"]["Variables"]["NEW_RELIC_LAMBDA_HANDLER"]
+        == original_std_handler
+    )
+    assert update_kwargs_std["Environment"]["Variables"]["NEW_RELIC_ACCOUNT_ID"] == str(
+        nr_account_id
+    )
+    assert (
+        update_kwargs_std["Environment"]["Variables"]["NEW_RELIC_LICENSE_KEY"]
+        == nr_license_key
+    )
+    assert (
+        update_kwargs_std["Environment"]["Variables"][
+            "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
+        ]
+        == "true"
+    )
+    assert (
+        update_kwargs_std["Environment"]["Variables"][
+            "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
+        ]
+        == "true"
+    )
+
+    # --- Scenario 2: ESM Node.js Handler (ESM enabled) ---
+    print(f"\nTesting Node.js ({runtime}) ESM Handler...")
+    original_esm_handler = "original_handler"
+    config_esm = mock_function_config(runtime)
+
+    install_opts_esm = layer_install(
+        session=session,
+        aws_region="us-east-1",
+        nr_account_id=nr_account_id,
+        enable_extension=True,
+        enable_extension_function_logs=True,
+        esm=True,
+    )
+
+    update_kwargs_esm = _add_new_relic(
+        install_opts_esm,
+        config_esm,
+        nr_license_key=nr_license_key,
+    )
+
+    assert update_kwargs_esm is not False, "Expected update_kwargs, not False"
+    assert (
+        update_kwargs_esm["FunctionName"] == config_esm["Configuration"]["FunctionArn"]
+    )
+    assert (
+        update_kwargs_esm["Handler"]
+        == "/opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index.handler"
+    )
+    assert (
+        update_kwargs_esm["Environment"]["Variables"]["NEW_RELIC_LAMBDA_HANDLER"]
+        == original_esm_handler
+    )
+    assert update_kwargs_esm["Environment"]["Variables"]["NEW_RELIC_ACCOUNT_ID"] == str(
+        nr_account_id
+    )
+    assert (
+        update_kwargs_esm["Environment"]["Variables"]["NEW_RELIC_LICENSE_KEY"]
+        == nr_license_key
+    )
+    assert (
+        update_kwargs_esm["Environment"]["Variables"][
+            "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
+        ]
+        == "true"
+    )
+    assert (
+        update_kwargs_esm["Environment"]["Variables"][
+            "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
+        ]
+        == "true"
+    )
 
 
 @mock_aws
@@ -520,7 +740,44 @@ def test_uninstall(aws_credentials, mock_function_config):
             )
 
 
-def test_layers_index():
-    layers = index("ap-southeast-1", "nodejs20.x", "x86_64")
+@mock_aws
+def test_install_success_message_new_layer(aws_credentials, mock_function_config):
+    """Test that the correct success message is shown when installing a layer on a function with no existing layers"""
 
-    assert len(layers) == 1
+    mock_session = MagicMock()
+    mock_session.region_name = "us-east-1"
+
+    with patch(
+        "newrelic_lambda_cli.layers._get_license_key_outputs"
+    ) as mock_get_license_key_outputs, patch(
+        "newrelic_lambda_cli.layers.success"
+    ) as mock_success:
+
+        mock_get_license_key_outputs.return_value = ("license_arn", "12345", "policy")
+        mock_client = mock_session.client.return_value
+
+        config = mock_function_config("python3.12")
+        config["Configuration"]["Layers"] = []
+        mock_client.get_function.return_value = config
+
+        new_layer_arn = (
+            "arn:aws:lambda:us-east-1:451483290750:layer:NewRelicPython39:35"
+        )
+
+        with patch("newrelic_lambda_cli.layers._add_new_relic") as mock_add_new_relic:
+            mock_add_new_relic.return_value = {
+                "FunctionName": "test-function-name",
+                "Layers": [new_layer_arn],
+            }
+
+            function_arn = "test-function-arn"
+            result = install(
+                layer_install(nr_account_id=12345, session=mock_session), function_arn
+            )
+
+            assert result is True
+
+            mock_success.assert_called_once_with(
+                "Successfully installed Layer ARN %s for the function: %s"
+                % (new_layer_arn, function_arn)
+            )

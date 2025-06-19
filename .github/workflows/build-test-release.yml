@@ -17,6 +17,7 @@ jobs:
       run: |
         pip install -q -U pip
         pip install -q -U pyOpenSSL setuptools twine wheel
+        pip install -q -U packaging
     - name: Release package
       env:
         TWINE_USERNAME: __token__

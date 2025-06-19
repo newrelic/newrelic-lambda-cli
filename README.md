@@ -36,36 +36,21 @@ A CLI to install the New Relic AWS Lambda integration and layers.
 
 ## Runtimes Supported
 
-* dotnetcore3.1
-* dotnet6
-* dotnet8
-* java8.al2
-* java11
-* java17
-* java21
-* nodejs16.x
-* nodejs18.x
-* nodejs20.x
-* nodejs22.x
-* provided
-* provided.al2
-* provided.al2023
-* python3.7
-* python3.8
-* python3.9
-* python3.10
-* python3.11
-* python3.12
-* python3.13
-* ruby3.2
-* ruby3.3
+| Runtime     | Versions               |
+|-------------|------------------------|
+| Python      | `python3.7`, `python3.8`, `python3.9`, `python3.10`, `python3.11`, `python3.12`, `python3.13` |
+| Node.js     | `nodejs16.x`, `nodejs18.x`, `nodejs20.x`, `nodejs22.x` |
+| .NET   | `dotnet3.1`, `dotnet6`, `dotnet8`              |
+| Java        | `java8.al2`, `java11`, `java17`, `java21`      |
+| Provided    | `provided`, `provided.al2`, `provided.al2023`         |
+| Ruby        | `ruby3.2`, `ruby3.3`, `ruby3.4`          |
 
 **Note:** Automatic handler wrapping is only supported for Node.js, Python, Java, and Ruby. For other runtimes,
 manual function wrapping is required using the runtime specific New Relic agent.
 
 ## Requirements
 
-* Python >= 3.3 <= 3.12
+* Python >= 3.7 <= 3.13
 * Retrieve your [New relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) and [User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key)
 
 ## Recommendations
@@ -195,6 +180,7 @@ newrelic-lambda layers install \
 | `--nr-api-key` or `-k` | No | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Can also use the `NEW_RELIC_API_KEY` environment variable. Only used if `--enable-extension` is set and there is no New Relic license key in AWS Secrets Manager. |
 | `--nr-region` | No | The New Relic region to use for the integration. Can use the `NEW_RELIC_REGION` environment variable. Can be either `eu` or `us`. Defaults to `us`. Only used if `--enable-extension` is set and there is no New Relic license key in AWS Secrets Manager. |
 | `--java_handler_method` or `-j` | No | For java runtimes only to specify an aws implementation method. Defaults to RequestHandler. Optional inputs are: handleRequest, handleStreamsRequest `--java_handler_method handleStreamsRequest`. |
+| `--esm` | No |  For Node.js functions using ES Modules (ESM), enable the specific ESM wrapper during installation (e.g., using the --esm flag). This sets the Lambda handler to `/opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index.handler`. |
 
 #### Uninstall Layer
 

@@ -24,6 +24,7 @@ NEW_RELIC_ENV_VARS = (
     "NEW_RELIC_LICENSE_KEY",
     "NEW_RELIC_LOG_ENDPOINT",
     "NEW_RELIC_TELEMETRY_ENDPOINT",
+    "NEW_RELIC_APM_LAMBDA_MODE",
 )
 
 
@@ -100,6 +101,13 @@ def _add_new_relic(input, config, nr_license_key):
     if "java" in runtime:
         postfix = input.java_handler_method or "handleRequest"
         runtime_handler = runtime_handler + postfix
+    if "nodejs" in runtime:
+        prefix = (
+            "/opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index"
+            if input.esm
+            else "newrelic-lambda-wrapper"
+        )
+        runtime_handler = prefix + ".handler"
 
     existing_newrelic_layer = [
         layer["Arn"]
@@ -111,6 +119,7 @@ def _add_new_relic(input, config, nr_license_key):
         success(
             "Already installed on function '%s'. Pass --upgrade (or -u) to allow "
             "upgrade or reinstall to latest layer version."
+            "Additionally pass --apm to enable APM Lambda mode."
             % config["Configuration"]["FunctionArn"]
         )
         return True
@@ -165,7 +174,18 @@ def _add_new_relic(input, config, nr_license_key):
 
     # Update the NEW_RELIC_LAMBDA_HANDLER envvars only when it's a new install.
     if runtime_handler and handler != runtime_handler:
-        update_kwargs["Environment"]["Variables"]["NEW_RELIC_LAMBDA_HANDLER"] = handler
+        if "nodejs" in runtime:
+            if handler not in [
+                "newrelic-lambda-wrapper.handler",
+                "/opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index.handler",
+            ]:
+                update_kwargs["Environment"]["Variables"][
+                    "NEW_RELIC_LAMBDA_HANDLER"
+                ] = handler
+        else:
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_LAMBDA_HANDLER"
+            ] = handler
 
     if input.enable_extension and not utils.supports_lambda_extension(runtime):
         warning(
@@ -213,6 +233,13 @@ def _add_new_relic(input, config, nr_license_key):
         update_kwargs["Environment"]["Variables"][
             "CORECLR_PROFILER_PATH"
         ] = "/opt/lib/newrelic-dotnet-agent/libNewRelicProfiler.so"
+
+    if input.apm:
+        success(
+            "Enabling APM Lambda mode for function '%s' "
+            % config["Configuration"]["FunctionArn"]
+        )
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_APM_LAMBDA_MODE"] = "True"
 
     return update_kwargs
 
@@ -277,6 +304,14 @@ def install(input, function_arn):
 
     try:
         res = client.update_function_configuration(**update_kwargs)
+        if input.apm:
+            client.tag_resource(
+                Resource=config["Configuration"]["FunctionArn"],
+                Tags={
+                    "NR.Apm.Lambda.Mode": "true",
+                },
+            )
+            success("Successfully added APM tag to the function")
     except botocore.exceptions.ClientError as e:
         failure(
             "Failed to update configuration for '%s': %s"
@@ -295,7 +330,25 @@ def install(input, function_arn):
         if input.verbose:
             click.echo(json.dumps(res, indent=2))
 
-        success("Successfully installed layer on %s" % function_arn)
+        old_layers = config["Configuration"].get("Layers", [])
+        old_layer_arn = old_layers[0]["Arn"].rsplit(":", 1)[0] if old_layers else "None"
+        old_layer_version = (
+            old_layers[0]["Arn"].split(":")[-1] if old_layers else "None"
+        )
+        new_layer = update_kwargs["Layers"][0]
+        new_layer_arn = update_kwargs["Layers"][0].rsplit(":", 1)[0]
+        new_layer_version = update_kwargs["Layers"][0].split(":")[-1]
+
+        if old_layer_arn == "None":
+            success(
+                "Successfully installed Layer ARN %s for the function: %s"
+                % (new_layer, function_arn)
+            )
+        else:
+            success(
+                "Successfully upgraded Layer ARN %s from version: %s to version: %s for the function: %s"
+                % (new_layer_arn, old_layer_version, new_layer_version, function_arn)
+            )
         return True
 
 
@@ -394,7 +447,11 @@ def uninstall(input, function_arn):
         if input.verbose:
             click.echo(json.dumps(res, indent=2))
 
-        success("Successfully uninstalled layer on %s" % function_arn)
+        old_layers = config["Configuration"].get("Layers", [])
+        old_layer_arn = old_layers[0]["Arn"] if old_layers else "None"
+        success(
+            "Successfully uninstalled Layer %s from %s" % (old_layer_arn, function_arn)
+        )
         return True
 
 

@@ -82,6 +82,11 @@ def register(group):
     is_flag=True,
 )
 @click.option(
+    "--apm",
+    help="Enable APM Lambda mode",
+    is_flag=True,
+)
+@click.option(
     "--enable-extension/--disable-extension",
     "-x",
     default=True,
@@ -102,6 +107,11 @@ def register(group):
     metavar="<java_handler>",
     show_default=True,
     type=click.Choice(["handleRequest", "handleStreamsRequest"]),
+)
+@click.option(
+    "--esm",
+    is_flag=True,
+    help="Nodejs runtimes only - nodejs implementation runtime handler to /opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index.handler",
 )
 @click.pass_context
 def install(ctx, **kwargs):
