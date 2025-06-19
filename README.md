@@ -101,6 +101,8 @@ newrelic-lambda integrations install \
 | `--linked-account-name` or `-n` | No | A label for the New Relic Linked Account. This is how this integration will appear in New Relic. Defaults to "New Relic Lambda Integration - <AWS Account ID>". |
 | `--enable-logs` or `-e` | No | Enables forwarding logs to New Relic Logging. This is disabled by default. Make sure you run `newrelic-lambda subscriptions install --function ... --filter-pattern ""` afterwards. |
 | `--enable-license-key-secret` | No | Securely manages and store your New Relic license key in `AWS Secrets Manager` |
+| `--enable-cw-ingest` | No | Enable the CloudWatch `log ingest` function |
+| `--disable-cw-ingest` | No | Disable the CloudWatch `log ingest` function |
 | `--memory-size` or `-m` | No | Memory size (in MiB) for the New Relic log ingestion function. Default to 128MB. |
 | `--nr-region` | No | The New Relic region to use for the integration. Can use the `NEW_RELIC_REGION` environment variable. Can be either `eu` or `us`. Defaults to `us`. |
 | `--timeout` or `-t` | No | Timeout (in seconds) for the New Relic log ingestion function. Defaults to 30 seconds. |
