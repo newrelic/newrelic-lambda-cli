@@ -187,7 +187,6 @@ def parse_arn(arn):
         result["resource"] = elements[5]
         result["resourcetype"] = None
     else:
-        print(elements[5])
         splitted_arn = elements[5].split("/")
         result["resourcetype"] = splitted_arn[0]
         result["resource"] = "/".join(splitted_arn[1:])
