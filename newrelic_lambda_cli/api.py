@@ -370,11 +370,10 @@ def retrieve_license_key(gql):
         return __cached_license_key
     except Exception:
         raise click.BadParameter(
-            "Could not retrieve license key from New Relic. Check that your New Relic "
-            "Account ID is valid and try again.",
+            " Invalid value for API Key: Kindly use your user key, which can be found at https://one.newrelic.com/api-keys",
             ctx=None,
-            param="nr_account_id",
-            param_hint="New Relic Account ID",
+            param="--nr-api-key",
+            param_hint="API Key",
         )
 
 
