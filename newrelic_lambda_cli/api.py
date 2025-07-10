@@ -372,7 +372,7 @@ def retrieve_license_key(gql):
         raise click.BadParameter(
             " Invalid value for API Key: Kindly use your user key, which can be found at https://one.newrelic.com/api-keys",
             ctx=None,
-            param="--nr-api-key",
+            param="nr_api_key",
             param_hint="API Key",
         )
 
