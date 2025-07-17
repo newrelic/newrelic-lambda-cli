@@ -18,6 +18,7 @@ from newrelic_lambda_cli.utils import catch_boto_errors
 
 NEW_RELIC_ENV_VARS = (
     "NEW_RELIC_ACCOUNT_ID",
+    "NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS",
     "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS",
     "NEW_RELIC_LAMBDA_EXTENSION_ENABLED",
     "NEW_RELIC_LAMBDA_HANDLER",
@@ -201,9 +202,31 @@ def _add_new_relic(input, config, nr_license_key):
             "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
         ] = "true"
 
-        update_kwargs["Environment"]["Variables"][
-            "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
-        ] = ("true" if input.enable_extension_function_logs else "false")
+        if not input.upgrade:
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
+            ] = "false"
+        elif input.enable_extension_function_logs or input.send_function_logs:
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
+            ] = "true"
+        elif input.disable_extension_function_logs or input.disable_function_logs:
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
+            ] = "false"
+
+        if not input.upgrade:
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS"
+            ] = "false"
+        elif input.send_extension_logs:
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS"
+            ] = "true"
+        elif input.disable_extension_logs:
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS"
+            ] = "false"
 
         if input.nr_region == "staging":
             update_kwargs["Environment"]["Variables"][

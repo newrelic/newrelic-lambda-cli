@@ -107,6 +107,11 @@ LAYER_INSTALL_KEYS = [
     "apm",
     "enable_extension",
     "enable_extension_function_logs",
+    "disable_extension_function_logs",
+    "send_function_logs",
+    "disable_function_logs",
+    "send_extension_logs",
+    "disable_extension_logs",
     "java_handler_method",
     "esm",
 ]
