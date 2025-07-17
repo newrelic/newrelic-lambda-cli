@@ -94,10 +94,34 @@ def register(group):
     help="Enable/disable the New Relic Lambda Extension",
 )
 @click.option(
-    "--enable-extension-function-logs/--disable-extension-function-logs",
-    default=False,
-    show_default=True,
-    help="Enable/disable sending Lambda function logs via the Extension",
+    "--send-extension-logs",
+    is_flag=True,
+    help="Enable sending extension logs via the New Relic Lambda Extension",
+)
+@click.option(
+    "--disable-extension-logs",
+    is_flag=True,
+    help="Disable sending extension logs via the New Relic Lambda Extension",
+)
+@click.option(
+    "--enable-extension-function-logs",
+    is_flag=True,
+    help="Enable sending Lambda function logs via the New Relic Lambda Extension",
+)
+@click.option(
+    "--disable-extension-function-logs",
+    is_flag=True,
+    help="Disable sending Lambda function logs via the New Relic Lambda Extension",
+)
+@click.option(
+    "--send-function-logs",
+    is_flag=True,
+    help="Enable sending Lambda function logs via the New Relic Lambda Extension",
+)
+@click.option(
+    "--disable-function-logs",
+    is_flag=True,
+    help="Disable sending Lambda function logs via the New Relic Lambda Extension",
 )
 @click.option(
     "--java_handler_method",
