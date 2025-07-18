@@ -26,6 +26,8 @@ NEW_RELIC_ENV_VARS = (
     "NEW_RELIC_LOG_ENDPOINT",
     "NEW_RELIC_TELEMETRY_ENDPOINT",
     "NEW_RELIC_APM_LAMBDA_MODE",
+    "NR_TAGS",
+    "NR_ENV_DELIMITER",
 )
 
 
@@ -228,6 +230,12 @@ def _add_new_relic(input, config, nr_license_key):
                 "NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS"
             ] = "false"
 
+        if input.nr_tags:
+            update_kwargs["Environment"]["Variables"]["NR_TAGS"] = input.nr_tags
+        if input.nr_env_delimiter:
+            update_kwargs["Environment"]["Variables"][
+                "NR_ENV_DELIMITER"
+            ] = input.nr_env_delimiter
         if input.nr_region == "staging":
             update_kwargs["Environment"]["Variables"][
                 "NEW_RELIC_TELEMETRY_ENDPOINT"

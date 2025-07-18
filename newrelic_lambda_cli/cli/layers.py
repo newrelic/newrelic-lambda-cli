@@ -114,6 +114,14 @@ def register(group):
     help="Disable sending Lambda function logs via the New Relic Lambda Extension",
 )
 @click.option(
+    "--nr-tags",
+    help="Set NR_TAGS environment variable for Lambda (e.g. key1:value1;key2:value2)",
+)
+@click.option(
+    "--nr-env-delimiter",
+    help="Set NR_ENV_DELIMITER environment variable for Lambda (e.g. ',' for comma)",
+)
+@click.option(
     "--send-function-logs",
     is_flag=True,
     help="Enable sending Lambda function logs via the New Relic Lambda Extension",
