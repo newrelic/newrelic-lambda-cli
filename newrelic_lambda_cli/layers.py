@@ -26,6 +26,8 @@ NEW_RELIC_ENV_VARS = (
     "NEW_RELIC_LOG_ENDPOINT",
     "NEW_RELIC_TELEMETRY_ENDPOINT",
     "NEW_RELIC_APM_LAMBDA_MODE",
+    "NR_TAGS",
+    "NR_ENV_DELIMITER",
 )
 
 
@@ -210,10 +212,16 @@ def _add_new_relic(input, config, nr_license_key):
             update_kwargs["Environment"]["Variables"][
                 "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
             ] = "true"
+            success(
+                "Successfully enabled NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS tag to the function"
+            )
         elif input.disable_extension_function_logs or input.disable_function_logs:
             update_kwargs["Environment"]["Variables"][
                 "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
             ] = "false"
+            success(
+                "Successfully disabled NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS tag to the function"
+            )
 
         if not input.upgrade:
             update_kwargs["Environment"]["Variables"][
@@ -223,11 +231,25 @@ def _add_new_relic(input, config, nr_license_key):
             update_kwargs["Environment"]["Variables"][
                 "NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS"
             ] = "true"
+            success(
+                "Successfully enabled NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS tag to the function"
+            )
         elif input.disable_extension_logs:
             update_kwargs["Environment"]["Variables"][
                 "NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS"
             ] = "false"
+            success(
+                "Successfully disabled NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS tag to the function"
+            )
 
+        if input.nr_tags:
+            update_kwargs["Environment"]["Variables"]["NR_TAGS"] = input.nr_tags
+            success("Successfully added NR_TAGS tag to the function")
+        if input.nr_env_delimiter:
+            update_kwargs["Environment"]["Variables"][
+                "NR_ENV_DELIMITER"
+            ] = input.nr_env_delimiter
+            success("Successfully added NR_ENV_DELIMITER tag to the function")
         if input.nr_region == "staging":
             update_kwargs["Environment"]["Variables"][
                 "NEW_RELIC_TELEMETRY_ENDPOINT"

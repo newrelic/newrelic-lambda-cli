@@ -1075,3 +1075,78 @@ def test_independent_log_settings(aws_credentials, mock_function_config):
         ]
         == "true"
     )
+
+
+@mock_aws
+def test_add_new_relic_sets_nr_tags(aws_credentials, mock_function_config):
+    session = boto3.Session(region_name="us-east-1")
+    config = mock_function_config("python3.12")
+    tags_value = "foo:bar;baz:qux"
+
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=12345,
+            enable_extension=True,
+            enable_extension_function_logs=True,
+            nr_tags=tags_value,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert update_kwargs["Environment"]["Variables"]["NR_TAGS"] == tags_value
+
+
+@mock_aws
+def test_add_new_relic_sets_nr_env_delimiter(aws_credentials, mock_function_config):
+    session = boto3.Session(region_name="us-east-1")
+    config = mock_function_config("python3.12")
+    delimiter_value = "|"
+
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=12345,
+            enable_extension=True,
+            enable_extension_function_logs=True,
+            nr_env_delimiter=delimiter_value,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert (
+        update_kwargs["Environment"]["Variables"]["NR_ENV_DELIMITER"] == delimiter_value
+    )
+
+
+@mock_aws
+def test_add_new_relic_sets_both_nr_tags_and_env_delimiter(
+    aws_credentials, mock_function_config
+):
+    session = boto3.Session(region_name="us-east-1")
+    config = mock_function_config("python3.12")
+    tags_value = "foo:bar|baz:qux"
+    delimiter_value = "|"
+
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=12345,
+            enable_extension=True,
+            enable_extension_function_logs=True,
+            nr_tags=tags_value,
+            nr_env_delimiter=delimiter_value,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert update_kwargs["Environment"]["Variables"]["NR_TAGS"] == tags_value
+    assert (
+        update_kwargs["Environment"]["Variables"]["NR_ENV_DELIMITER"] == delimiter_value
+    )

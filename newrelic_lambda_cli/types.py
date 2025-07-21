@@ -108,6 +108,8 @@ LAYER_INSTALL_KEYS = [
     "enable_extension",
     "enable_extension_function_logs",
     "disable_extension_function_logs",
+    "nr_tags",
+    "nr_env_delimiter",
     "send_function_logs",
     "disable_function_logs",
     "send_extension_logs",
