@@ -341,7 +341,7 @@ def install(input, function_arn):
         and input.nr_region
     ):
         gql = api.validate_gql_credentials(input)
-        nr_license_key = api.retrieve_license_key(gql)
+        nr_license_key = api.retrieve_license_key(gql,input.nr_account_id)
 
     update_kwargs = _add_new_relic(input, config, nr_license_key)
     if isinstance(update_kwargs, bool):

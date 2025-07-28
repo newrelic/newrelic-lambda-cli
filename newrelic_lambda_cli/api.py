@@ -360,7 +360,7 @@ def validate_gql_credentials(input):
         )
 
 
-def retrieve_license_key(gql):
+def retrieve_license_key(gql, account_id):
     global __cached_license_key
     if __cached_license_key:
         return __cached_license_key
@@ -370,7 +370,9 @@ def retrieve_license_key(gql):
         return __cached_license_key
     except Exception:
         raise click.BadParameter(
-            " Invalid value for API Key: Kindly use your user key, which can be found at https://one.newrelic.com/api-keys",
+            f"For New Relic Account ID: {account_id}. "
+            "Could not retrieve INGEST - LICENSE key from New Relic. "
+            "Check that your New Relic Account ID and USER key are valid and try again.",
             ctx=None,
             param="nr_api_key",
             param_hint="API Key",
