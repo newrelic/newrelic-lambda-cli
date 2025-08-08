@@ -74,6 +74,8 @@ def integration_update(**kwargs):
 
 
 def layer_install(**kwargs):
+    if "nr_api_key" not in kwargs and "nr_ingest_key" not in kwargs:
+        kwargs["nr_api_key"] = "test-api-key"
     assert all(key in LAYER_INSTALL_KEYS for key in kwargs)
     return LayerInstall(**{key: kwargs.get(key) for key in LAYER_INSTALL_KEYS})
 

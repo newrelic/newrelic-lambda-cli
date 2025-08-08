@@ -96,6 +96,7 @@ LAYER_INSTALL_KEYS = [
     "verbose",
     "nr_account_id",
     "nr_api_key",
+    "nr_ingest_key",
     "nr_region",
     "aws_profile",
     "aws_region",

@@ -362,6 +362,9 @@ def validate_gql_credentials(input):
 
 def retrieve_license_key(gql):
     global __cached_license_key
+    if gql is None and input and getattr(input, "nr_ingest_key", None):
+        return input.nr_ingest_key
+
     if __cached_license_key:
         return __cached_license_key
     assert isinstance(gql, NewRelicGQL)

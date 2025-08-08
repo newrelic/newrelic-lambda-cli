@@ -1,4 +1,5 @@
 import boto3
+import click
 from click import UsageError
 from moto import mock_aws
 import pytest
@@ -49,7 +50,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
     )
     assert (
         update_kwargs["Environment"]["Variables"]["NEW_RELIC_LAMBDA_EXTENSION_ENABLED"]
-        == "true"
+        == "false"
     )
     assert (
         update_kwargs["Environment"]["Variables"][
@@ -316,7 +317,6 @@ def test_install_apm(aws_credentials, mock_function_config):
                             "EXISTING_ENV_VAR": "Hello World",
                             "NEW_RELIC_ACCOUNT_ID": "12345",
                             "NEW_RELIC_LAMBDA_HANDLER": "original_handler",
-                            "NEW_RELIC_LAMBDA_EXTENSION_ENABLED": "false",
                             "NEW_RELIC_APM_LAMBDA_MODE": "True",
                         }
                     },
@@ -378,7 +378,7 @@ def test_add_new_relic_dotnet(aws_credentials, mock_function_config):
             update_kwargs["Environment"]["Variables"][
                 "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
             ]
-            == "true"
+            == "false"
         )
         assert (
             update_kwargs["Environment"]["Variables"][
@@ -621,7 +621,13 @@ def test_install_failure(aws_credentials, mock_function_config):
         mock_client.get_function.return_value = config
         with pytest.raises(UsageError):
             install(
-                layer_install(nr_account_id=9876543, session=mock_session), "foobarbaz"
+                layer_install(
+                    nr_account_id=9876543,
+                    session=mock_session,
+                    nr_api_key=None,
+                    nr_ingest_key=None,
+                ),
+                "foobarbaz",
             )
 
 
@@ -639,7 +645,13 @@ def test_install(aws_credentials, mock_function_config):
         mock_client.get_function.return_value = config
         with pytest.raises(UsageError):
             install(
-                layer_install(nr_account_id=9876543, session=mock_session), "foobarbaz"
+                layer_install(
+                    nr_account_id=9876543,
+                    session=mock_session,
+                    nr_api_key=None,
+                    nr_ingest_key=None,
+                ),
+                "foobarbaz",
             )
 
         mock_client = mock_session.client.return_value
@@ -681,7 +693,6 @@ def test_install(aws_credentials, mock_function_config):
                             "EXISTING_ENV_VAR": "Hello World",
                             "NEW_RELIC_ACCOUNT_ID": "12345",
                             "NEW_RELIC_LAMBDA_HANDLER": "original_handler",
-                            "NEW_RELIC_LAMBDA_EXTENSION_ENABLED": "false",
                         }
                     },
                     Layers=ANY,
@@ -1150,3 +1161,274 @@ def test_add_new_relic_sets_both_nr_tags_and_env_delimiter(
     assert (
         update_kwargs["Environment"]["Variables"]["NR_ENV_DELIMITER"] == delimiter_value
     )
+
+
+@mock_aws
+def test_add_new_relic_with_ingest_key(aws_credentials, mock_function_config):
+    """Test _add_new_relic function with ingest key instead of API key"""
+    session = boto3.Session(region_name="us-east-1")
+
+    config = mock_function_config("python3.12")
+
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=12345,
+            enable_extension=True,
+            nr_ingest_key="test-ingest-key-12345",
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    # Verify ingest key is used for NEW_RELIC_LICENSE_KEY
+    assert (
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_LICENSE_KEY"]
+        == "test-ingest-key-12345"
+    )
+    assert (
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_LAMBDA_EXTENSION_ENABLED"]
+        == "true"
+    )
+
+
+@mock_aws
+def test_add_new_relic_without_license_key_or_ingest_key(
+    aws_credentials, mock_function_config
+):
+    """Test _add_new_relic function when neither license key nor ingest key is provided"""
+    session = boto3.Session(region_name="us-east-1")
+
+    config = mock_function_config("python3.12")
+
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=12345,
+            enable_extension=True,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    # When no license key or ingest key is provided, extension should be disabled
+    assert (
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_LAMBDA_EXTENSION_ENABLED"]
+        == "false"
+    )
+    assert "NEW_RELIC_LICENSE_KEY" not in update_kwargs["Environment"]["Variables"]
+
+
+@mock_aws
+def test_add_new_relic_staging_region(aws_credentials, mock_function_config):
+    """Test _add_new_relic function with staging region"""
+    session = boto3.Session(region_name="us-east-1")
+
+    config = mock_function_config("python3.12")
+
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=12345,
+            enable_extension=True,
+            nr_region="staging",
+            nr_ingest_key="test-ingest-key",
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    # Verify staging endpoints are set
+    assert (
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_TELEMETRY_ENDPOINT"]
+        == "https://staging-cloud-collector.newrelic.com/aws/lambda/v1"
+    )
+    assert (
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_LOG_ENDPOINT"]
+        == "https://staging-log-api.newrelic.com/log/v1"
+    )
+
+
+def test_install_with_both_api_key_and_ingest_key(
+    aws_credentials, mock_function_config
+):
+    """Test install function fails when both API key and ingest key are provided"""
+    mock_session = MagicMock()
+    mock_session.region_name = "us-east-1"
+
+    with pytest.raises(
+        UsageError,
+        match="Please provide either the --nr-api-key or the --nr-ingest-key flag, but not both",
+    ):
+        install(
+            layer_install(
+                session=mock_session,
+                nr_account_id=12345,
+                nr_api_key="test-api-key",
+                nr_ingest_key="test-ingest-key",
+            ),
+            "test-function",
+        )
+
+
+def test_install_with_ingest_key_success(aws_credentials, mock_function_config):
+    """Test successful install with ingest key"""
+    mock_session = MagicMock()
+    mock_session.region_name = "us-east-1"
+    mock_client = mock_session.client.return_value
+
+    with patch(
+        "newrelic_lambda_cli.layers._get_license_key_outputs"
+    ) as mock_get_license_key_outputs, patch(
+        "newrelic_lambda_cli.layers.get_function"
+    ) as mock_get_function, patch(
+        "newrelic_lambda_cli.layers._add_new_relic"
+    ) as mock_add_new_relic:
+
+        # Set up policy_arn so GraphQL validation is skipped
+        mock_get_license_key_outputs.return_value = (None, "12345", "test-policy-arn")
+        mock_get_function.return_value = mock_function_config("python3.12")
+        mock_add_new_relic.return_value = {
+            "FunctionName": "test-function",
+            "Environment": {"Variables": {"NEW_RELIC_LICENSE_KEY": "test-ingest-key"}},
+            "Layers": ["test-layer"],
+        }
+        mock_client.update_function_configuration.return_value = {
+            "Configuration": {
+                "Layers": [{"Arn": "existing-layer"}],
+                "FunctionArn": "test-function",
+            }
+        }
+
+        result = install(
+            layer_install(
+                session=mock_session,
+                nr_account_id=12345,
+                nr_ingest_key="test-ingest-key",
+                enable_extension=False,
+            ),
+            "test-function",
+        )
+
+        assert result is True
+        mock_client.update_function_configuration.assert_called_once()
+
+
+@mock_aws
+def test_install_with_apm_and_verbose(aws_credentials, mock_function_config):
+    """Test install with APM enabled and verbose output to cover success message paths"""
+    mock_session = MagicMock()
+    mock_session.region_name = "us-east-1"
+    mock_client = mock_session.client.return_value
+
+    with patch(
+        "newrelic_lambda_cli.layers._get_license_key_outputs"
+    ) as mock_get_license_key_outputs, patch(
+        "newrelic_lambda_cli.layers.get_function"
+    ) as mock_get_function, patch(
+        "newrelic_lambda_cli.layers._add_new_relic"
+    ) as mock_add_new_relic:
+
+        mock_get_license_key_outputs.return_value = (None, "12345", "test-policy-arn")
+        mock_get_function.return_value = mock_function_config("python3.12")
+        mock_add_new_relic.return_value = {
+            "FunctionName": "test-function",
+            "Environment": {"Variables": {"NEW_RELIC_LICENSE_KEY": "test-key"}},
+            "Layers": ["test-layer"],
+        }
+        mock_client.update_function_configuration.return_value = {
+            "Configuration": {"Layers": [], "FunctionArn": "test-function"}
+        }
+        mock_client.tag_resource.return_value = {}
+
+        result = install(
+            layer_install(
+                session=mock_session,
+                nr_account_id=12345,
+                nr_api_key="test-api-key",
+                nr_region="us",
+                apm=True,
+                verbose=True,
+                enable_extension=False,
+            ),
+            "test-function",
+        )
+
+        assert result is True
+        mock_client.tag_resource.assert_called_once()
+
+
+@mock_aws
+def test_install_function_not_found(aws_credentials):
+    """Test install function when function is not found"""
+    mock_session = MagicMock()
+    mock_session.region_name = "us-east-1"
+
+    with patch("newrelic_lambda_cli.layers.get_function") as mock_get_function:
+        mock_get_function.return_value = None
+
+        result = install(
+            layer_install(
+                session=mock_session,
+                nr_account_id=12345,
+                nr_api_key="test-api-key",
+            ),
+            "nonexistent-function",
+        )
+
+        assert result is False
+
+
+def test_install_secret_account_mismatch(aws_credentials):
+    """Test install with managed secret account ID mismatch"""
+    mock_session = MagicMock()
+    mock_session.region_name = "us-east-1"
+
+    with patch(
+        "newrelic_lambda_cli.layers._get_license_key_outputs"
+    ) as mock_get_license_key_outputs, patch(
+        "newrelic_lambda_cli.layers.get_function"
+    ) as mock_get_function:
+
+        # Different account ID in existing secret
+        mock_get_license_key_outputs.return_value = (None, "99999", "test-policy-arn")
+        mock_get_function.return_value = {"Configuration": {"FunctionArn": "test"}}
+
+        with pytest.raises(UsageError, match="A managed secret already exists"):
+            install(
+                layer_install(
+                    session=mock_session,
+                    nr_account_id=12345,  # Different from secret account ID
+                    nr_ingest_key="test-ingest-key",
+                ),
+                "test-function",
+            )
+
+
+def test_install_extension_without_secret_or_api_key(aws_credentials):
+    """Test install with extension enabled but no secret or API key"""
+    mock_session = MagicMock()
+    mock_session.region_name = "us-east-1"
+
+    with patch(
+        "newrelic_lambda_cli.layers._get_license_key_outputs"
+    ) as mock_get_license_key_outputs, patch(
+        "newrelic_lambda_cli.layers.get_function"
+    ) as mock_get_function:
+
+        mock_get_license_key_outputs.return_value = (None, None, None)  # No secret
+        mock_get_function.return_value = {"Configuration": {"FunctionArn": "test"}}
+
+        with pytest.raises(UsageError, match="In order to use `--enable-extension`"):
+            install(
+                layer_install(
+                    session=mock_session,
+                    nr_account_id=12345,
+                    enable_extension=True,
+                    nr_ingest_key="test-ingest-key",
+                ),
+                "test-function",
+            )
