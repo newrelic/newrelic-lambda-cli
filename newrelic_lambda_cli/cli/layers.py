@@ -43,6 +43,13 @@ def register(group):
     required=False,
 )
 @click.option(
+    "--nr-ingest-key",
+    envvar="NEW_RELIC_INGEST_KEY",
+    help="New Relic License/Ingest Key (alternative to --nr-api-key)",
+    metavar="<key>",
+    required=False,
+)
+@click.option(
     "--nr-region",
     default="us",
     envvar="NEW_RELIC_REGION",
@@ -148,6 +155,12 @@ def register(group):
 @click.pass_context
 def install(ctx, **kwargs):
     """Install New Relic AWS Lambda Layers"""
+
+    if "nr_ingest_key" not in kwargs:
+        kwargs["nr_ingest_key"] = None
+    if "nr_api_key" not in kwargs:
+        kwargs["nr_api_key"] = None
+
     input = LayerInstall(session=None, verbose=ctx.obj["VERBOSE"], **kwargs)
     input = input._replace(
         session=boto3.Session(
