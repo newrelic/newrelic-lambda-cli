@@ -1382,8 +1382,8 @@ def test_install_function_not_found(aws_credentials):
         assert result is False
 
 
-def test_install_secret_account_mismatch(aws_credentials):
-    """Test install with managed secret account ID mismatch"""
+def test_install_secret_account_mismatch(aws_credentials, mock_function_config):
+    """Test API key bypasses managed secret account ID mismatch validation"""
     mock_session = MagicMock()
     mock_session.region_name = "us-east-1"
 
@@ -1391,25 +1391,28 @@ def test_install_secret_account_mismatch(aws_credentials):
         "newrelic_lambda_cli.layers._get_license_key_outputs"
     ) as mock_get_license_key_outputs, patch(
         "newrelic_lambda_cli.layers.get_function"
-    ) as mock_get_function:
+    ) as mock_get_function, patch(
+        "newrelic_lambda_cli.layers._add_new_relic"
+    ) as mock_add_new_relic:
 
-        # Different account ID in existing secret
         mock_get_license_key_outputs.return_value = (None, "99999", "test-policy-arn")
-        mock_get_function.return_value = {"Configuration": {"FunctionArn": "test"}}
 
-        with pytest.raises(UsageError, match="A managed secret already exists"):
-            install(
-                layer_install(
-                    session=mock_session,
-                    nr_account_id=12345,  # Different from secret account ID
-                    nr_ingest_key="test-ingest-key",
-                ),
-                "test-function",
-            )
+        config = mock_function_config("python3.12")
+        mock_get_function.return_value = config
+
+        result = install(
+            layer_install(
+                session=mock_session,
+                nr_account_id=12345,
+                nr_api_key="test-key",
+            ),
+            "test-function",
+        )
+        assert result is True
 
 
 def test_install_extension_without_secret_or_api_key(aws_credentials):
-    """Test install with extension enabled but no secret or API key"""
+    """Test install with extension enabled but no secret - should succeed with ingest key"""
     mock_session = MagicMock()
     mock_session.region_name = "us-east-1"
 
@@ -1417,18 +1420,37 @@ def test_install_extension_without_secret_or_api_key(aws_credentials):
         "newrelic_lambda_cli.layers._get_license_key_outputs"
     ) as mock_get_license_key_outputs, patch(
         "newrelic_lambda_cli.layers.get_function"
-    ) as mock_get_function:
+    ) as mock_get_function, patch(
+        "newrelic_lambda_cli.layers._add_new_relic"
+    ) as mock_add_new_relic:
 
-        mock_get_license_key_outputs.return_value = (None, None, None)  # No secret
-        mock_get_function.return_value = {"Configuration": {"FunctionArn": "test"}}
+        mock_get_license_key_outputs.return_value = (None, None, None)
+        mock_get_function.return_value = {
+            "Configuration": {
+                "FunctionArn": "test",
+                "Runtime": "python3.12",
+                "Handler": "handler",
+                "Environment": {"Variables": {}},
+            }
+        }
 
-        with pytest.raises(UsageError, match="In order to use `--enable-extension`"):
-            install(
-                layer_install(
-                    session=mock_session,
-                    nr_account_id=12345,
-                    enable_extension=True,
-                    nr_ingest_key="test-ingest-key",
-                ),
-                "test-function",
-            )
+        
+        mock_add_new_relic.return_value = {
+            "FunctionName": "test-function",
+            "Environment": {"Variables": {"NEW_RELIC_LICENSE_KEY": "test-ingest-key"}},
+            "Layers": ["test-layer"],
+        }
+
+        
+        result = install(
+            layer_install(
+                session=mock_session,
+                nr_account_id=12345,
+                enable_extension=True,
+                nr_ingest_key="test-ingest-key",
+            ),
+            "test-function",
+        )
+
+        
+        assert result is True
