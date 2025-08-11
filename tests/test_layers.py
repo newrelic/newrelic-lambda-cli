@@ -1434,14 +1434,12 @@ def test_install_extension_without_secret_or_api_key(aws_credentials):
             }
         }
 
-        
         mock_add_new_relic.return_value = {
             "FunctionName": "test-function",
             "Environment": {"Variables": {"NEW_RELIC_LICENSE_KEY": "test-ingest-key"}},
             "Layers": ["test-layer"],
         }
 
-        
         result = install(
             layer_install(
                 session=mock_session,
@@ -1452,5 +1450,4 @@ def test_install_extension_without_secret_or_api_key(aws_credentials):
             "test-function",
         )
 
-        
         assert result is True
