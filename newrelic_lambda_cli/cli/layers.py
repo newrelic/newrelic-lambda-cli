@@ -155,12 +155,6 @@ def register(group):
 @click.pass_context
 def install(ctx, **kwargs):
     """Install New Relic AWS Lambda Layers"""
-
-    if "nr_ingest_key" not in kwargs:
-        kwargs["nr_ingest_key"] = None
-    if "nr_api_key" not in kwargs:
-        kwargs["nr_api_key"] = None
-
     input = LayerInstall(session=None, verbose=ctx.obj["VERBOSE"], **kwargs)
     input = input._replace(
         session=boto3.Session(

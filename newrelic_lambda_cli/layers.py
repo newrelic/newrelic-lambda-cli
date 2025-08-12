@@ -267,10 +267,10 @@ def _add_new_relic(input, config, nr_license_key):
             update_kwargs["Environment"]["Variables"][
                 "NEW_RELIC_LICENSE_KEY"
             ] = nr_license_key
-        else:
-            update_kwargs["Environment"]["Variables"][
-                "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
-            ] = "false"
+    else:
+        update_kwargs["Environment"]["Variables"][
+            "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
+        ] = "false"
 
     if "dotnet" in runtime:
         update_kwargs["Environment"]["Variables"]["CORECLR_ENABLE_PROFILING"] = "1"
@@ -300,10 +300,6 @@ def install(input, function_arn):
         raise click.UsageError(
             "Please provide either the --nr-api-key or the --nr-ingest-key flag, but not both."
         )
-    if not input.nr_api_key and not input.nr_ingest_key:
-        raise click.UsageError(
-            "Please provide either the --nr-api-key or the --nr-ingest-key flag."
-        )
     assert isinstance(input, LayerInstall)
 
     client = input.session.client("lambda")
@@ -323,6 +319,7 @@ def install(input, function_arn):
         and nr_account_id
         and nr_account_id != str(input.nr_account_id)
         and not input.nr_api_key
+        and not input.nr_ingest_key
     ):
         raise click.UsageError(
             "A managed secret already exists in this region for New Relic account {0}. "
@@ -335,7 +332,12 @@ def install(input, function_arn):
                 nr_account_id, input.nr_account_id, utils.NR_DOCS_ACT_LINKING_URL
             )
         )
-    if input.enable_extension and not policy_arn and not input.nr_api_key:
+    if (
+        input.enable_extension
+        and not policy_arn
+        and not input.nr_api_key
+        and not input.nr_ingest_key
+    ):
         raise click.UsageError(
             "In order to use `--enable-extension`, you must first run "
             "`newrelic-lambda integrations install` with the "
@@ -347,7 +349,9 @@ def install(input, function_arn):
         )
 
     nr_license_key = None
-    if (
+    if input.nr_ingest_key:
+        nr_license_key = input.nr_ingest_key
+    elif (
         not policy_arn
         or nr_account_id != str(input.nr_account_id)
         and input.nr_api_key
@@ -355,8 +359,6 @@ def install(input, function_arn):
     ):
         gql = api.validate_gql_credentials(input)
         nr_license_key = api.retrieve_license_key(gql)
-    elif input.nr_ingest_key:
-        nr_license_key = input.nr_ingest_key
 
     update_kwargs = _add_new_relic(input, config, nr_license_key)
     if isinstance(update_kwargs, bool):
