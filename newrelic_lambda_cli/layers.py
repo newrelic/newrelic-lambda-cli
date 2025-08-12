@@ -267,10 +267,10 @@ def _add_new_relic(input, config, nr_license_key):
             update_kwargs["Environment"]["Variables"][
                 "NEW_RELIC_LICENSE_KEY"
             ] = nr_license_key
-        else:
-            update_kwargs["Environment"]["Variables"][
-                "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
-            ] = "false"
+    else:
+        update_kwargs["Environment"]["Variables"][
+            "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
+        ] = "false"
 
     if "dotnet" in runtime:
         update_kwargs["Environment"]["Variables"]["CORECLR_ENABLE_PROFILING"] = "1"
@@ -299,10 +299,6 @@ def install(input, function_arn):
     if input.nr_api_key and input.nr_ingest_key:
         raise click.UsageError(
             "Please provide either the --nr-api-key or the --nr-ingest-key flag, but not both."
-        )
-    if not input.nr_api_key and not input.nr_ingest_key:
-        raise click.UsageError(
-            "Please provide either the --nr-api-key or the --nr-ingest-key flag."
         )
     assert isinstance(input, LayerInstall)
 
