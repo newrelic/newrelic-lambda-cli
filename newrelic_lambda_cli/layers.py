@@ -47,53 +47,47 @@ def index(region, runtime, architecture):
     ]
 
 
-def get_base_layer_arn(layer_version_arn):
-    
-    return layer_version_arn.rsplit(":", 1)[0]
+def layer_selection(available_layers, runtime, architecture,upgrade=False, existing_layer_arn=None):
+    if upgrade and existing_layer_arn:
+        base_arn = existing_layer_arn.rsplit(":", 1)[0]
+        for layer in available_layers:
+            candidate_arn = layer["LatestMatchingVersion"]["LayerVersionArn"]
+            if candidate_arn.startswith(base_arn):
+                return candidate_arn  
+        return available_layers[0]["LatestMatchingVersion"]["LayerVersionArn"]
 
+    if len(available_layers) == 1:
+        return available_layers[0]["LatestMatchingVersion"]["LayerVersionArn"]
 
-def get_latest_layer_arn(base_arn, available_layers):
-    
-    for layer in available_layers:
-        full_arn = layer["LatestMatchingVersion"]["LayerVersionArn"]
-        if get_base_layer_arn(full_arn) == base_arn:
-            return full_arn
-    return None
+    layer_options = [
+        layer["LatestMatchingVersion"]["LayerVersionArn"] for layer in available_layers
+    ]
 
+    if sys.stdout.isatty():
+        output = "\n".join(
+            [
+                "Discovered multiple layers for runtime %s (%s):"
+                % (runtime, architecture),
+                "",
+            ]
+            + ["%d: %s" % (i, layer) for i, layer in enumerate(layer_options)]
+            + ["", "Select a layer"]
+        )
 
-def layer_selection(available_layers, runtime, architecture, existing_layer_arn=None):
-    
-    if existing_layer_arn:
-        
-        return get_base_layer_arn(existing_layer_arn)
-
-    layer_options = [layer["LatestMatchingVersion"]["LayerVersionArn"] for layer in available_layers]
-    base_arns = [get_base_layer_arn(arn) for arn in layer_options]
-
-    if len(base_arns) == 1:
-        return base_arns[0]
-
-    if not sys.stdout.isatty():
-        
-        return base_arns[0]
-
-    
-    output = "\n".join(
-        [
-            f"Discovered multiple layers for runtime {runtime} ({architecture}):",
-            "",
-        ]
-        + [f"{i}: {arn}" for i, arn in enumerate(base_arns)]
-        + ["", "Select a layer base ARN (latest version will be used)"]
-    )
-    while True:
-        value = click.prompt(output, default=0, type=int)
-        try:
-            selected_base_arn = base_arns[value]
-            success(f"Layer base ARN {selected_base_arn} selected (latest version will be used)")
-            return selected_base_arn
-        except IndexError:
-            failure("Invalid layer selection")
+        while True:
+            value = click.prompt(output, default=0, type=int)
+            try:
+                selected_layer = layer_options[value]
+                success("Layer %s selected" % selected_layer)
+                return selected_layer
+            except IndexError:
+                failure("Invalid layer selection")
+    else:
+        raise click.UsageError(
+            "Discovered multiple layers for runtime %s (%s):\n%s\n"
+            "Pass --layer-arn to specify a layer ARN"
+            % (runtime, architecture, "\n".join(layer_options))
+        )
 
 
 def _add_new_relic(input, config, nr_license_key):
@@ -126,7 +120,6 @@ def _add_new_relic(input, config, nr_license_key):
         )
         runtime_handler = prefix + ".handler"
 
-    # Find existing New Relic layer base ARN (if any)
     existing_newrelic_layer = [
         layer["Arn"]
         for layer in config["Configuration"].get("Layers", [])
@@ -162,21 +155,8 @@ def _add_new_relic(input, config, nr_license_key):
                 % (config["Configuration"]["FunctionArn"], runtime, architecture)
             )
             return False
-
-        # layer_selection now returns base ARN
-        selected_base_arn = layer_selection(available_layers, runtime, architecture, existing_newrelic_layer[0] if existing_newrelic_layer else None)
-        # Find the latest version for the selected base ARN
-        latest_layer = get_latest_layer_arn(selected_base_arn, available_layers)
-        if not latest_layer:
-            failure(f"No published layer found for ARN {selected_base_arn} in region {aws_region}.")
-            return False
-        new_relic_layer = latest_layer
-
-    existing_layers = [
-        layer["Arn"]
-        for layer in config["Configuration"].get("Layers", [])
-        if not layer["Arn"].startswith(utils.get_arn_prefix(aws_region))
-    ]
+        existing_layer_arn = existing_newrelic_layer[0] if existing_newrelic_layer else None
+        new_relic_layer = layer_selection(available_layers, runtime, architecture, upgrade=input.upgrade, existing_layer_arn=existing_layer_arn)
 
     update_kwargs = {
         "FunctionName": config["Configuration"]["FunctionArn"],

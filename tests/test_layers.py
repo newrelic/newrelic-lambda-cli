@@ -143,7 +143,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
             )
 
             layer_selection_mock.assert_called_with(
-                mock_index.return_value, "java11", "x86_64"
+                mock_index.return_value, "java11", "x86_64", upgrade=None, existing_layer_arn=None
             )
             assert "original_handler" in config["Configuration"]["Handler"]
 
@@ -417,7 +417,7 @@ def test_add_new_relic_nodejs(aws_credentials, mock_function_config):
 
     runtime = "nodejs20.x"
 
-    # --- Scenario 1: Standard Node.js Handler (ESM disabled) ---
+    
     print(f"\nTesting Node.js ({runtime}) Standard Handler...")
     original_std_handler = "original_handler"
     config_std = mock_function_config(runtime)
@@ -430,11 +430,15 @@ def test_add_new_relic_nodejs(aws_credentials, mock_function_config):
         enable_extension_function_logs=True,
     )
 
-    update_kwargs_std = _add_new_relic(
-        install_opts_std,
-        config_std,
-        nr_license_key=nr_license_key,
-    )
+    with patch("sys.stdout.isatty") as mock_isatty, patch("newrelic_lambda_cli.layers.click.prompt") as mock_prompt:
+        mock_isatty.return_value = True
+        mock_prompt.return_value = 0  
+        update_kwargs_std = _add_new_relic(
+            install_opts_std,
+            config_std,
+            nr_license_key=nr_license_key,
+        )
+    
 
     assert update_kwargs_std is not False, "Expected update_kwargs, not False"
     assert (
@@ -479,11 +483,14 @@ def test_add_new_relic_nodejs(aws_credentials, mock_function_config):
         esm=True,
     )
 
-    update_kwargs_esm = _add_new_relic(
-        install_opts_esm,
-        config_esm,
-        nr_license_key=nr_license_key,
-    )
+    with patch("sys.stdout.isatty") as mock_isatty, patch("newrelic_lambda_cli.layers.click.prompt") as mock_prompt:
+        mock_isatty.return_value = True
+        mock_prompt.return_value = 0
+        update_kwargs_esm = _add_new_relic(
+            install_opts_esm,
+            config_esm,
+            nr_license_key=nr_license_key,
+        )
 
     assert update_kwargs_esm is not False, "Expected update_kwargs, not False"
     assert (
