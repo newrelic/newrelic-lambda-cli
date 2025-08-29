@@ -47,13 +47,15 @@ def index(region, runtime, architecture):
     ]
 
 
-def layer_selection(available_layers, runtime, architecture,upgrade=False, existing_layer_arn=None):
+def layer_selection(
+    available_layers, runtime, architecture, upgrade=False, existing_layer_arn=None
+):
     if upgrade and existing_layer_arn:
         base_arn = existing_layer_arn.rsplit(":", 1)[0]
         for layer in available_layers:
             candidate_arn = layer["LatestMatchingVersion"]["LayerVersionArn"]
             if candidate_arn.startswith(base_arn):
-                return candidate_arn  
+                return candidate_arn
         return available_layers[0]["LatestMatchingVersion"]["LayerVersionArn"]
 
     if len(available_layers) == 1:
@@ -155,8 +157,16 @@ def _add_new_relic(input, config, nr_license_key):
                 % (config["Configuration"]["FunctionArn"], runtime, architecture)
             )
             return False
-        existing_layer_arn = existing_newrelic_layer[0] if existing_newrelic_layer else None
-        new_relic_layer = layer_selection(available_layers, runtime, architecture, upgrade=input.upgrade, existing_layer_arn=existing_layer_arn)
+        existing_layer_arn = (
+            existing_newrelic_layer[0] if existing_newrelic_layer else None
+        )
+        new_relic_layer = layer_selection(
+            available_layers,
+            runtime,
+            architecture,
+            upgrade=input.upgrade,
+            existing_layer_arn=existing_layer_arn,
+        )
 
     update_kwargs = {
         "FunctionName": config["Configuration"]["FunctionArn"],
