@@ -48,12 +48,12 @@ def index(region, runtime, architecture):
 
 
 def get_base_layer_arn(layer_version_arn):
-    """Return the base layer ARN (without version) from a full LayerVersionArn."""
+    
     return layer_version_arn.rsplit(":", 1)[0]
 
 
 def get_latest_layer_arn(base_arn, available_layers):
-    """Return the latest LayerVersionArn for a given base ARN from available layers."""
+    
     for layer in available_layers:
         full_arn = layer["LatestMatchingVersion"]["LayerVersionArn"]
         if get_base_layer_arn(full_arn) == base_arn:
@@ -62,13 +62,9 @@ def get_latest_layer_arn(base_arn, available_layers):
 
 
 def layer_selection(available_layers, runtime, architecture, existing_layer_arn=None):
-    """
-    If an existing layer ARN is provided, always select its base ARN (no prompt).
-    Otherwise, if only one layer is available, select its base ARN.
-    If multiple layers and no existing, prompt user (if interactive), else pick first.
-    """
+    
     if existing_layer_arn:
-        # Always update the existing layer to its latest version
+        
         return get_base_layer_arn(existing_layer_arn)
 
     layer_options = [layer["LatestMatchingVersion"]["LayerVersionArn"] for layer in available_layers]
@@ -78,10 +74,10 @@ def layer_selection(available_layers, runtime, architecture, existing_layer_arn=
         return base_arns[0]
 
     if not sys.stdout.isatty():
-        # Non-interactive: just pick the first available base ARN
+        
         return base_arns[0]
 
-    # Interactive prompt for user selection
+    
     output = "\n".join(
         [
             f"Discovered multiple layers for runtime {runtime} ({architecture}):",
