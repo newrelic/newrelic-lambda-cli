@@ -52,11 +52,11 @@ def layer_selection(
 ):
     if upgrade and existing_layer_arn:
         base_arn = existing_layer_arn.rsplit(":", 1)[0]
-        
+
         for i, layer in enumerate(available_layers):
             candidate_arn = layer["LatestMatchingVersion"]["LayerVersionArn"]
             candidate_base_arn = candidate_arn.rsplit(":", 1)[0]
-            if candidate_base_arn == base_arn :
+            if candidate_base_arn == base_arn:
                 return candidate_arn
 
     if len(available_layers) == 1:
