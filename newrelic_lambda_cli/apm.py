@@ -75,7 +75,7 @@ class NRGQL_APM(object):
             data = res
             entities = data["actor"]["entitySearch"]["results"]["entities"]
             for entity in entities:
-                if entity['name'] == entity_name:
+                if entity["name"] == entity_name:
                     entity_dicts[entity["type"]] = entity["guid"]
             return entity_dicts
         except (KeyError, TypeError) as e:
@@ -291,7 +291,9 @@ def select_lambda_entity_impacted_alerts(entity_data):
     for condition in alert_conditions:
         alert_query = condition["nrql"]["query"]
         has_lambda_invocation = "AwsLambdaInvocation" in alert_query
-        has_cloudwatch_metrics = any(metric in alert_query for metric in lambda_entity_alert_metric.keys())
+        has_cloudwatch_metrics = any(
+            metric in alert_query for metric in lambda_entity_alert_metric.keys()
+        )
         if has_lambda_invocation and has_cloudwatch_metrics:
             print(f"Selected alert for migration: {condition['name']}")
             selected_alerts.append(condition)
@@ -304,8 +306,6 @@ def create_apm_alert_query(alert_query, lambda_entity_guid, apm_entity_guid):
         if key in alert_query:
             alert_query = alert_query.replace(key, value)
             break
-    apm_alert_query = alert_query.replace(
-        "AwsLambdaInvocation", "Metric"
-    )
+    apm_alert_query = alert_query.replace("AwsLambdaInvocation", "Metric")
     apm_alert_query = apm_alert_query.replace(lambda_entity_guid, apm_entity_guid)
     return apm_alert_query
