@@ -75,7 +75,8 @@ class NRGQL_APM(object):
             data = res
             entities = data["actor"]["entitySearch"]["results"]["entities"]
             for entity in entities:
-                entity_dicts[entity["type"]] = entity["guid"]
+                if entity['name'] == entity_name:
+                    entity_dicts[entity["type"]] = entity["guid"]
             return entity_dicts
         except (KeyError, TypeError) as e:
             print(f"An error occurred parsing the response: {e}")
@@ -289,7 +290,9 @@ def select_lambda_entity_impacted_alerts(entity_data):
     alert_conditions = entity_data["alertConditions"]
     for condition in alert_conditions:
         alert_query = condition["nrql"]["query"]
-        if "AwsLambdaInvocation" in alert_query:
+        has_lambda_invocation = "AwsLambdaInvocation" in alert_query
+        has_cloudwatch_metrics = any(metric in alert_query for metric in lambda_entity_alert_metric.keys())
+        if has_lambda_invocation and has_cloudwatch_metrics:
             print(f"Selected alert for migration: {condition['name']}")
             selected_alerts.append(condition)
 
@@ -302,7 +305,7 @@ def create_apm_alert_query(alert_query, lambda_entity_guid, apm_entity_guid):
             alert_query = alert_query.replace(key, value)
             break
     apm_alert_query = alert_query.replace(
-        "AwsLambdaInvocation", "apm.lambda.transaction"
+        "AwsLambdaInvocation", "Metric"
     )
     apm_alert_query = apm_alert_query.replace(lambda_entity_guid, apm_entity_guid)
     return apm_alert_query
