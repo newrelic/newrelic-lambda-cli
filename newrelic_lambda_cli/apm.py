@@ -331,7 +331,7 @@ def select_lambda_entity_impacted_alerts(entity_data, apm_entity_data=None):
         )
     if len(selected_alerts) == 0:
         print(
-            "Debug: No alerts met the migration criteria (must contain 'AwsLambdaInvocation' or CloudWatch metrics)"
+            "No alerts met the migration criteria (must contain 'AwsLambdaInvocation' or CloudWatch metrics)"
         )
     return selected_alerts
 
