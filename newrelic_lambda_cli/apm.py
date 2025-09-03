@@ -281,7 +281,35 @@ lambda_entity_alert_metric = {
 }
 
 
-def select_lambda_entity_impacted_alerts(entity_data):
+def check_apm_migrated_alerts(lambda_entity_data, apm_entity_data):
+    """
+    Check which Lambda alerts have not been migrated to APM yet.
+    Returns a list of Lambda alert conditions that don't have corresponding APM migrated versions.
+    """
+    if not lambda_entity_data or "alertConditions" not in lambda_entity_data:
+        print("No alert conditions found for Lambda entity.")
+        return []
+
+    if not apm_entity_data or "alertConditions" not in apm_entity_data:
+        print("No alert conditions found for APM entity.")
+        return []
+
+    alerts_not_migrated = []
+    lambda_alert_conditions = lambda_entity_data["alertConditions"]
+    apm_alert_conditions = apm_entity_data["alertConditions"]
+    apm_alerts_name = [condition["name"] for condition in apm_alert_conditions]
+
+    for lambda_condition in lambda_alert_conditions:
+        migrated_lambda_alert_name = lambda_condition["name"] + " - apm_migrated"
+        if migrated_lambda_alert_name not in apm_alerts_name:
+            alerts_not_migrated.append(lambda_condition)
+        else:
+            print(f"Alert already migrated, skipping: {lambda_condition['name']}")
+
+    return alerts_not_migrated
+
+
+def select_lambda_entity_impacted_alerts(entity_data, apm_entity_data=None):
     if not entity_data or "alertConditions" not in entity_data:
         print("No alert conditions found.")
         return []
@@ -297,7 +325,14 @@ def select_lambda_entity_impacted_alerts(entity_data):
         if has_lambda_invocation and has_cloudwatch_metrics:
             print(f"Selected alert for migration: {condition['name']}")
             selected_alerts.append(condition)
-
+    if apm_entity_data:
+        selected_alerts = check_apm_migrated_alerts(
+            {"alertConditions": selected_alerts}, apm_entity_data
+        )
+    if len(selected_alerts) == 0:
+        print(
+            "Debug: No alerts met the migration criteria (must contain 'AwsLambdaInvocation' or CloudWatch metrics)"
+        )
     return selected_alerts
 
 
