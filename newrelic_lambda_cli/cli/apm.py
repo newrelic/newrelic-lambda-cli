@@ -106,10 +106,16 @@ def alerts_migrate(ctx, **kwargs):
             lambda_entity_guid = entity_guid
         if entity_type == "APPLICATION":
             apm_entity_guid = entity_guid
-    entity_data = client.get_entity_alert_details(lambda_entity_guid)
+    lambda_entity_data = client.get_entity_alert_details(lambda_entity_guid)
+    apm_entity_data = client.get_entity_alert_details(apm_entity_guid)
     lambda_entity_selected_alerts = apm.select_lambda_entity_impacted_alerts(
-        entity_data
+        lambda_entity_data, apm_entity_data
     )
-    client.create_alert_for_new_entity(
-        lambda_entity_selected_alerts, lambda_entity_guid, apm_entity_guid
-    )
+    if lambda_entity_selected_alerts:
+        client.create_alert_for_new_entity(
+            lambda_entity_selected_alerts, lambda_entity_guid, apm_entity_guid
+        )
+    else:
+        print(
+            "No alerts need to be migrated - all eligible alerts have already been migrated."
+        )
