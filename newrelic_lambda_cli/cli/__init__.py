@@ -3,6 +3,7 @@
 import click
 
 from newrelic_lambda_cli.cli import (
+    apm,
     functions,
     integrations,
     layers,
@@ -21,6 +22,7 @@ def cli(ctx, verbose):
 
 
 def register_groups(group):
+    apm.register(group)
     functions.register(group)
     integrations.register(group)
     otel_ingestions.register(group)

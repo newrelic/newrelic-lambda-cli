@@ -141,6 +141,19 @@ SUBSCRIPTION_INSTALL_KEYS = [
     "otel",
 ]
 
+ALERTS_MIGRATE_KEYS = [
+    "session",
+    "aws_profile",
+    "aws_region",
+    "aws_permissions_check",
+    "nr_account_id",
+    "nr_api_key",
+    "nr_region",
+    "function",
+    "excludes",
+    "verbose",
+]
+
 SUBSCRIPTION_UNINSTALL_KEYS = [
     "session",
     "aws_profile",
@@ -165,6 +178,8 @@ OtelIngestionUpdate = namedtuple("OtelIngestionUpdate", OTEL_INGESTION_UPDATE_KE
 
 LayerInstall = namedtuple("LayerInstall", LAYER_INSTALL_KEYS)
 LayerUninstall = namedtuple("LayerUninstall", LAYER_UNINSTALL_KEYS)
+
+AlertsMigrate = namedtuple("AlertsMigrate", ALERTS_MIGRATE_KEYS)
 
 SubscriptionInstall = namedtuple("SubscriptionInstall", SUBSCRIPTION_INSTALL_KEYS)
 SubscriptionUninstall = namedtuple("SubscriptionUninstall", SUBSCRIPTION_UNINSTALL_KEYS)

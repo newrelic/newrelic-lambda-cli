@@ -255,6 +255,17 @@ newrelic-lambda subscriptions uninstall --function <name or arn>
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 
+### NewRelic APM + Serverless Convergence
+
+#### Migrate Alerts from Lambda to APM 
+
+```bash
+newrelic-lambda apm alerts-migrate \
+    --nr-account-id <account id> \
+    --nr-api-key <api key>
+    --function <Lambda-function-name>
+```
+
 ### NewRelic Otel Ingestions Install
 
 #### Install Otel Log Ingestion
