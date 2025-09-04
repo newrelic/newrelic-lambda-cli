@@ -96,17 +96,17 @@ class NewRelicGQL(object):
         """
         res = self.query(
             """
-            {
-                actor {
-                    apiAccess {
-                        keySearch(query: {types: INGEST, scope: {accountIds: 2516823}}) {
-                            keys {
-                                key
+                query ($accountId: Int!) {
+                    actor {
+                        apiAccess {
+                            keySearch(query: {types: INGEST, scope: {accountIds: [$accountId]}}) {
+                                keys {
+                                    key
+                                }
                             }
                         }
                     }
                 }
-            }
             """,
             accountId=self.account_id,
         )
