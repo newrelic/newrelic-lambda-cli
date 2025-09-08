@@ -96,24 +96,23 @@ class NewRelicGQL(object):
         """
         res = self.query(
             """
-            query ($accountId: Int!) {
-              requestContext {
-                apiKey
-              }
-              actor {
-                account(id: $accountId) {
-                  licenseKey
-                  id
-                  name
+                query ($accountId: Int!) {
+                    actor {
+                        apiAccess {
+                            keySearch(query: {types: INGEST, scope: {accountIds: [$accountId]}}) {
+                                keys {
+                                    key
+                                }
+                            }
+                        }
+                    }
                 }
-              }
-            }
             """,
             accountId=self.account_id,
         )
         try:
-            return res["actor"]["account"]["licenseKey"]
-        except KeyError:
+            return res["actor"]["apiAccess"]["keySearch"]["keys"][0]["key"]
+        except (KeyError, IndexError):
             return None
 
     def get_linked_account_by_id(self, id):
