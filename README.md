@@ -38,11 +38,11 @@ A CLI to install the New Relic AWS Lambda integration and layers.
 
 | Runtime     | Versions               |
 |-------------|------------------------|
-| Python      | `python3.7`, `python3.8`, `python3.9`, `python3.10`, `python3.11`, `python3.12`, `python3.13` |
+| Python      | `python3.8`, `python3.9`, `python3.10`, `python3.11`, `python3.12`, `python3.13` |
 | Node.js     | `nodejs16.x`, `nodejs18.x`, `nodejs20.x`, `nodejs22.x` |
-| .NET   | `dotnet3.1`, `dotnet6`, `dotnet8`              |
+| .NET   |  `dotnet6`, `dotnet8`              |
 | Java        | `java8.al2`, `java11`, `java17`, `java21`      |
-| Provided    | `provided`, `provided.al2`, `provided.al2023`         |
+| Provided    | `provided.al2`, `provided.al2023`         |
 | Ruby        | `ruby3.2`, `ruby3.3`, `ruby3.4`          |
 
 **Note:** Automatic handler wrapping is only supported for Node.js, Python, Java, and Ruby. For other runtimes,
@@ -52,6 +52,7 @@ manual function wrapping is required using the runtime specific New Relic agent.
 
 * Python >= 3.7 <= 3.13
 * Retrieve your [New relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) and [User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key)
+* Retrieve your [New Relic Ingest License Key](https://docs.newrelic.com/docs/apis/intro-apis/new-relic-api-keys/#personal-api-key)
 
 ## Recommendations
 
@@ -183,6 +184,7 @@ newrelic-lambda layers install \
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 | `--nr-api-key` or `-k` | No | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Can also use the `NEW_RELIC_API_KEY` environment variable. Only used if `--enable-extension` is set and there is no New Relic license key in AWS Secrets Manager. |
+| `--nr-ingest-key`| No | Your [New Relic Ingest License Key](https://docs.newrelic.com/docs/apis/intro-apis/new-relic-api-keys/#personal-api-key). Can be used without `--enable-extension` configured or license key in AWS Secrets Manager. |
 | `--nr-region` | No | The New Relic region to use for the integration. Can use the `NEW_RELIC_REGION` environment variable. Can be either `eu` or `us`. Defaults to `us`. Only used if `--enable-extension` is set and there is no New Relic license key in AWS Secrets Manager. |
 | `--nr-env-delimite` | No | Set `NR_ENV_DELIMITER` environment variable for your Lambda Function |
 | `--nr-tags` | No | Set `NR_TAGS` environment variable for your Lambda Function |
