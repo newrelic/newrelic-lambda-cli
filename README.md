@@ -184,7 +184,7 @@ newrelic-lambda layers install \
 | `--aws-profile` or `-p` | No | The AWS profile to use for this command. Can also use `AWS_PROFILE`. Will also check `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables if not using AWS CLI. |
 | `--aws-region` or `-r` | No | The AWS region this function is located. Can use `AWS_DEFAULT_REGION` environment variable. Defaults to AWS session region. |
 | `--nr-api-key` or `-k` | No | Your [New Relic User API Key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key). Can also use the `NEW_RELIC_API_KEY` environment variable. Only used if `--enable-extension` is set and there is no New Relic license key in AWS Secrets Manager. |
-| `--nr-ingest-key`| No | Your [New Relic Ingest License Key](https://docs.newrelic.com/docs/apis/intro-apis/new-relic-api-keys/#personal-api-key). Can be used without any `--enable-extension` configured or license key in AWS Secrets Manager. |
+| `--nr-ingest-key`| No | Your [New Relic Ingest License Key](https://docs.newrelic.com/docs/apis/intro-apis/new-relic-api-keys/#personal-api-key). Can be used without `--enable-extension` configured or license key in AWS Secrets Manager. |
 | `--nr-region` | No | The New Relic region to use for the integration. Can use the `NEW_RELIC_REGION` environment variable. Can be either `eu` or `us`. Defaults to `us`. Only used if `--enable-extension` is set and there is no New Relic license key in AWS Secrets Manager. |
 | `--nr-env-delimite` | No | Set `NR_ENV_DELIMITER` environment variable for your Lambda Function |
 | `--nr-tags` | No | Set `NR_TAGS` environment variable for your Lambda Function |
