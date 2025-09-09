@@ -174,6 +174,7 @@ newrelic-lambda layers install \
 | `--function` or `-f` | Yes | The AWS Lambda function name or ARN in which to add a layer. Can provide multiple `--function` arguments. Will also accept `all`, `installed` and `not-installed` similar to `newrelic-lambda functions list`. |
 | `--nr-account-id` or `-a` | Yes | The [New Relic Account ID](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/account-id) this function should use. Can also use the `NEW_RELIC_ACCOUNT_ID` environment variable. |
 | `--exclude` or `-e` | No | A function name to exclude while installing layers. Can provide multiple `--exclude` arguments. Only checked when `all`, `installed` and `not-installed` are used. See `newrelic-lambda functions list` for function names. |
+| `--slim` | No | The flag `--slim` adds the Node.js layer without OpenTelemetry dependencies, resulting in a lighter size. |
 | `--layer-arn` or `-l` | No | Specify a specific layer version ARN to use. This is auto detected by default. |
 | `--upgrade` or `-u` | No | Permit upgrade to the latest layer version for this region and runtime. |
 | `--disable-extension` | No | Disable the [New Relic Lambda Extension](https://github.com/newrelic/newrelic-lambda-extension). |

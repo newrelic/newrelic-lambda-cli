@@ -148,6 +148,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
                 "x86_64",
                 upgrade=None,
                 existing_layer_arn=None,
+                slim=ANY,
             )
             assert "original_handler" in config["Configuration"]["Handler"]
 
@@ -199,8 +200,9 @@ def test_add_new_relic(aws_credentials, mock_function_config):
 
     with patch("sys.stdout.isatty") as mock_isatty:
         mock_isatty.return_value = False
-        with pytest.raises(UsageError):
-            layer_selection(mock_layers, "python3.12", "x86_64")
+
+        selected = layer_selection(mock_layers, "python3.12", "x86_64")
+        assert selected == "arn:aws:lambda:us-east-1:123456789:layer/javajava"
 
     config = mock_function_config("python3.12")
     _add_new_relic(
