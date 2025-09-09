@@ -134,6 +134,12 @@ def register(group):
     help="Enable sending Lambda function logs via the New Relic Lambda Extension",
 )
 @click.option(
+    "--slim",
+    is_flag=True,
+    default=False,
+    help="New Relic slim Layer without opentelemetry for Node.js",
+)
+@click.option(
     "--disable-function-logs",
     is_flag=True,
     help="Disable sending Lambda function logs via the New Relic Lambda Extension",

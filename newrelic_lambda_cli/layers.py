@@ -48,7 +48,12 @@ def index(region, runtime, architecture):
 
 
 def layer_selection(
-    available_layers, runtime, architecture, upgrade=False, existing_layer_arn=None
+    available_layers,
+    runtime,
+    architecture,
+    upgrade=False,
+    existing_layer_arn=None,
+    slim=False,
 ):
     if upgrade and existing_layer_arn:
         base_arn = existing_layer_arn.rsplit(":", 1)[0]
@@ -65,7 +70,11 @@ def layer_selection(
     layer_options = [
         layer["LatestMatchingVersion"]["LayerVersionArn"] for layer in available_layers
     ]
-
+    if slim:
+        for arn in layer_options:
+            if "-slim:" in arn:
+                success("Layer %s selected (slim)" % arn)
+                return arn
     if sys.stdout.isatty():
         output = "\n".join(
             [
@@ -86,11 +95,14 @@ def layer_selection(
             except IndexError:
                 failure("Invalid layer selection")
     else:
-        raise click.UsageError(
+        click.echo(
             "Discovered multiple layers for runtime %s (%s):\n%s\n"
-            "Pass --layer-arn to specify a layer ARN"
+            "To add a particular Layer ARN use --layer-arn"
             % (runtime, architecture, "\n".join(layer_options))
         )
+        selected = layer_options[0]
+        success("Layer %s selected (auto)" % selected)
+        return selected
 
 
 def _add_new_relic(input, config, nr_license_key):
@@ -167,6 +179,7 @@ def _add_new_relic(input, config, nr_license_key):
             architecture,
             upgrade=input.upgrade,
             existing_layer_arn=existing_layer_arn,
+            slim=input.slim,
         )
 
     update_kwargs = {

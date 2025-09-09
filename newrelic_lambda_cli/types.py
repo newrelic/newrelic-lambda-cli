@@ -117,6 +117,7 @@ LAYER_INSTALL_KEYS = [
     "disable_extension_logs",
     "java_handler_method",
     "esm",
+    "slim",
 ]
 
 LAYER_UNINSTALL_KEYS = [
