@@ -65,6 +65,13 @@ def register(group):
 )
 @add_options(NR_OPTIONS)
 @click.option(
+    "--nr-ingest-key",
+    envvar="NEW_RELIC_INGEST_KEY",
+    help="New Relic License/Ingest Key. When used alone (without --nr-api-key), only AWS resources will be created; cloud integration linking will be skipped.",
+    metavar="<key>",
+    required=False,
+)
+@click.option(
     "--timeout",
     "-t",
     default=30,
@@ -113,6 +120,12 @@ def install(ctx, **kwargs):
     """Install New Relic AWS Lambda Integration"""
     input = IntegrationInstall(session=None, verbose=ctx.obj["VERBOSE"], **kwargs)
 
+    if input.nr_api_key and input.nr_ingest_key:
+        raise click.UsageError(
+            "Please provide either the --nr-api-key or the --nr-ingest-key flag, but not both."
+        )
+    if not input.nr_api_key and not input.nr_ingest_key:
+        raise click.UsageError("Please provide either --nr-api-key or --nr-ingest-key.")
     input = input._replace(
         session=boto3.Session(
             profile_name=input.aws_profile, region_name=input.aws_region
@@ -130,11 +143,26 @@ def install(ctx, **kwargs):
     if input.aws_permissions_check:
         permissions.ensure_integration_install_permissions(input)
 
-    click.echo("Validating New Relic credentials")
-    gql_client = api.validate_gql_credentials(input)
+    nr_license_key = None
+    gql_client = None
 
-    click.echo("Retrieving integration license key")
-    nr_license_key = api.retrieve_license_key(gql_client)
+    if input.nr_ingest_key:
+        click.echo("Using provided New Relic ingest key")
+        nr_license_key = input.nr_ingest_key
+        if input.nr_api_key:
+            click.echo("Validating New Relic credentials for account linking")
+            gql_client = api.validate_gql_credentials(input)
+        else:
+            click.echo(
+                "Note: Skipping cloud integration account linking "
+                "(requires --nr-api-key). Only AWS resources will be created."
+            )
+    else:
+        click.echo("Validating New Relic credentials")
+        gql_client = api.validate_gql_credentials(input)
+
+        click.echo("Retrieving integration license key")
+        nr_license_key = api.retrieve_license_key(gql_client)
 
     install_success = True
 
@@ -142,18 +170,20 @@ def install(ctx, **kwargs):
     role = integrations.create_integration_role(input)
     install_success = install_success and role
 
-    if role:
+    if role and gql_client:
         click.echo("Linking New Relic account to AWS account")
         res = api.create_integration_account(gql_client, input, role)
         install_success = res and install_success
 
-        linked_account_id = res.get("id")
+        linked_account_id = res.get("id") if res else None
         if linked_account_id:
             click.echo(
                 "Enabling Lambda integration on the link between New Relic and AWS"
             )
             res = api.enable_lambda_integration(gql_client, input, linked_account_id)
             install_success = res and install_success
+    elif role and not gql_client:
+        click.echo("Skipping cloud integration (no API key provided)")
 
     if input.enable_license_key_secret:
         click.echo("Creating the managed secret for the New Relic License Key")
@@ -283,6 +313,13 @@ def uninstall(**kwargs):
 )
 @add_options(NR_OPTIONS)
 @click.option(
+    "--nr-ingest-key",
+    envvar="NEW_RELIC_INGEST_KEY",
+    help="New Relic License/Ingest Key (alternative to --nr-api-key for update operations)",
+    metavar="<key>",
+    required=False,
+)
+@click.option(
     "--timeout",
     "-t",
     help="Timeout (in seconds) for the New Relic log ingestion function",
@@ -323,6 +360,12 @@ def update(**kwargs):
     """UpdateNew Relic AWS Lambda Integration"""
     input = IntegrationUpdate(session=None, **kwargs)
 
+    if input.nr_api_key and input.nr_ingest_key:
+        raise click.UsageError(
+            "Please provide either the --nr-api-key or the --nr-ingest-key flag, but not both."
+        )
+    if not input.nr_api_key and not input.nr_ingest_key:
+        raise click.UsageError("Please provide either --nr-api-key or --nr-ingest-key.")
     input = input._replace(
         session=boto3.Session(
             profile_name=input.aws_profile, region_name=input.aws_region
@@ -332,11 +375,15 @@ def update(**kwargs):
     if input.aws_permissions_check:
         permissions.ensure_integration_install_permissions(input)
 
-    click.echo("Validating New Relic credentials")
-    gql_client = api.validate_gql_credentials(input)
+    if input.nr_ingest_key:
+        click.echo("Using provided New Relic ingest key")
+        nr_license_key = input.nr_ingest_key
+    else:
+        click.echo("Validating New Relic credentials")
+        gql_client = api.validate_gql_credentials(input)
 
-    click.echo("Retrieving integration license key")
-    nr_license_key = api.retrieve_license_key(gql_client)
+        click.echo("Retrieving integration license key")
+        nr_license_key = api.retrieve_license_key(gql_client)
 
     update_success = True
 
