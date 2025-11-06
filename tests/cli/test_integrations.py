@@ -258,7 +258,10 @@ def test_integrations_install_with_both_keys(
 
     assert result.exit_code != 0
     error_message = result.output + result.stderr
-    assert "Please provide either the --nr-api-key or the --nr-ingest-key flag, but not both" in error_message
+    assert (
+        "Please provide either the --nr-api-key or the --nr-ingest-key flag, but not both"
+        in error_message
+    )
 
 
 @patch("newrelic_lambda_cli.cli.integrations.boto3")
@@ -305,7 +308,7 @@ def test_integrations_install_ingest_key_with_api_key(
     api_mock.validate_gql_credentials.return_value = MagicMock()
     api_mock.create_integration_account.return_value = {"id": "test_id"}
     integrations_mock.create_integration_role.return_value = True
-    
+
     register_groups(cli)
     result = cli_runner.invoke(
         cli,
@@ -326,7 +329,10 @@ def test_integrations_install_ingest_key_with_api_key(
 
     assert result.exit_code != 0
     error_message = result.output + result.stderr
-    assert "Please provide either the --nr-api-key or the --nr-ingest-key flag, but not both" in error_message
+    assert (
+        "Please provide either the --nr-api-key or the --nr-ingest-key flag, but not both"
+        in error_message
+    )
 
 
 @patch("newrelic_lambda_cli.cli.integrations.boto3")
@@ -340,7 +346,7 @@ def test_integrations_update_with_ingest_key(
     """
     integrations_mock.update_log_ingestion.return_value = True
     integrations_mock.install_license_key.return_value = True
-    
+
     register_groups(cli)
     result = cli_runner.invoke(
         cli,
@@ -404,7 +410,10 @@ def test_integrations_update_with_both_keys(
 
     assert result.exit_code != 0
     error_message = result.output + result.stderr
-    assert "Please provide either the --nr-api-key or the --nr-ingest-key flag, but not both" in error_message
+    assert (
+        "Please provide either the --nr-api-key or the --nr-ingest-key flag, but not both"
+        in error_message
+    )
 
 
 @patch("newrelic_lambda_cli.cli.integrations.boto3")
