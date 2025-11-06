@@ -66,8 +66,7 @@ def register(group):
 @add_options(NR_OPTIONS)
 @click.option(
     "--nr-ingest-key",
-    envvar="NEW_RELIC_INGEST_KEY",
-    help="New Relic License/Ingest Key. When used alone (without --nr-api-key), only AWS resources will be created; cloud integration linking will be skipped.",
+    help="New Relic Ingest Key",
     metavar="<key>",
     required=False,
 )
@@ -314,8 +313,7 @@ def uninstall(**kwargs):
 @add_options(NR_OPTIONS)
 @click.option(
     "--nr-ingest-key",
-    envvar="NEW_RELIC_INGEST_KEY",
-    help="New Relic License/Ingest Key (alternative to --nr-api-key for update operations)",
+    help="New Relic Ingest Key",
     metavar="<key>",
     required=False,
 )
