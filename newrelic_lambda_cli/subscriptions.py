@@ -133,7 +133,10 @@ def create_log_subscription(input, function_name):
             "Found log subscription for '%s', verifying configuration" % function_name
         )
         newrelic_filter = newrelic_filters[0]
-        if (newrelic_filter["filterPattern"] != input.filter_pattern or newrelic_filter["destinationArn"] != destination_arn):
+        if (
+            newrelic_filter["filterPattern"] != input.filter_pattern
+            or newrelic_filter["destinationArn"] != destination_arn
+        ):
             return _remove_subscription_filter(
                 input.session, function_name, newrelic_filter["filterName"]
             ) and _create_subscription_filter(
@@ -189,7 +192,10 @@ def create_otel_log_subscription(input, function_name):
             "Found log subscription for '%s', verifying configuration" % function_name
         )
         newrelic_filter = newrelic_filters[0]
-        if newrelic_filter["filterPattern"] != input.filter_pattern or newrelic_filter["destinationArn"] != destination_arn:
+        if (
+            newrelic_filter["filterPattern"] != input.filter_pattern
+            or newrelic_filter["destinationArn"] != destination_arn
+        ):
             return _remove_subscription_filter(
                 input.session, function_name, newrelic_filter["filterName"]
             ) and _create_subscription_filter(
