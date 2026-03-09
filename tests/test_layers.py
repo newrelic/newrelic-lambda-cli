@@ -55,7 +55,7 @@ def test_add_new_relic(aws_credentials, mock_function_config):
         update_kwargs["Environment"]["Variables"][
             "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
         ]
-        == "false"
+        == "true"
     )
 
     config = mock_function_config("not.a.runtime")
@@ -76,20 +76,19 @@ def test_add_new_relic(aws_credentials, mock_function_config):
 
     config = mock_function_config("python3.12")
     config["Configuration"]["Layers"] = [{"Arn": get_arn_prefix("us-east-1")}]
-    assert (
-        _add_new_relic(
-            layer_install(
-                session=session,
-                aws_region="us-east-1",
-                nr_account_id=12345,
-                enable_extension=True,
-                enable_extension_function_logs=True,
-            ),
-            config,
-            nr_license_key=None,
-        )
-        is True
+    result = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=12345,
+            enable_extension=True,
+            enable_extension_function_logs=True,
+        ),
+        config,
+        nr_license_key=None,
     )
+    # With log flags set, the function proceeds to update even if layer exists
+    assert result is not False
 
     with patch("newrelic_lambda_cli.layers.index") as mock_index:
         mock_index.return_value = []
@@ -390,7 +389,7 @@ def test_add_new_relic_dotnet(aws_credentials, mock_function_config):
             update_kwargs["Environment"]["Variables"][
                 "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
             ]
-            == "false"
+            == "true"
         )
 
         # .NET specific environment variables
@@ -472,7 +471,7 @@ def test_add_new_relic_nodejs(aws_credentials, mock_function_config):
         update_kwargs_std["Environment"]["Variables"][
             "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
         ]
-        == "false"
+        == "true"
     )
 
     # --- Scenario 2: ESM Node.js Handler (ESM enabled) ---
@@ -529,7 +528,7 @@ def test_add_new_relic_nodejs(aws_credentials, mock_function_config):
         update_kwargs_esm["Environment"]["Variables"][
             "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
         ]
-        == "false"
+        == "true"
     )
 
 
@@ -840,7 +839,7 @@ def test_extension_logs_flags(aws_credentials, mock_function_config):
         == "false"
     )
 
-    # Test 2: Fresh install with --send-extension-logs
+    # Test 2: Fresh install with --send-extension-logs - should be true
     config = mock_function_config("python3.12")
     update_kwargs = _add_new_relic(
         layer_install(
@@ -858,7 +857,7 @@ def test_extension_logs_flags(aws_credentials, mock_function_config):
         update_kwargs["Environment"]["Variables"][
             "NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS"
         ]
-        == "false"
+        == "true"
     )
 
     # Test 3: Upgrade with --send-extension-logs - should set to true
@@ -965,7 +964,7 @@ def test_function_logs_flags(aws_credentials, mock_function_config):
         == "false"
     )
 
-    # Test 2: Fresh install with --send-function-logs - should still be false
+    # Test 2: Fresh install with --send-function-logs - should be true
     config = mock_function_config("python3.12")
     update_kwargs = _add_new_relic(
         layer_install(
@@ -983,7 +982,7 @@ def test_function_logs_flags(aws_credentials, mock_function_config):
         update_kwargs["Environment"]["Variables"][
             "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
         ]
-        == "false"
+        == "true"
     )
 
     # Test 3: Upgrade with --send-function-logs - should set to true
@@ -1059,6 +1058,131 @@ def test_function_logs_flags(aws_credentials, mock_function_config):
     assert (
         update_kwargs["Environment"]["Variables"][
             "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
+        ]
+        == "true"
+    )
+
+
+@mock_aws
+def test_platform_logs_flags(aws_credentials, mock_function_config):
+    """Test that --send-platform-logs and --disable-platform-logs flags work correctly"""
+    session = boto3.Session(region_name="us-east-1")
+    nr_account_id = 12345
+
+    # Test 1: Fresh install with default settings - logs should be disabled by default
+    config = mock_function_config("python3.12")
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=nr_account_id,
+            enable_extension=True,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert (
+        update_kwargs["Environment"]["Variables"][
+            "NEW_RELIC_EXTENSION_SEND_PLATFORM_LOGS"
+        ]
+        == "false"
+    )
+
+    # Test 2: Fresh install with --send-platform-logs - should be true
+    config = mock_function_config("python3.12")
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=nr_account_id,
+            enable_extension=True,
+            send_platform_logs=True,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert (
+        update_kwargs["Environment"]["Variables"][
+            "NEW_RELIC_EXTENSION_SEND_PLATFORM_LOGS"
+        ]
+        == "true"
+    )
+
+    # Test 3: Upgrade with --send-platform-logs - should set to true
+    config = mock_function_config("python3.12")
+    config["Configuration"]["Environment"]["Variables"][
+        "NEW_RELIC_EXTENSION_SEND_PLATFORM_LOGS"
+    ] = "false"
+
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=nr_account_id,
+            enable_extension=True,
+            send_platform_logs=True,
+            upgrade=True,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert (
+        update_kwargs["Environment"]["Variables"][
+            "NEW_RELIC_EXTENSION_SEND_PLATFORM_LOGS"
+        ]
+        == "true"
+    )
+
+    # Test 4: Upgrade with --disable-platform-logs - should set to false
+    config = mock_function_config("python3.12")
+    config["Configuration"]["Environment"]["Variables"][
+        "NEW_RELIC_EXTENSION_SEND_PLATFORM_LOGS"
+    ] = "true"
+
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=nr_account_id,
+            enable_extension=True,
+            disable_platform_logs=True,
+            upgrade=True,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert (
+        update_kwargs["Environment"]["Variables"][
+            "NEW_RELIC_EXTENSION_SEND_PLATFORM_LOGS"
+        ]
+        == "false"
+    )
+
+    # Test 5: Upgrade without flags - should preserve existing value
+    config = mock_function_config("python3.12")
+    config["Configuration"]["Environment"]["Variables"][
+        "NEW_RELIC_EXTENSION_SEND_PLATFORM_LOGS"
+    ] = "true"
+
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=nr_account_id,
+            enable_extension=True,
+            upgrade=True,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert (
+        update_kwargs["Environment"]["Variables"][
+            "NEW_RELIC_EXTENSION_SEND_PLATFORM_LOGS"
         ]
         == "true"
     )

@@ -115,6 +115,8 @@ LAYER_INSTALL_KEYS = [
     "disable_function_logs",
     "send_extension_logs",
     "disable_extension_logs",
+    "send_platform_logs",
+    "disable_platform_logs",
     "java_handler_method",
     "esm",
     "slim",
