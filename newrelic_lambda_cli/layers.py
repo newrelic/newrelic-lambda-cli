@@ -18,6 +18,7 @@ from newrelic_lambda_cli.utils import catch_boto_errors
 
 NEW_RELIC_ENV_VARS = (
     "NEW_RELIC_ACCOUNT_ID",
+    "NEW_RELIC_EXTENSION_LOGS_ENABLED",
     "NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS",
     "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS",
     "NEW_RELIC_LAMBDA_EXTENSION_ENABLED",
@@ -273,6 +274,19 @@ def _add_new_relic(input, config, nr_license_key):
             success(
                 "Successfully disabled NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS tag to the function"
             )
+
+        if input.extension_logs_enabled is not None:
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_EXTENSION_LOGS_ENABLED"
+            ] = input.extension_logs_enabled
+            if input.extension_logs_enabled == "true":
+                success(
+                    "Successfully enabled NEW_RELIC_EXTENSION_LOGS_ENABLED for the function"
+                )
+            else:
+                success(
+                    "Successfully disabled NEW_RELIC_EXTENSION_LOGS_ENABLED for the function"
+                )
 
         if input.nr_tags:
             update_kwargs["Environment"]["Variables"]["NR_TAGS"] = input.nr_tags

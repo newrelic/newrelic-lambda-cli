@@ -158,6 +158,21 @@ def register(group):
     is_flag=True,
     help="Nodejs runtimes only - nodejs implementation runtime handler to /opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index.handler",
 )
+@click.option(
+    "--extension-logs-enabled",
+    "extension_logs_enabled",
+    flag_value="true",
+    help="Set NEW_RELIC_EXTENSION_LOGS_ENABLED=true to enable [NR_EXT] extension "
+    "log output in CloudWatch (default extension behaviour)",
+)
+@click.option(
+    "--extension-logs-disabled",
+    "extension_logs_enabled",
+    flag_value="false",
+    help="Set NEW_RELIC_EXTENSION_LOGS_ENABLED=false to suppress [NR_EXT] extension "
+    "log output in CloudWatch, reducing CloudWatch log volume without affecting "
+    "telemetry delivery to New Relic",
+)
 @click.pass_context
 def install(ctx, **kwargs):
     """Install New Relic AWS Lambda Layers"""

@@ -1525,3 +1525,154 @@ def test_install_account_mismatch_error_with_missing_keys(
         # This should raise UsageError
         with pytest.raises(UsageError):
             mock_install(input_obj, "foobarbaz")
+
+
+@mock_aws
+def test_extension_logs_enabled_flag(aws_credentials, mock_function_config):
+    """Test that --extension-logs-enabled sets NEW_RELIC_EXTENSION_LOGS_ENABLED=true"""
+    session = boto3.Session(region_name="us-east-1")
+    nr_account_id = 12345
+
+    # Test 1: Fresh install with --extension-logs-enabled
+    config = mock_function_config("python3.12")
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=nr_account_id,
+            enable_extension=True,
+            extension_logs_enabled="true",
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert (
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_EXTENSION_LOGS_ENABLED"]
+        == "true"
+    )
+
+    # Test 2: Upgrade with --extension-logs-enabled
+    config = mock_function_config("python3.12")
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=nr_account_id,
+            enable_extension=True,
+            extension_logs_enabled="true",
+            upgrade=True,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert (
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_EXTENSION_LOGS_ENABLED"]
+        == "true"
+    )
+
+
+@mock_aws
+def test_extension_logs_disabled_flag(aws_credentials, mock_function_config):
+    """Test that --extension-logs-disabled sets NEW_RELIC_EXTENSION_LOGS_ENABLED=false"""
+    session = boto3.Session(region_name="us-east-1")
+    nr_account_id = 12345
+
+    # Test 1: Fresh install with --extension-logs-disabled
+    config = mock_function_config("python3.12")
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=nr_account_id,
+            enable_extension=True,
+            extension_logs_enabled="false",
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert (
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_EXTENSION_LOGS_ENABLED"]
+        == "false"
+    )
+
+    # Test 2: Upgrade with --extension-logs-disabled
+    config = mock_function_config("python3.12")
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=nr_account_id,
+            enable_extension=True,
+            extension_logs_enabled="false",
+            upgrade=True,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert (
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_EXTENSION_LOGS_ENABLED"]
+        == "false"
+    )
+
+
+@mock_aws
+def test_extension_logs_not_set_by_default(aws_credentials, mock_function_config):
+    """Test that NEW_RELIC_EXTENSION_LOGS_ENABLED is NOT set when neither flag is passed"""
+    session = boto3.Session(region_name="us-east-1")
+    nr_account_id = 12345
+
+    # Fresh install without either --extension-logs-enabled or --extension-logs-disabled
+    config = mock_function_config("python3.12")
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=nr_account_id,
+            enable_extension=True,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert "NEW_RELIC_EXTENSION_LOGS_ENABLED" not in update_kwargs["Environment"]["Variables"]
+
+    # Upgrade without either flag - should also not set the var
+    config = mock_function_config("python3.12")
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=nr_account_id,
+            enable_extension=True,
+            upgrade=True,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert "NEW_RELIC_EXTENSION_LOGS_ENABLED" not in update_kwargs["Environment"]["Variables"]
+
+
+@mock_aws
+def test_extension_logs_removed_on_uninstall(aws_credentials, mock_function_config):
+    """Test that NEW_RELIC_EXTENSION_LOGS_ENABLED is removed during uninstall"""
+    session = boto3.Session(region_name="us-east-1")
+
+    config = mock_function_config("python3.12")
+    config["Configuration"]["Handler"] = "newrelic_lambda_wrapper.handler"
+    config["Configuration"]["Environment"]["Variables"][
+        "NEW_RELIC_LAMBDA_HANDLER"
+    ] = "original_handler"
+    config["Configuration"]["Environment"]["Variables"][
+        "NEW_RELIC_EXTENSION_LOGS_ENABLED"
+    ] = "true"
+
+    update_kwargs = _remove_new_relic(
+        layer_uninstall(session=session, aws_region="us-east-1"), config
+    )
+
+    assert "NEW_RELIC_EXTENSION_LOGS_ENABLED" not in update_kwargs["Environment"]["Variables"]
