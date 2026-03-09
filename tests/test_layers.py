@@ -1638,7 +1638,10 @@ def test_extension_logs_not_set_by_default(aws_credentials, mock_function_config
         nr_license_key=None,
     )
 
-    assert "NEW_RELIC_EXTENSION_LOGS_ENABLED" not in update_kwargs["Environment"]["Variables"]
+    assert (
+        "NEW_RELIC_EXTENSION_LOGS_ENABLED"
+        not in update_kwargs["Environment"]["Variables"]
+    )
 
     # Upgrade without either flag - should also not set the var
     config = mock_function_config("python3.12")
@@ -1654,7 +1657,10 @@ def test_extension_logs_not_set_by_default(aws_credentials, mock_function_config
         nr_license_key=None,
     )
 
-    assert "NEW_RELIC_EXTENSION_LOGS_ENABLED" not in update_kwargs["Environment"]["Variables"]
+    assert (
+        "NEW_RELIC_EXTENSION_LOGS_ENABLED"
+        not in update_kwargs["Environment"]["Variables"]
+    )
 
 
 @mock_aws
@@ -1675,4 +1681,7 @@ def test_extension_logs_removed_on_uninstall(aws_credentials, mock_function_conf
         layer_uninstall(session=session, aws_region="us-east-1"), config
     )
 
-    assert "NEW_RELIC_EXTENSION_LOGS_ENABLED" not in update_kwargs["Environment"]["Variables"]
+    assert (
+        "NEW_RELIC_EXTENSION_LOGS_ENABLED"
+        not in update_kwargs["Environment"]["Variables"]
+    )
