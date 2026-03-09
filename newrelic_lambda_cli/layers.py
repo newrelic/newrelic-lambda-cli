@@ -142,16 +142,18 @@ def _add_new_relic(input, config, nr_license_key):
         if layer["Arn"].startswith(utils.get_arn_prefix(aws_region))
     ]
 
-    has_log_flags = any([
-        input.send_function_logs,
-        input.disable_function_logs,
-        input.enable_extension_function_logs,
-        input.disable_extension_function_logs,
-        input.send_extension_logs,
-        input.disable_extension_logs,
-        input.send_platform_logs,
-        input.disable_platform_logs,
-    ])
+    has_log_flags = any(
+        [
+            input.send_function_logs,
+            input.disable_function_logs,
+            input.enable_extension_function_logs,
+            input.disable_extension_function_logs,
+            input.send_extension_logs,
+            input.disable_extension_logs,
+            input.send_platform_logs,
+            input.disable_platform_logs,
+        ]
+    )
 
     if not input.upgrade and existing_newrelic_layer and not has_log_flags:
         success(
