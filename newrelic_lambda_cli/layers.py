@@ -21,6 +21,7 @@ NEW_RELIC_ENV_VARS = (
     "NEW_RELIC_EXTENSION_LOGS_ENABLED",
     "NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS",
     "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS",
+    "NEW_RELIC_EXTENSION_SEND_PLATFORM_LOGS",
     "NEW_RELIC_LAMBDA_EXTENSION_ENABLED",
     "NEW_RELIC_LAMBDA_HANDLER",
     "NEW_RELIC_LICENSE_KEY",
@@ -142,7 +143,20 @@ def _add_new_relic(input, config, nr_license_key):
         if layer["Arn"].startswith(utils.get_arn_prefix(aws_region))
     ]
 
-    if not input.upgrade and existing_newrelic_layer:
+    has_log_flags = any(
+        [
+            input.send_function_logs,
+            input.disable_function_logs,
+            input.enable_extension_function_logs,
+            input.disable_extension_function_logs,
+            input.send_extension_logs,
+            input.disable_extension_logs,
+            input.send_platform_logs,
+            input.disable_platform_logs,
+        ]
+    )
+
+    if not input.upgrade and existing_newrelic_layer and not has_log_flags:
         success(
             "Already installed on function '%s'. Pass --upgrade (or -u) to allow "
             "upgrade or reinstall to latest layer version."
@@ -237,11 +251,7 @@ def _add_new_relic(input, config, nr_license_key):
             "NEW_RELIC_LAMBDA_EXTENSION_ENABLED"
         ] = "true"
 
-        if not input.upgrade:
-            update_kwargs["Environment"]["Variables"][
-                "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
-            ] = "false"
-        elif input.enable_extension_function_logs or input.send_function_logs:
+        if input.enable_extension_function_logs or input.send_function_logs:
             update_kwargs["Environment"]["Variables"][
                 "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
             ] = "true"
@@ -255,12 +265,12 @@ def _add_new_relic(input, config, nr_license_key):
             success(
                 "Successfully disabled NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS tag to the function"
             )
-
-        if not input.upgrade:
+        elif not input.upgrade:
             update_kwargs["Environment"]["Variables"][
-                "NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS"
+                "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS"
             ] = "false"
-        elif input.send_extension_logs:
+
+        if input.send_extension_logs:
             update_kwargs["Environment"]["Variables"][
                 "NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS"
             ] = "true"
@@ -274,6 +284,29 @@ def _add_new_relic(input, config, nr_license_key):
             success(
                 "Successfully disabled NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS tag to the function"
             )
+        elif not input.upgrade:
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS"
+            ] = "false"
+
+        if input.send_platform_logs:
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_EXTENSION_SEND_PLATFORM_LOGS"
+            ] = "true"
+            success(
+                "Successfully enabled NEW_RELIC_EXTENSION_SEND_PLATFORM_LOGS tag to the function"
+            )
+        elif input.disable_platform_logs:
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_EXTENSION_SEND_PLATFORM_LOGS"
+            ] = "false"
+            success(
+                "Successfully disabled NEW_RELIC_EXTENSION_SEND_PLATFORM_LOGS tag to the function"
+            )
+        elif not input.upgrade:
+            update_kwargs["Environment"]["Variables"][
+                "NEW_RELIC_EXTENSION_SEND_PLATFORM_LOGS"
+            ] = "false"
 
         if input.extension_logs_enabled is not None:
             update_kwargs["Environment"]["Variables"][

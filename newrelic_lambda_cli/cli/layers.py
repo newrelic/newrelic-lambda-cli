@@ -145,6 +145,16 @@ def register(group):
     help="Disable sending Lambda function logs via the New Relic Lambda Extension",
 )
 @click.option(
+    "--send-platform-logs",
+    is_flag=True,
+    help="Enable sending Lambda platform logs via the New Relic Lambda Extension",
+)
+@click.option(
+    "--disable-platform-logs",
+    is_flag=True,
+    help="Disable sending Lambda platform logs via the New Relic Lambda Extension",
+)
+@click.option(
     "--java_handler_method",
     "-j",
     default="handleRequest",
