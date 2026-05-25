@@ -1884,6 +1884,35 @@ def test_app_name_not_set_when_flag_omitted(aws_credentials, mock_function_confi
 
 
 @mock_aws
+def test_existing_app_name_preserved_when_flag_omitted_on_upgrade(
+    aws_credentials, mock_function_config
+):
+    """Existing NEW_RELIC_APP_NAME is preserved when --app-name is not passed during upgrade"""
+    session = boto3.Session(region_name="us-east-1")
+    config = mock_function_config("python3.12")
+    config["Configuration"]["Environment"]["Variables"][
+        "NEW_RELIC_APP_NAME"
+    ] = "previously-set-app"
+
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=12345,
+            enable_extension=True,
+            upgrade=True,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert (
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_APP_NAME"]
+        == "previously-set-app"
+    )
+
+
+@mock_aws
 def test_app_name_removed_on_uninstall(aws_credentials, mock_function_config):
     """NEW_RELIC_APP_NAME is removed during uninstall"""
     session = boto3.Session(region_name="us-east-1")

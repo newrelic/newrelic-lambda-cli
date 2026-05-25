@@ -1,6 +1,16 @@
+import pytest
+from click.testing import CliRunner
 from moto import mock_aws
 
 from newrelic_lambda_cli.cli import cli, register_groups
+
+
+@pytest.fixture(scope="module")
+def cli_runner():
+    try:
+        return CliRunner(mix_stderr=False)
+    except TypeError:
+        return CliRunner()
 
 
 @mock_aws
