@@ -1809,3 +1809,93 @@ def test_extension_logs_removed_on_uninstall(aws_credentials, mock_function_conf
         "NEW_RELIC_EXTENSION_LOGS_ENABLED"
         not in update_kwargs["Environment"]["Variables"]
     )
+
+
+@mock_aws
+def test_sets_app_name_from_flag(aws_credentials, mock_function_config):
+    """Sets NEW_RELIC_APP_NAME when --app-name flag is provided"""
+    session = boto3.Session(region_name="us-east-1")
+    config = mock_function_config("python3.12")
+
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=12345,
+            enable_extension=True,
+            app_name="my-custom-app",
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert (
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_APP_NAME"]
+        == "my-custom-app"
+    )
+
+
+@mock_aws
+def test_app_name_flag_overrides_existing_value(aws_credentials, mock_function_config):
+    """--app-name flag overrides existing NEW_RELIC_APP_NAME already set on the function"""
+    session = boto3.Session(region_name="us-east-1")
+    config = mock_function_config("python3.12")
+    config["Configuration"]["Environment"]["Variables"][
+        "NEW_RELIC_APP_NAME"
+    ] = "existing-app"
+
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=12345,
+            enable_extension=True,
+            app_name="new-app-name",
+            upgrade=True,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert (
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_APP_NAME"]
+        == "new-app-name"
+    )
+
+
+@mock_aws
+def test_app_name_not_set_when_flag_omitted(aws_credentials, mock_function_config):
+    """NEW_RELIC_APP_NAME is not set when --app-name flag is not provided"""
+    session = boto3.Session(region_name="us-east-1")
+    config = mock_function_config("python3.12")
+
+    update_kwargs = _add_new_relic(
+        layer_install(
+            session=session,
+            aws_region="us-east-1",
+            nr_account_id=12345,
+            enable_extension=True,
+        ),
+        config,
+        nr_license_key=None,
+    )
+
+    assert "NEW_RELIC_APP_NAME" not in update_kwargs["Environment"]["Variables"]
+
+
+@mock_aws
+def test_app_name_removed_on_uninstall(aws_credentials, mock_function_config):
+    """NEW_RELIC_APP_NAME is removed during uninstall"""
+    session = boto3.Session(region_name="us-east-1")
+    config = mock_function_config("python3.12")
+    config["Configuration"]["Handler"] = "newrelic_lambda_wrapper.handler"
+    config["Configuration"]["Environment"]["Variables"][
+        "NEW_RELIC_LAMBDA_HANDLER"
+    ] = "original_handler"
+    config["Configuration"]["Environment"]["Variables"]["NEW_RELIC_APP_NAME"] = "my-app"
+
+    update_kwargs = _remove_new_relic(
+        layer_uninstall(session=session, aws_region="us-east-1"), config
+    )
+
+    assert "NEW_RELIC_APP_NAME" not in update_kwargs["Environment"]["Variables"]

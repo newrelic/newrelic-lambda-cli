@@ -66,6 +66,42 @@ def test_layers_install(aws_credentials, cli_runner):
 
 
 @mock_aws
+def test_layers_install_app_name_flag(aws_credentials, cli_runner):
+    """
+    Assert that 'newrelic-lambda layers install --app-name' accepts the flag
+    and passes it through without raising an unrecognized option error
+    """
+    register_groups(cli)
+
+    result = cli_runner.invoke(
+        cli,
+        [
+            "layers",
+            "install",
+            "--no-aws-permissions-check",
+            "--function",
+            "foobar",
+            "--nr-account-id",
+            "12345678",
+            "--aws-region",
+            "us-east-1",
+            "--app-name",
+            "my-custom-app",
+        ],
+        env={
+            "AWS_ACCESS_KEY_ID": "testing",
+            "AWS_SECRET_ACCESS_KEY": "testing",
+            "AWS_SECURITY_TOKEN": "testing",
+            "AWS_SESSION_TOKEN": "testing",
+        },
+    )
+
+    assert "no such option" not in result.output
+    assert result.exit_code == 1
+    assert "Could not find function: foobar" in result.stderr
+
+
+@mock_aws
 def test_layers_uninstall(aws_credentials, cli_runner):
     """
     Assert that 'newrelic-lambda layers uninstall' attempts to uninstall the New Relic

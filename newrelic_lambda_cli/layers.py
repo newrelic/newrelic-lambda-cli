@@ -224,8 +224,13 @@ def _add_new_relic(input, config, nr_license_key):
     )
 
     if input.app_name:
-        update_kwargs["Environment"]["Variables"]["NEW_RELIC_APP_NAME"] = str(input.app_name)
-        success("Successfully set NEW_RELIC_APP_NAME to '%s' for the function" % input.app_name)
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_APP_NAME"] = str(
+            input.app_name
+        )
+        success(
+            "Successfully set NEW_RELIC_APP_NAME to '%s' for the function"
+            % input.app_name
+        )
 
     # Update the NEW_RELIC_LAMBDA_HANDLER envvars only when it's a new install.
     if runtime_handler and handler != runtime_handler:
