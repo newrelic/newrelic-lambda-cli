@@ -18,6 +18,7 @@ from newrelic_lambda_cli.utils import catch_boto_errors
 
 NEW_RELIC_ENV_VARS = (
     "NEW_RELIC_ACCOUNT_ID",
+    "NEW_RELIC_APP_NAME",
     "NEW_RELIC_EXTENSION_LOGS_ENABLED",
     "NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS",
     "NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS",
@@ -221,6 +222,10 @@ def _add_new_relic(input, config, nr_license_key):
     update_kwargs["Environment"]["Variables"]["NEW_RELIC_ACCOUNT_ID"] = str(
         input.nr_account_id
     )
+
+    if input.app_name:
+        update_kwargs["Environment"]["Variables"]["NEW_RELIC_APP_NAME"] = str(input.app_name)
+        success("Successfully set NEW_RELIC_APP_NAME to '%s' for the function" % input.app_name)
 
     # Update the NEW_RELIC_LAMBDA_HANDLER envvars only when it's a new install.
     if runtime_handler and handler != runtime_handler:
