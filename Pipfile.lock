@@ -1193,10 +1193,12 @@
         },
         "multipart": {
             "hashes": [
-                "sha256:96352d67fa1f704e2bcbec9726d7fb316533bd010f0c66639f930fb59b734931",
-                "sha256:fa98838d40c967bb19589626a0fb8a5c40c421dda2febe1b0351fcf626e24651"
+                "sha256:4b5596e533f4b859c6efb208897b9a4198776a2ef6951b28cea64eca1a9345af",
+                "sha256:8379020c484e94e511b4d948432441362dbcf3d71cdb48f59856f2417a3eae09"
             ],
-            "version": "==0.2.5"
+            "index": "pypi",
+            "markers": "python_version >= '3.8'",
+            "version": "==1.2.2"
         },
         "mypy-extensions": {
             "hashes": [
