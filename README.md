@@ -195,6 +195,7 @@ newrelic-lambda layers install \
 | `--esm` | No |  For Node.js functions using ES Modules (ESM), enable the specific ESM wrapper during installation (e.g., using the --esm flag). This sets the Lambda handler to `/opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index.handler`. |
 | `--extension-logs-enabled` | No | Set `NEW_RELIC_EXTENSION_LOGS_ENABLED=true` to enable `[NR_EXT]` extension log output in CloudWatch. This is the default extension behaviour.|
 | `--extension-logs-disabled` | No | Set `NEW_RELIC_EXTENSION_LOGS_ENABLED=false` to suppress `[NR_EXT]` extension log output in CloudWatch.  |
+| `--app-name` | No | Set the `NEW_RELIC_APP_NAME` environment variable on instrumented functions. If a different value is passed during an upgrade (`--upgrade`), the existing `NEW_RELIC_APP_NAME` will be updated to the new value. |
 
 #### Uninstall Layer
 

@@ -183,6 +183,15 @@ def register(group):
     "log output in CloudWatch, reducing CloudWatch log volume without affecting "
     "telemetry delivery to New Relic",
 )
+@click.option(
+    "--app-name",
+    "app_name",
+    help="Set the NEW_RELIC_APP_NAME environment variable on instrumented functions. "
+    "If a different value is passed during an upgrade (--upgrade), the existing "
+    "NEW_RELIC_APP_NAME will be updated to the new value.",
+    metavar="<name>",
+    default=None,
+)
 @click.pass_context
 def install(ctx, **kwargs):
     """Install New Relic AWS Lambda Layers"""
