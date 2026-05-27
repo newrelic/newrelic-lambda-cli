@@ -38,9 +38,14 @@ def mock_function_config():
     return _mock_function_config
 
 
+@pytest.fixture(autouse=True)
+def clear_aws_env(monkeypatch):
+    monkeypatch.delenv("AWS_PROFILE", raising=False)
+
+
 @pytest.fixture(scope="module")
 def cli_runner():
-    return CliRunner(mix_stderr=False)
+    return CliRunner()
 
 
 @pytest.fixture(scope="function")
