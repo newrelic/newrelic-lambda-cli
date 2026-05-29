@@ -46,7 +46,7 @@ NR_OPTIONS = [
         envvar="NEW_RELIC_API_KEY",
         help="New Relic User API Key",
         metavar="<key>",
-        required=True,
+        required=False,
     ),
     click.option(
         "--nr-region",
