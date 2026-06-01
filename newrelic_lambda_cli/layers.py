@@ -190,12 +190,14 @@ def _add_new_relic(input, config, nr_license_key):
         if "java" in runtime:
             if use_java_agent:
                 available_layers = [
-                    l for l in available_layers
+                    l
+                    for l in available_layers
                     if l.get("LayerName", "").lower().startswith("newrelicagent")
                 ]
             else:
                 available_layers = [
-                    l for l in available_layers
+                    l
+                    for l in available_layers
                     if not l.get("LayerName", "").lower().startswith("newrelicagent")
                 ]
 
