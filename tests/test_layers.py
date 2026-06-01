@@ -1788,6 +1788,273 @@ def test_extension_logs_not_set_by_default(aws_credentials, mock_function_config
 
 
 @mock_aws
+def test_add_new_relic_java_agent(aws_credentials, mock_function_config):
+    session = boto3.Session(region_name="us-east-1")
+
+    with patch("newrelic_lambda_cli.layers.index") as mock_index, patch(
+        "newrelic_lambda_cli.layers.layer_selection"
+    ) as mock_layer_selection:
+        mock_index.return_value = [
+            {
+                "LayerName": "NewRelicJava17",
+                "LatestMatchingVersion": {
+                    "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/NewRelicJava17:1",
+                    "CompatibleArchitectures": ["x86_64"],
+                },
+            },
+            {
+                "LayerName": "NewRelicAgentJava",
+                "LatestMatchingVersion": {
+                    "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/NewRelicAgentJava:1",
+                    "CompatibleArchitectures": ["x86_64"],
+                },
+            },
+            {
+                "LayerName": "NewRelicAgentJava-slim",
+                "LatestMatchingVersion": {
+                    "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/NewRelicAgentJava-slim:1",
+                    "CompatibleArchitectures": ["x86_64"],
+                },
+            },
+        ]
+        mock_layer_selection.return_value = (
+            "arn:aws:lambda:us-east-1:123456789:layer/NewRelicAgentJava:1"
+        )
+
+        config = mock_function_config("java17")
+
+        update_kwargs = _add_new_relic(
+            layer_install(
+                session=session,
+                aws_region="us-east-1",
+                nr_account_id=12345,
+                enable_extension=True,
+                java_agent=True,
+            ),
+            config,
+            nr_license_key=None,
+        )
+
+        # Only agent layers passed to layer_selection
+        called_layers = mock_layer_selection.call_args[0][0]
+        assert all(
+            l.get("LayerName", "").lower().startswith("newrelicagent")
+            for l in called_layers
+        )
+        # Handler unchanged — not in update_kwargs
+        assert "Handler" not in update_kwargs
+        # AWS_LAMBDA_EXEC_WRAPPER set
+        assert (
+            update_kwargs["Environment"]["Variables"]["AWS_LAMBDA_EXEC_WRAPPER"]
+            == "/opt/newrelic-java-handler"
+        )
+        # NEW_RELIC_LAMBDA_HANDLER not set
+        assert (
+            "NEW_RELIC_LAMBDA_HANDLER" not in update_kwargs["Environment"]["Variables"]
+        )
+
+
+@mock_aws
+def test_add_new_relic_java_ot_excludes_agent_layers(
+    aws_credentials, mock_function_config
+):
+    session = boto3.Session(region_name="us-east-1")
+
+    with patch("newrelic_lambda_cli.layers.index") as mock_index, patch(
+        "newrelic_lambda_cli.layers.layer_selection"
+    ) as mock_layer_selection:
+        mock_index.return_value = [
+            {
+                "LayerName": "NewRelicJava17",
+                "LatestMatchingVersion": {
+                    "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/NewRelicJava17:1",
+                    "CompatibleArchitectures": ["x86_64"],
+                },
+            },
+            {
+                "LayerName": "NewRelicAgentJava",
+                "LatestMatchingVersion": {
+                    "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/NewRelicAgentJava:1",
+                    "CompatibleArchitectures": ["x86_64"],
+                },
+            },
+        ]
+        mock_layer_selection.return_value = (
+            "arn:aws:lambda:us-east-1:123456789:layer/NewRelicJava17:1"
+        )
+
+        config = mock_function_config("java17")
+
+        update_kwargs = _add_new_relic(
+            layer_install(
+                session=session,
+                aws_region="us-east-1",
+                nr_account_id=12345,
+                enable_extension=True,
+            ),
+            config,
+            nr_license_key=None,
+        )
+
+        # Only non-agent layers passed to layer_selection
+        called_layers = mock_layer_selection.call_args[0][0]
+        assert all(
+            not l.get("LayerName", "").lower().startswith("newrelicagent")
+            for l in called_layers
+        )
+        # Handler set to OT wrapper
+        assert "HandlerWrapper" in update_kwargs["Handler"]
+        # NEW_RELIC_LAMBDA_HANDLER set
+        assert "NEW_RELIC_LAMBDA_HANDLER" in update_kwargs["Environment"]["Variables"]
+        # AWS_LAMBDA_EXEC_WRAPPER not set
+        assert (
+            "AWS_LAMBDA_EXEC_WRAPPER" not in update_kwargs["Environment"]["Variables"]
+        )
+
+
+@mock_aws
+def test_add_new_relic_java_ot_to_agent_switch(aws_credentials, mock_function_config):
+    session = boto3.Session(region_name="us-east-1")
+
+    with patch("newrelic_lambda_cli.layers.index") as mock_index, patch(
+        "newrelic_lambda_cli.layers.layer_selection"
+    ) as mock_layer_selection:
+        mock_index.return_value = [
+            {
+                "LayerName": "NewRelicAgentJava",
+                "LatestMatchingVersion": {
+                    "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/NewRelicAgentJava:1",
+                    "CompatibleArchitectures": ["x86_64"],
+                },
+            },
+        ]
+        mock_layer_selection.return_value = (
+            "arn:aws:lambda:us-east-1:123456789:layer/NewRelicAgentJava:1"
+        )
+
+        config = mock_function_config("java17")
+        config["Configuration"][
+            "Handler"
+        ] = "com.newrelic.java.HandlerWrapper::handleRequest"
+        config["Configuration"]["Environment"]["Variables"][
+            "NEW_RELIC_LAMBDA_HANDLER"
+        ] = "original_handler"
+
+        update_kwargs = _add_new_relic(
+            layer_install(
+                session=session,
+                aws_region="us-east-1",
+                nr_account_id=12345,
+                enable_extension=True,
+                upgrade=True,
+                java_agent=True,
+            ),
+            config,
+            nr_license_key=None,
+        )
+
+        # Handler restored to original
+        assert update_kwargs["Handler"] == "original_handler"
+        # NEW_RELIC_LAMBDA_HANDLER removed
+        assert (
+            "NEW_RELIC_LAMBDA_HANDLER" not in update_kwargs["Environment"]["Variables"]
+        )
+        # AWS_LAMBDA_EXEC_WRAPPER set
+        assert (
+            update_kwargs["Environment"]["Variables"]["AWS_LAMBDA_EXEC_WRAPPER"]
+            == "/opt/newrelic-java-handler"
+        )
+
+
+@mock_aws
+def test_add_new_relic_java_agent_to_ot_switch(aws_credentials, mock_function_config):
+    session = boto3.Session(region_name="us-east-1")
+
+    with patch("newrelic_lambda_cli.layers.index") as mock_index, patch(
+        "newrelic_lambda_cli.layers.layer_selection"
+    ) as mock_layer_selection:
+        mock_index.return_value = [
+            {
+                "LayerName": "NewRelicJava17",
+                "LatestMatchingVersion": {
+                    "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/NewRelicJava17:1",
+                    "CompatibleArchitectures": ["x86_64"],
+                },
+            },
+        ]
+        mock_layer_selection.return_value = (
+            "arn:aws:lambda:us-east-1:123456789:layer/NewRelicJava17:1"
+        )
+
+        config = mock_function_config("java17")
+        config["Configuration"]["Environment"]["Variables"][
+            "AWS_LAMBDA_EXEC_WRAPPER"
+        ] = "/opt/newrelic-java-handler"
+
+        update_kwargs = _add_new_relic(
+            layer_install(
+                session=session,
+                aws_region="us-east-1",
+                nr_account_id=12345,
+                enable_extension=True,
+                upgrade=True,
+            ),
+            config,
+            nr_license_key=None,
+        )
+
+        # AWS_LAMBDA_EXEC_WRAPPER removed
+        assert (
+            "AWS_LAMBDA_EXEC_WRAPPER" not in update_kwargs["Environment"]["Variables"]
+        )
+        # Handler set to OT wrapper
+        assert "Handler" in update_kwargs
+
+
+@mock_aws
+def test_remove_new_relic_java_agent(aws_credentials, mock_function_config):
+    session = boto3.Session(region_name="us-east-1")
+
+    config = mock_function_config("java17")
+    config["Configuration"]["Handler"] = "original_handler"
+    config["Configuration"]["Environment"]["Variables"][
+        "AWS_LAMBDA_EXEC_WRAPPER"
+    ] = "/opt/newrelic-java-handler"
+
+    update_kwargs = _remove_new_relic(
+        layer_uninstall(session=session, aws_region="us-east-1"), config
+    )
+
+    assert update_kwargs is not False
+    # AWS_LAMBDA_EXEC_WRAPPER removed
+    assert "AWS_LAMBDA_EXEC_WRAPPER" not in update_kwargs["Environment"]["Variables"]
+    # Handler unchanged
+    assert update_kwargs["Handler"] == "original_handler"
+
+
+def test_layer_selection_slim():
+    mock_layers = [
+        {
+            "LayerName": "NewRelicAgentJava",
+            "LatestMatchingVersion": {
+                "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/NewRelicAgentJava:1"
+            },
+        },
+        {
+            "LayerName": "NewRelicAgentJava-slim",
+            "LatestMatchingVersion": {
+                "LayerVersionArn": "arn:aws:lambda:us-east-1:123456789:layer/NewRelicAgentJava-slim:1"
+            },
+        },
+    ]
+
+    selected = layer_selection(mock_layers, "java17", "x86_64", slim=True)
+    assert (
+        selected == "arn:aws:lambda:us-east-1:123456789:layer/NewRelicAgentJava-slim:1"
+    )
+
+
+@mock_aws
 def test_extension_logs_removed_on_uninstall(aws_credentials, mock_function_config):
     """Test that NEW_RELIC_EXTENSION_LOGS_ENABLED is removed during uninstall"""
     session = boto3.Session(region_name="us-east-1")

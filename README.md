@@ -192,6 +192,7 @@ newrelic-lambda layers install \
 | `--nr-env-delimite` | No | Set `NR_ENV_DELIMITER` environment variable for your Lambda Function |
 | `--nr-tags` | No | Set `NR_TAGS` environment variable for your Lambda Function |
 | `--java_handler_method` or `-j` | No | For java runtimes only to specify an aws implementation method. Defaults to RequestHandler. Optional inputs are: handleRequest, handleStreamsRequest `--java_handler_method handleStreamsRequest`. |
+| `--java-agent` | No | For Java runtimes only (`java17`, `java21`). Attaches the New Relic Java Agent layer (`NewRelicAgentJava`) instead of the default OpenTracing layer. Sets `AWS_LAMBDA_EXEC_WRAPPER=/opt/newrelic-java-handler` and leaves the function handler unchanged. Use `--java-agent true` to enable. |
 | `--esm` | No |  For Node.js functions using ES Modules (ESM), enable the specific ESM wrapper during installation (e.g., using the --esm flag). This sets the Lambda handler to `/opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index.handler`. |
 | `--extension-logs-enabled` | No | Set `NEW_RELIC_EXTENSION_LOGS_ENABLED=true` to enable `[NR_EXT]` extension log output in CloudWatch. This is the default extension behaviour.|
 | `--extension-logs-disabled` | No | Set `NEW_RELIC_EXTENSION_LOGS_ENABLED=false` to suppress `[NR_EXT]` extension log output in CloudWatch.  |

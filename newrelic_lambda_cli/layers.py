@@ -17,6 +17,7 @@ from newrelic_lambda_cli.utils import catch_boto_errors
 
 
 NEW_RELIC_ENV_VARS = (
+    "AWS_LAMBDA_EXEC_WRAPPER",
     "NEW_RELIC_ACCOUNT_ID",
     "NEW_RELIC_EXTENSION_LOGS_ENABLED",
     "NEW_RELIC_EXTENSION_SEND_EXTENSION_LOGS",
@@ -57,10 +58,20 @@ def layer_selection(
     existing_layer_arn=None,
     slim=False,
 ):
+    layer_options = [
+        layer["LatestMatchingVersion"]["LayerVersionArn"] for layer in available_layers
+    ]
+
+    if slim:
+        for arn in layer_options:
+            if "-slim:" in arn:
+                success("Layer %s selected (slim)" % arn)
+                return arn
+
     if upgrade and existing_layer_arn:
         base_arn = existing_layer_arn.rsplit(":", 1)[0]
 
-        for i, layer in enumerate(available_layers):
+        for layer in available_layers:
             candidate_arn = layer["LatestMatchingVersion"]["LayerVersionArn"]
             candidate_base_arn = candidate_arn.rsplit(":", 1)[0]
             if candidate_base_arn == base_arn:
@@ -69,14 +80,6 @@ def layer_selection(
     if len(available_layers) == 1:
         return available_layers[0]["LatestMatchingVersion"]["LayerVersionArn"]
 
-    layer_options = [
-        layer["LatestMatchingVersion"]["LayerVersionArn"] for layer in available_layers
-    ]
-    if slim:
-        for arn in layer_options:
-            if "-slim:" in arn:
-                success("Layer %s selected (slim)" % arn)
-                return arn
     if sys.stdout.isatty():
         output = "\n".join(
             [
@@ -126,9 +129,14 @@ def _add_new_relic(input, config, nr_license_key):
     handler = config["Configuration"]["Handler"]
     runtime_handler = utils.RUNTIME_CONFIG.get(runtime, {}).get("Handler")
 
+    use_java_agent = input.java_agent and "java" in runtime
+
     if "java" in runtime:
-        postfix = input.java_handler_method or "handleRequest"
-        runtime_handler = runtime_handler + postfix
+        if use_java_agent:
+            runtime_handler = None
+        else:
+            postfix = input.java_handler_method or "handleRequest"
+            runtime_handler = runtime_handler + postfix
     if "nodejs" in runtime:
         prefix = (
             "/opt/nodejs/node_modules/newrelic-esm-lambda-wrapper/index"
@@ -179,6 +187,20 @@ def _add_new_relic(input, config, nr_license_key):
         # discover compatible layers...
         available_layers = index(aws_region, runtime, architecture)
 
+        if "java" in runtime:
+            if use_java_agent:
+                available_layers = [
+                    l
+                    for l in available_layers
+                    if l.get("LayerName", "").lower().startswith("newrelicagent")
+                ]
+            else:
+                available_layers = [
+                    l
+                    for l in available_layers
+                    if not l.get("LayerName", "").lower().startswith("newrelicagent")
+                ]
+
         if not available_layers:
             failure(
                 "No Lambda layers published for %s (%s) runtime: %s"
@@ -216,6 +238,18 @@ def _add_new_relic(input, config, nr_license_key):
     # NewRelicLambdaExtension layer
     if runtime_handler:
         update_kwargs["Handler"] = runtime_handler
+
+    if use_java_agent:
+        update_kwargs["Environment"]["Variables"][
+            "AWS_LAMBDA_EXEC_WRAPPER"
+        ] = "/opt/newrelic-java-handler"
+        original_handler = update_kwargs["Environment"]["Variables"].pop(
+            "NEW_RELIC_LAMBDA_HANDLER", None
+        )
+        if original_handler:
+            update_kwargs["Handler"] = original_handler
+    elif "java" in runtime:
+        update_kwargs["Environment"]["Variables"].pop("AWS_LAMBDA_EXEC_WRAPPER", None)
 
     # Update the account id
     update_kwargs["Environment"]["Variables"]["NEW_RELIC_ACCOUNT_ID"] = str(
@@ -508,19 +542,29 @@ def _remove_new_relic(input, config):
 
     handler = config["Configuration"]["Handler"]
 
-    # For java runtimes we need to remove the method name before
-    # validating because method names are variable
-    if "java" in runtime:
-        handler = handler.split("::", 1)[0] + "::"
+    is_java_agent = (
+        "java" in runtime
+        and config["Configuration"]
+        .get("Environment", {})
+        .get("Variables", {})
+        .get("AWS_LAMBDA_EXEC_WRAPPER")
+        == "/opt/newrelic-java-handler"
+    )
 
-    # Detect non-New Relic handler and error if necessary.
-    if not utils.is_valid_handler(runtime, handler):
-        failure(
-            "New Relic installation (via layers) not auto-detected for the specified "
-            "function '%s'. Unrecognized handler in deployed function."
-            % config["Configuration"]["FunctionArn"]
-        )
-        return False
+    if not is_java_agent:
+        # For java runtimes we need to remove the method name before
+        # validating because method names are variable
+        if "java" in runtime:
+            handler = handler.split("::", 1)[0] + "::"
+
+        # Detect non-New Relic handler and error if necessary.
+        if not utils.is_valid_handler(runtime, handler):
+            failure(
+                "New Relic installation (via layers) not auto-detected for the specified "
+                "function '%s'. Unrecognized handler in deployed function."
+                % config["Configuration"]["FunctionArn"]
+            )
+            return False
 
     env_handler = (
         config["Configuration"]
