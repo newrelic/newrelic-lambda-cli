@@ -1849,11 +1849,15 @@ def test_add_new_relic_java_agent(aws_credentials, mock_function_config):
             == "/opt/newrelic-java-handler"
         )
         # NEW_RELIC_LAMBDA_HANDLER not set
-        assert "NEW_RELIC_LAMBDA_HANDLER" not in update_kwargs["Environment"]["Variables"]
+        assert (
+            "NEW_RELIC_LAMBDA_HANDLER" not in update_kwargs["Environment"]["Variables"]
+        )
 
 
 @mock_aws
-def test_add_new_relic_java_ot_excludes_agent_layers(aws_credentials, mock_function_config):
+def test_add_new_relic_java_ot_excludes_agent_layers(
+    aws_credentials, mock_function_config
+):
     session = boto3.Session(region_name="us-east-1")
 
     with patch("newrelic_lambda_cli.layers.index") as mock_index, patch(
@@ -1903,7 +1907,9 @@ def test_add_new_relic_java_ot_excludes_agent_layers(aws_credentials, mock_funct
         # NEW_RELIC_LAMBDA_HANDLER set
         assert "NEW_RELIC_LAMBDA_HANDLER" in update_kwargs["Environment"]["Variables"]
         # AWS_LAMBDA_EXEC_WRAPPER not set
-        assert "AWS_LAMBDA_EXEC_WRAPPER" not in update_kwargs["Environment"]["Variables"]
+        assert (
+            "AWS_LAMBDA_EXEC_WRAPPER" not in update_kwargs["Environment"]["Variables"]
+        )
 
 
 @mock_aws
@@ -1927,7 +1933,9 @@ def test_add_new_relic_java_ot_to_agent_switch(aws_credentials, mock_function_co
         )
 
         config = mock_function_config("java17")
-        config["Configuration"]["Handler"] = "com.newrelic.java.HandlerWrapper::handleRequest"
+        config["Configuration"][
+            "Handler"
+        ] = "com.newrelic.java.HandlerWrapper::handleRequest"
         config["Configuration"]["Environment"]["Variables"][
             "NEW_RELIC_LAMBDA_HANDLER"
         ] = "original_handler"
@@ -1948,7 +1956,9 @@ def test_add_new_relic_java_ot_to_agent_switch(aws_credentials, mock_function_co
         # Handler restored to original
         assert update_kwargs["Handler"] == "original_handler"
         # NEW_RELIC_LAMBDA_HANDLER removed
-        assert "NEW_RELIC_LAMBDA_HANDLER" not in update_kwargs["Environment"]["Variables"]
+        assert (
+            "NEW_RELIC_LAMBDA_HANDLER" not in update_kwargs["Environment"]["Variables"]
+        )
         # AWS_LAMBDA_EXEC_WRAPPER set
         assert (
             update_kwargs["Environment"]["Variables"]["AWS_LAMBDA_EXEC_WRAPPER"]
@@ -1994,7 +2004,9 @@ def test_add_new_relic_java_agent_to_ot_switch(aws_credentials, mock_function_co
         )
 
         # AWS_LAMBDA_EXEC_WRAPPER removed
-        assert "AWS_LAMBDA_EXEC_WRAPPER" not in update_kwargs["Environment"]["Variables"]
+        assert (
+            "AWS_LAMBDA_EXEC_WRAPPER" not in update_kwargs["Environment"]["Variables"]
+        )
         # Handler set to OT wrapper
         assert "Handler" in update_kwargs
 
@@ -2037,7 +2049,9 @@ def test_layer_selection_slim():
     ]
 
     selected = layer_selection(mock_layers, "java17", "x86_64", slim=True)
-    assert selected == "arn:aws:lambda:us-east-1:123456789:layer/NewRelicAgentJava-slim:1"
+    assert (
+        selected == "arn:aws:lambda:us-east-1:123456789:layer/NewRelicAgentJava-slim:1"
+    )
 
 
 @mock_aws
