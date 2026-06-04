@@ -184,6 +184,15 @@ def register(group):
     "telemetry delivery to New Relic",
 )
 @click.option(
+    "--app-name",
+    "app_name",
+    help="Set the NEW_RELIC_APP_NAME environment variable on instrumented functions. "
+    "If a different value is passed during an upgrade (--upgrade), the existing "
+    "NEW_RELIC_APP_NAME will be updated to the new value.",
+    metavar="<name>",
+    default=None,
+)
+@click.option(
     "--java-agent",
     "java_agent",
     default=False,

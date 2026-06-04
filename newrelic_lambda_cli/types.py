@@ -122,6 +122,7 @@ LAYER_INSTALL_KEYS = [
     "esm",
     "slim",
     "extension_logs_enabled",
+    "app_name",
 ]
 
 LAYER_UNINSTALL_KEYS = [
