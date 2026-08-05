@@ -2,6 +2,9 @@ name: Build Test & Coverage
 on:
     [pull_request, push]
 
+permissions:
+  contents: read
+
 jobs:
 
   test:
@@ -27,6 +30,7 @@ jobs:
         with: 
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true  
+          use_pypi: true
 
   code-style:
     name: Code style
