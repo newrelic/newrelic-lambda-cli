@@ -17,7 +17,7 @@ pytest = "*"
 pytest-cov = "*"
 requests_toolbelt = "*"
 moto = {extras = ["all"], version = ">=5,<6.0"}
-setuptools = ">=65.0,<79.0"
+setuptools = ">=83.0.0,<84.0"
 
 [requires]
 python_version = "3.12"
