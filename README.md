@@ -43,7 +43,7 @@ A CLI to install the New Relic AWS Lambda integration and layers.
 | .NET   |  `dotnet6`, `dotnet8`              |
 | Java        | `java8.al2`, `java11`, `java17`, `java21`      |
 | Provided    | `provided.al2`, `provided.al2023`         |
-| Ruby        | `ruby3.2`, `ruby3.3`, `ruby3.4`          |
+| Ruby        | `ruby3.2`, `ruby3.3`, `ruby3.4`, `ruby4.0`          |
 
 **Note:** Automatic handler wrapping is only supported for Node.js, Python, Java, and Ruby. For other runtimes,
 manual function wrapping is required using the runtime specific New Relic agent.
