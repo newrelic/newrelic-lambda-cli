@@ -177,3 +177,268 @@ def test_integrations_update(
             call.install_license_key().__bool__(),
         ]
     )
+
+
+@patch("newrelic_lambda_cli.cli.integrations.boto3")
+@patch("newrelic_lambda_cli.cli.integrations.integrations")
+@patch("newrelic_lambda_cli.cli.integrations.permissions")
+def test_integrations_install_with_ingest_key_only(
+    permissions_mock, integrations_mock, boto3_mock, cli_runner
+):
+    """
+    Test install with only --nr-ingest-key (no API key)
+    Should create AWS resources but skip cloud integration linking
+    """
+    register_groups(cli)
+    result = cli_runner.invoke(
+        cli,
+        [
+            "integrations",
+            "install",
+            "--nr-account-id",
+            "12345678",
+            "--nr-ingest-key",
+            "test_ingest_key",
+            "--linked-account-name",
+            "test_linked_account",
+            "--aws-permissions-check",
+        ],
+        env={"AWS_DEFAULT_REGION": "us-east-1"},
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert "Using provided New Relic ingest key" in result.output
+    assert "Skipping cloud integration account linking" in result.output
+
+    boto3_mock.assert_has_calls(
+        [call.Session(profile_name=None, region_name="us-east-1")]
+    )
+
+    permissions_mock.assert_has_calls(
+        [call.ensure_integration_install_permissions(ANY)]
+    )
+
+    integrations_mock.assert_has_calls(
+        [
+            call.create_integration_role(ANY),
+            call.install_log_ingestion(ANY, "test_ingest_key"),
+        ],
+        any_order=True,
+    )
+
+
+@patch("newrelic_lambda_cli.cli.integrations.boto3")
+@patch("newrelic_lambda_cli.cli.integrations.integrations")
+@patch("newrelic_lambda_cli.cli.integrations.permissions")
+@patch("newrelic_lambda_cli.cli.integrations.api")
+def test_integrations_install_with_both_keys(
+    api_mock, permissions_mock, integrations_mock, boto3_mock, cli_runner
+):
+    """
+    Test install with both --nr-ingest-key and --nr-api-key
+    Should fail with usage error
+    """
+    register_groups(cli)
+    result = cli_runner.invoke(
+        cli,
+        [
+            "integrations",
+            "install",
+            "--nr-account-id",
+            "12345678",
+            "--nr-api-key",
+            "test_api_key",
+            "--nr-ingest-key",
+            "test_ingest_key",
+            "--linked-account-name",
+            "test_linked_account",
+        ],
+        env={"AWS_DEFAULT_REGION": "us-east-1"},
+    )
+
+    assert result.exit_code != 0
+    error_message = result.output + result.stderr
+    assert (
+        "Please provide either the --nr-api-key or the --nr-ingest-key flag, but not both"
+        in error_message
+    )
+
+
+@patch("newrelic_lambda_cli.cli.integrations.boto3")
+@patch("newrelic_lambda_cli.cli.integrations.integrations")
+@patch("newrelic_lambda_cli.cli.integrations.permissions")
+@patch("newrelic_lambda_cli.cli.integrations.api")
+def test_integrations_install_with_no_keys(
+    api_mock, permissions_mock, integrations_mock, boto3_mock, cli_runner
+):
+    """
+    Test install with neither --nr-api-key nor --nr-ingest-key
+    Should fail with usage error
+    """
+    register_groups(cli)
+    result = cli_runner.invoke(
+        cli,
+        [
+            "integrations",
+            "install",
+            "--nr-account-id",
+            "12345678",
+            "--linked-account-name",
+            "test_linked_account",
+        ],
+        env={"AWS_DEFAULT_REGION": "us-east-1"},
+    )
+
+    assert result.exit_code != 0
+    error_message = result.output + result.stderr
+    assert "Please provide either --nr-api-key or --nr-ingest-key" in error_message
+
+
+@patch("newrelic_lambda_cli.cli.integrations.boto3")
+@patch("newrelic_lambda_cli.cli.integrations.integrations")
+@patch("newrelic_lambda_cli.cli.integrations.permissions")
+@patch("newrelic_lambda_cli.cli.integrations.api")
+def test_integrations_install_ingest_key_with_api_key(
+    api_mock, permissions_mock, integrations_mock, boto3_mock, cli_runner
+):
+    """
+    Test install with --nr-ingest-key alongside --nr-api-key (both provided)
+    This should fail as they are mutually exclusive
+    """
+    api_mock.validate_gql_credentials.return_value = MagicMock()
+    api_mock.create_integration_account.return_value = {"id": "test_id"}
+    integrations_mock.create_integration_role.return_value = True
+
+    register_groups(cli)
+    result = cli_runner.invoke(
+        cli,
+        [
+            "integrations",
+            "install",
+            "--nr-account-id",
+            "12345678",
+            "--nr-api-key",
+            "test_api_key",
+            "--nr-ingest-key",
+            "test_ingest_key",
+            "--linked-account-name",
+            "test_linked_account",
+        ],
+        env={"AWS_DEFAULT_REGION": "us-east-1"},
+    )
+
+    assert result.exit_code != 0
+    error_message = result.output + result.stderr
+    assert (
+        "Please provide either the --nr-api-key or the --nr-ingest-key flag, but not both"
+        in error_message
+    )
+
+
+@patch("newrelic_lambda_cli.cli.integrations.boto3")
+@patch("newrelic_lambda_cli.cli.integrations.integrations")
+@patch("newrelic_lambda_cli.cli.integrations.permissions")
+def test_integrations_update_with_ingest_key(
+    permissions_mock, integrations_mock, boto3_mock, cli_runner
+):
+    """
+    Test update with --nr-ingest-key instead of --nr-api-key
+    """
+    integrations_mock.update_log_ingestion.return_value = True
+    integrations_mock.install_license_key.return_value = True
+
+    register_groups(cli)
+    result = cli_runner.invoke(
+        cli,
+        [
+            "integrations",
+            "update",
+            "--nr-account-id",
+            "123456789",
+            "--nr-ingest-key",
+            "test_ingest_key",
+            "--aws-permissions-check",
+        ],
+        env={"AWS_DEFAULT_REGION": "us-east-1"},
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert "Using provided New Relic ingest key" in result.output
+
+    boto3_mock.assert_has_calls(
+        [call.Session(profile_name=None, region_name="us-east-1")]
+    )
+    permissions_mock.assert_has_calls(
+        [call.ensure_integration_install_permissions(ANY)]
+    )
+
+    integrations_mock.assert_has_calls(
+        [
+            call.update_log_ingestion(ANY),
+            call.install_license_key(ANY, "test_ingest_key"),
+        ],
+        any_order=True,
+    )
+
+
+@patch("newrelic_lambda_cli.cli.integrations.boto3")
+@patch("newrelic_lambda_cli.cli.integrations.integrations")
+@patch("newrelic_lambda_cli.cli.integrations.permissions")
+@patch("newrelic_lambda_cli.cli.integrations.api")
+def test_integrations_update_with_both_keys(
+    api_mock, permissions_mock, integrations_mock, boto3_mock, cli_runner
+):
+    """
+    Test update with both --nr-api-key and --nr-ingest-key
+    Should fail with usage error
+    """
+    register_groups(cli)
+    result = cli_runner.invoke(
+        cli,
+        [
+            "integrations",
+            "update",
+            "--nr-account-id",
+            "123456789",
+            "--nr-api-key",
+            "test_api_key",
+            "--nr-ingest-key",
+            "test_ingest_key",
+        ],
+        env={"AWS_DEFAULT_REGION": "us-east-1"},
+    )
+
+    assert result.exit_code != 0
+    error_message = result.output + result.stderr
+    assert (
+        "Please provide either the --nr-api-key or the --nr-ingest-key flag, but not both"
+        in error_message
+    )
+
+
+@patch("newrelic_lambda_cli.cli.integrations.boto3")
+@patch("newrelic_lambda_cli.cli.integrations.integrations")
+@patch("newrelic_lambda_cli.cli.integrations.permissions")
+@patch("newrelic_lambda_cli.cli.integrations.api")
+def test_integrations_update_with_no_keys(
+    api_mock, permissions_mock, integrations_mock, boto3_mock, cli_runner
+):
+    """
+    Test update with neither --nr-api-key nor --nr-ingest-key
+    Should fail with usage error
+    """
+    register_groups(cli)
+    result = cli_runner.invoke(
+        cli,
+        [
+            "integrations",
+            "update",
+            "--nr-account-id",
+            "123456789",
+        ],
+        env={"AWS_DEFAULT_REGION": "us-east-1"},
+    )
+
+    assert result.exit_code != 0
+    error_message = result.output + result.stderr
+    assert "Please provide either --nr-api-key or --nr-ingest-key" in error_message
