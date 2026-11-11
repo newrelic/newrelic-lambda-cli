@@ -86,6 +86,7 @@ def test_supports_lambda_extension():
             "dotnetcore3.1",
             "dotnet6",
             "dotnet8",
+            "dotnet10",
             "java21",
             "java17",
             "java11",

@@ -12,6 +12,7 @@ RUNTIME_CONFIG = {
     "dotnetcore3.1": {"LambdaExtension": True},
     "dotnet6": {"LambdaExtension": True},
     "dotnet8": {"LambdaExtension": True},
+    "dotnet10": {"LambdaExtension": True},
     "java21": {
         "Handler": "com.newrelic.java.HandlerWrapper::",
         "LambdaExtension": True,
